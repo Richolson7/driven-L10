@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driven Solutions — Task Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --g:#39FF14;--gd:#2ECC0E;--gbg:#0D1F0A;
+  --dk:#0E0E0E;--s:#161616;--s2:#1E1E1E;--s3:#252525;
+  --br:rgba(255,255,255,0.08);--bra:rgba(57,255,20,0.3);
+  --tx:#F0F0F0;--td:#888;--tm:#555;
+  --red:#FF4444;--rbg:#2A0808;--rbr:#993333;
+  --amb:#FFB800;--abg:#1F1500;--abr:#996600;
+  --blue:#4A9EFF;--bbg:#0A1A2E;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--dk);color:var(--tx);font-family:'Barlow',sans-serif;font-size:14px;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--s)}
+::-webkit-scrollbar-thumb{background:var(--s3);border-radius:3px}
+
+/* TOP BAR */
+.topbar{background:#080E08;border-bottom:3px solid var(--g);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px}
+.logo em{color:var(--g);font-style:normal}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.sync-info{font-size:11px;color:var(--td);font-family:'DM Mono',monospace;display:flex;align-items:center;gap:6px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--g);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tbtn{height:32px;padding:0 16px;border-radius:4px;border:1px solid var(--br);background:var(--s2);color:var(--td);font-size:12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:all .15s}
+.tbtn:hover{color:var(--tx);border-color:rgba(255,255,255,.2)}
+.tbtn.green{border-color:var(--gd);color:var(--g);background:var(--gbg)}
+.tbtn.red{border-color:var(--rbr);color:var(--red);background:var(--rbg)}
+
+/* STATS BAR */
+.stats-bar{background:var(--s);border-bottom:1px solid var(--br);padding:12px 32px;display:flex;gap:0}
+.stat-item{padding:6px 24px;border-right:1px solid var(--br);text-align:center}
+.stat-item:first-child{padding-left:0}
+.stat-item:last-child{border-right:none}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;line-height:1}
+.stat-lbl{font-size:10px;color:var(--td);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.stat-num.red{color:var(--red)}
+.stat-num.amb{color:var(--amb)}
+.stat-num.grn{color:var(--g)}
+.stat-num.blue{color:var(--blue)}
+
+/* OVERDUE BANNER */
+.od-banner{background:var(--rbg);border-bottom:1px solid var(--rbr);padding:10px 32px;font-size:13px;color:var(--red);display:none;align-items:center;gap:10px}
+.od-banner.show{display:flex}
+.od-icon{font-size:16px;flex-shrink:0}
+
+/* ADD BAR */
+.add-bar{background:var(--s2);border-bottom:1px solid var(--br);padding:12px 32px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.add-input{flex:2;min-width:220px;height:36px;background:var(--s);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:14px;padding:0 12px;transition:border .15s}
+.add-input:focus{outline:none;border-color:var(--bra)}
+.add-select{height:36px;background:var(--s);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:13px;padding:0 8px;cursor:pointer;transition:border .15s}
+.add-select:focus{outline:none;border-color:var(--bra)}
+.add-date{height:36px;background:var(--s);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:13px;padding:0 8px;width:130px}
+.add-date:focus{outline:none;border-color:var(--bra)}
+.add-btn{height:36px;padding:0 20px;border-radius:4px;border:1px solid var(--gd);background:var(--gbg);color:var(--g);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;font-size:14px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.add-btn:hover{background:#152a0f}
+
+/* FILTERS */
+.filter-bar{padding:10px 32px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--br)}
+.flt{padding:4px 12px;border-radius:99px;border:1px solid var(--br);background:none;color:var(--td);font-size:12px;cursor:pointer;font-family:'Barlow',sans-serif;transition:all .15s}
+.flt:hover{color:var(--tx);border-color:rgba(255,255,255,.2)}
+.flt.active{background:var(--s2);color:var(--tx);border-color:rgba(255,255,255,.3)}
+.flt.danger{background:var(--rbg);border-color:var(--rbr);color:var(--red)}
+.flt-select{height:30px;background:var(--s);border:1px solid var(--br);border-radius:99px;color:var(--td);font-size:12px;padding:0 10px;font-family:'Barlow',sans-serif;cursor:pointer}
+.flt-select:focus{outline:none}
+.search-box{height:30px;background:var(--s);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-size:12px;padding:0 10px;font-family:'Barlow',sans-serif;min-width:160px;margin-left:auto}
+.search-box:focus{outline:none;border-color:var(--bra)}
+
+/* MAIN CONTENT */
+.main{padding:20px 32px 40px}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 0 8px;margin-bottom:8px;border-bottom:1px solid var(--br)}
+.section-hdr-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--td)}
+.section-hdr-action{font-size:12px;color:var(--td);cursor:pointer}
+.section-hdr-action:hover{color:var(--red)}
+
+/* TASK CARDS */
+.task-list{display:flex;flex-direction:column;gap:6px;margin-bottom:24px}
+.task-card{background:var(--s);border:1px solid var(--br);border-radius:8px;display:grid;grid-template-columns:26px 1fr auto;gap:12px;padding:13px 16px;align-items:start;transition:border-color .15s;position:relative}
+.task-card:hover{border-color:rgba(255,255,255,.15)}
+.task-card.is-overdue{border-left:3px solid var(--red);padding-left:13px}
+.task-card.is-soon{border-left:3px solid var(--amb);padding-left:13px}
+.task-card.is-done{opacity:.5}
+
+/* CHECKBOX */
+.chk{width:22px;height:22px;border-radius:5px;border:1px solid rgba(255,255,255,.2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s;background:none}
+.chk:hover{border-color:var(--gd)}
+.chk.on{background:var(--gbg);border-color:var(--gd)}
+.chk.on::after{content:'';display:block;width:11px;height:7px;border-left:2px solid var(--g);border-bottom:2px solid var(--g);transform:rotate(-45deg) translate(1px,-1px)}
+
+/* TASK BODY */
+.task-body{min-width:0}
+.task-text{font-size:14px;color:var(--tx);line-height:1.5;margin-bottom:7px;word-break:break-word}
+.task-text.done-text{text-decoration:line-through;color:var(--tm)}
+.task-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
+.pill.owner{background:var(--s3);color:var(--td);border:1px solid var(--br)}
+.pill.due-ok{background:var(--s3);color:var(--td);border:1px solid var(--br)}
+.pill.due-soon{background:var(--abg);color:var(--amb);border:1px solid var(--abr)}
+.pill.due-late{background:var(--rbg);color:var(--red);border:1px solid var(--rbr)}
+.pill.due-done{background:var(--gbg);color:var(--g);border:1px solid var(--gd)}
+.pill.pri-high{background:var(--rbg);color:var(--red);border:1px solid var(--rbr)}
+.pill.pri-med{background:var(--abg);color:var(--amb);border:1px solid var(--abr)}
+.pill.pri-low{background:var(--s3);color:var(--tm);border:1px solid var(--br)}
+.pill.cat{background:var(--bbg);color:var(--blue);border:1px solid rgba(74,158,255,.3)}
+.avt{width:16px;height:16px;border-radius:50%;background:var(--gbg);color:var(--g);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.task-notes{width:100%;background:transparent;border:none;border-top:1px dashed var(--br);color:var(--td);font-family:'Barlow',sans-serif;font-size:12px;padding-top:7px;margin-top:4px;resize:none;line-height:1.5;min-height:24px}
+.task-notes:focus{outline:none;color:var(--tx)}
+.task-notes::placeholder{color:var(--tm)}
+
+/* TASK ACTIONS */
+.task-actions{display:flex;gap:4px;flex-shrink:0}
+.act{width:28px;height:28px;border-radius:4px;border:1px solid var(--br);background:none;color:var(--tm);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;position:relative}
+.act:hover{border-color:rgba(255,255,255,.2);color:var(--tx)}
+.act.del:hover{background:var(--rbg);border-color:var(--rbr);color:var(--red)}
+
+/* SNOOZE DROPDOWN */
+.snooze-menu{display:none;position:absolute;right:0;top:32px;background:var(--s2);border:1px solid var(--br);border-radius:6px;z-index:50;min-width:120px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.snooze-menu.open{display:block}
+.snooze-opt{padding:8px 14px;font-size:12px;cursor:pointer;color:var(--td);transition:all .1s}
+.snooze-opt:hover{background:var(--s3);color:var(--tx)}
+.snooze-opt:first-child{border-radius:6px 6px 0 0}
+.snooze-opt:last-child{border-radius:0 0 6px 6px}
+
+/* EMPTY */
+.empty{padding:40px;text-align:center;color:var(--tm);font-size:14px;background:var(--s);border:1px dashed var(--br);border-radius:8px}
+.empty strong{display:block;font-size:18px;color:var(--td);margin-bottom:8px}
+
+/* FOOTER */
+.footer{background:var(--s);border-top:1px solid var(--br);padding:12px 32px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--tm);position:sticky;bottom:0}
+.footer-btns{display:flex;gap:8px}
+
+/* EDIT MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--s2);border:1px solid var(--br);border-radius:8px;width:100%;max-width:560px;max-height:80vh;overflow-y:auto}
+.modal-head{padding:18px 24px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;color:var(--g)}
+.modal-body{padding:24px}
+.form-row{margin-bottom:16px}
+.form-row label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--td);margin-bottom:6px;font-family:'Barlow Condensed',sans-serif;font-weight:600}
+.form-row input,.form-row select,.form-row textarea{width:100%;background:var(--s);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:14px;padding:8px 12px;transition:border .15s}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{outline:none;border-color:var(--bra)}
+.form-row textarea{resize:vertical;min-height:80px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--br);display:flex;justify-content:flex-end;gap:10px}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:64px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--s2);border:1px solid var(--br);border-radius:6px;padding:10px 16px;font-size:13px;color:var(--tx);animation:tin .2s ease;min-width:200px}
+.toast.ok{border-color:var(--gd);color:var(--g);background:var(--gbg)}
+.toast.err{border-color:var(--rbr);color:var(--red);background:var(--rbg)}
+@keyframes tin{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+
+select option{background:var(--s2);color:var(--tx)}
+</style>
+</head>
+<body>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Edit Task</h3>
+      <button class="tbtn" onclick="closeModal()">✕ Close</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>Task</label><textarea id="edit-text" rows="2"></textarea></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Owner</label>
+          <select id="edit-owner">
+            <option value="">No owner</option>
+            <option>Owner / President</option>
+            <option>Account Executive</option>
+            <option>Ops Coordinator</option>
+            <option>Admin / Bookkeeper</option>
+            <option>All</option>
+          </select>
+        </div>
+        <div class="form-row"><label>Category</label>
+          <select id="edit-cat">
+            <option value="">No category</option>
+            <option>Sales</option><option>Operations</option><option>Finance</option>
+            <option>Marketing</option><option>Hiring</option><option>L10 Rock</option>
+            <option>Customer</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-row"><label>Priority</label>
+          <select id="edit-pri">
+            <option value="high">High</option>
+            <option value="med" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="form-row"><label>Due Date</label><input type="date" id="edit-due"></div>
+      </div>
+      <div class="form-row"><label>Notes / Context / Blockers</label><textarea id="edit-notes" rows="3" placeholder="Add any context, blockers, links, or updates..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="tbtn" onclick="closeModal()">Cancel</button>
+      <button class="tbtn green" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">DRIVEN <em>SOLUTIONS</em> — Task Tracker</div>
+  <div class="topbar-right">
+    <div class="sync-info"><div class="sync-dot"></div><span id="sync-label">Saved</span></div>
+    <button class="tbtn" onclick="exportCSV()">Export CSV</button>
+    <button class="tbtn" onclick="exportL10()">Export for L10</button>
+    <button class="tbtn red" onclick="clearDoneConfirm()">Clear Done</button>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar" id="stats-bar"></div>
+
+<!-- OVERDUE BANNER -->
+<div class="od-banner" id="od-banner"><div class="od-icon">⚠</div><span id="od-text"></span></div>
+
+<!-- ADD BAR -->
+<div class="add-bar">
+  <input class="add-input" type="text" id="new-text" placeholder="Type a task and press Enter..." onkeydown="if(event.key==='Enter')addTask()">
+  <select class="add-select" id="new-owner">
+    <option value="">Owner</option>
+    <option>Owner / President</option>
+    <option>Account Executive</option>
+    <option>Ops Coordinator</option>
+    <option>Admin / Bookkeeper</option>
+    <option>All</option>
+  </select>
+  <select class="add-select" id="new-cat">
+    <option value="">Category</option>
+    <option>Sales</option><option>Operations</option><option>Finance</option>
+    <option>Marketing</option><option>Hiring</option><option>L10 Rock</option>
+    <option>Customer</option><option>Other</option>
+  </select>
+  <select class="add-select" id="new-pri">
+    <option value="high">High</option>
+    <option value="med" selected>Medium</option>
+    <option value="low">Low</option>
+  </select>
+  <input class="add-date" type="date" id="new-due" title="Due date">
+  <button class="add-btn" onclick="addTask()">+ Add Task</button>
+</div>
+
+<!-- FILTERS -->
+<div class="filter-bar">
+  <button class="flt active" id="flt-all" onclick="setFilter('all',this)">All</button>
+  <button class="flt danger" id="flt-overdue" onclick="setFilter('overdue',this)">Overdue</button>
+  <button class="flt" id="flt-today" onclick="setFilter('today',this)">Due Today</button>
+  <button class="flt" id="flt-week" onclick="setFilter('week',this)">This Week</button>
+  <button class="flt" id="flt-open" onclick="setFilter('open',this)">Open</button>
+  <button class="flt" id="flt-done" onclick="setFilter('done',this)">Done</button>
+  <select class="flt-select" id="owner-flt" onchange="render()">
+    <option value="">All owners</option>
+    <option>Owner / President</option>
+    <option>Account Executive</option>
+    <option>Ops Coordinator</option>
+    <option>Admin / Bookkeeper</option>
+    <option>All</option>
+  </select>
+  <select class="flt-select" id="cat-flt" onchange="render()">
+    <option value="">All categories</option>
+    <option>Sales</option><option>Operations</option><option>Finance</option>
+    <option>Marketing</option><option>Hiring</option><option>L10 Rock</option>
+    <option>Customer</option><option>Other</option>
+  </select>
+  <input class="search-box" type="text" id="search" placeholder="Search tasks..." oninput="render()">
+</div>
+
+<!-- MAIN -->
+<div class="main" id="main"></div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span id="footer-count">0 tasks</span>
+  <div class="footer-btns">
+    <span style="font-size:11px;color:var(--tm)">Tip: click any task to edit · press Enter to add · snooze ⏱ to push date</span>
+  </div>
+</div>
+
+<script>
+// ── Data ────────────────────────────────────────────────────────────────────
+const today = () => new Date().toISOString().split('T')[0];
+const todayD = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+const parseD = s => { if(!s)return null; const[y,m,d]=s.split('-'); return new Date(y,+m-1,+d); };
+const daysUntil = s => { if(!s)return null; return Math.round((parseD(s)-todayD())/86400000); };
+const fmtDate = s => { if(!s)return '—'; return parseD(s).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); };
+const initials = n => !n?'?':n.split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+let tasks = [];
+let nid = 1;
+let activeFilter = 'all';
+let editingId = null;
+let saveTimer = null;
+
+const DEFAULTS = [
+  {text:'Post Account Executive job on LinkedIn + Indeed',owner:'Owner / President',cat:'Hiring',pri:'high',due:today(),notes:'Use the exact job post from the Hiring System doc'},
+  {text:'Send Touch 2 on every open quote from last week',owner:'Account Executive',cat:'Sales',pri:'high',due:today(),notes:'5-touch system — no quote dies without all 5 touches'},
+  {text:'Update CRM — all open quotes must have a next touch scheduled',owner:'Account Executive',cat:'Sales',pri:'high',due:today(),notes:'CRM 100% current before end of day — no exceptions'},
+  {text:'Call every invoice 30+ days outstanding — AR cleanup',owner:'Ops Coordinator',cat:'Operations',pri:'high',due:today(),notes:'AR floor is 35 days. Target is 25 days. Fix this today.'},
+  {text:'Block Monday 8AM L10 as permanent recurring event',owner:'Owner / President',cat:'L10 Rock',pri:'high',due:today(),notes:'Invite all leadership. Never move this meeting.'},
+  {text:'Update 13-week cash model with this week\'s actuals',owner:'Owner / President',cat:'Finance',pri:'med',due:'',notes:'Every Friday by 5PM. Cash position must be known.'},
+  {text:'Build top 50 ICP target account list — add all to HubSpot',owner:'Account Executive',cat:'Sales',pri:'med',due:'',notes:'Use ICP criteria: $5M–$100M manufacturers + distributors'},
+  {text:'Ask 5 current customers for a Google review',owner:'All',cat:'Marketing',pri:'med',due:'',notes:'Text link converts better than email. Target: 40+ reviews by year end.'},
+  {text:'Post first LinkedIn article — use Customer Win template',owner:'Owner / President',cat:'Marketing',pri:'med',due:'',notes:'Template 1: Customer Win Post from the Marketing Plan doc'},
+  {text:'Identify first 5 freight carrier relationships for brokerage launch',owner:'Owner / President',cat:'Operations',pri:'med',due:'',notes:'Freight brokerage target: $400K annual contribution (Phase 1)'},
+  {text:'Send weekly scorecard to leadership team by 5PM Friday',owner:'Owner / President',cat:'L10 Rock',pri:'med',due:'',notes:'KPI scorecard — every metric gets a Red/Green call'},
+  {text:'Review AR aging report — flag any 30+ day invoices',owner:'Ops Coordinator',cat:'Finance',pri:'med',due:'',notes:'Same-day collections call on any invoice over 30 days'},
+];
+
+// ── Persistence ─────────────────────────────────────────────────────────────
+function load() {
+  try {
+    const s = localStorage.getItem('driven_tasks_v2');
+    if (s) {
+      const p = JSON.parse(s);
+      tasks = p.tasks || [];
+      nid = p.nid || 200;
+    } else {
+      tasks = DEFAULTS.map((t,i) => ({...t, id:i+1, done:false, completedAt:null, created:today()}));
+      nid = DEFAULTS.length + 10;
+      save(false);
+    }
+  } catch(e) { tasks = []; }
+}
+
+function save(showToast=false) {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem('driven_tasks_v2', JSON.stringify({tasks, nid, savedAt: new Date().toISOString()}));
+      const now = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('sync-label').textContent = 'Saved ' + now;
+      if (showToast) toast('Saved','ok');
+    } catch(e) { toast('Could not save','err'); }
+  }, 400);
+}
+
+// ── Task operations ──────────────────────────────────────────────────────────
+function addTask() {
+  const text = document.getElementById('new-text').value.trim();
+  if (!text) { document.getElementById('new-text').focus(); return; }
+  const t = {
+    id: ++nid,
+    text,
+    owner: document.getElementById('new-owner').value || '',
+    cat: document.getElementById('new-cat').value || '',
+    pri: document.getElementById('new-pri').value || 'med',
+    due: document.getElementById('new-due').value || '',
+    done: false, completedAt: null, notes: '', created: today(),
+  };
+  tasks.unshift(t);
+  document.getElementById('new-text').value = '';
+  document.getElementById('new-due').value = '';
+  save(); render();
+  document.getElementById('new-text').focus();
+}
+
+function toggleDone(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  t.completedAt = t.done ? today() : null;
+  save(); render();
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(x => x.id !== id);
+  save(); render();
+}
+
+function updateNotes(id, val) {
+  const t = tasks.find(x => x.id === id);
+  if (t) { t.notes = val; save(); }
+}
+
+function snooze(id, days) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  const base = t.due && parseD(t.due) > todayD() ? parseD(t.due) : todayD();
+  base.setDate(base.getDate() + days);
+  t.due = base.toISOString().split('T')[0];
+  save(); render();
+  document.querySelectorAll('.snooze-menu').forEach(m => m.classList.remove('open'));
+  toast('Snoozed to ' + fmtDate(t.due), 'ok');
+}
+
+function clearDoneConfirm() {
+  const n = tasks.filter(t => t.done).length;
+  if (!n) { toast('No completed tasks to clear','err'); return; }
+  if (confirm(`Clear ${n} completed task${n>1?'s':''}?`)) {
+    tasks = tasks.filter(t => !t.done);
+    save(); render(); toast('Cleared','ok');
+  }
+}
+
+// ── Edit modal ───────────────────────────────────────────────────────────────
+function openEdit(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit Task';
+  document.getElementById('edit-text').value = t.text;
+  document.getElementById('edit-owner').value = t.owner || '';
+  document.getElementById('edit-cat').value = t.cat || '';
+  document.getElementById('edit-pri').value = t.pri || 'med';
+  document.getElementById('edit-due').value = t.due || '';
+  document.getElementById('edit-notes').value = t.notes || '';
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editingId = null;
+}
+function saveEdit() {
+  const t = tasks.find(x => x.id === editingId);
+  if (!t) return;
+  t.text = document.getElementById('edit-text').value.trim() || t.text;
+  t.owner = document.getElementById('edit-owner').value;
+  t.cat = document.getElementById('edit-cat').value;
+  t.pri = document.getElementById('edit-pri').value;
+  t.due = document.getElementById('edit-due').value;
+  t.notes = document.getElementById('edit-notes').value;
+  closeModal();
+  save(true); render();
+}
+document.getElementById('edit-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ── Filter ───────────────────────────────────────────────────────────────────
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.flt').forEach(b => { b.classList.remove('active','danger'); });
+  btn.classList.add('active');
+  if (f === 'overdue') btn.classList.add('danger');
+  render();
+}
+
+function getFiltered() {
+  let list = [...tasks];
+  const ownerF = document.getElementById('owner-flt').value;
+  const catF = document.getElementById('cat-flt').value;
+  const q = document.getElementById('search').value.toLowerCase();
+  if (ownerF) list = list.filter(t => t.owner === ownerF);
+  if (catF) list = list.filter(t => t.cat === catF);
+  if (q) list = list.filter(t => t.text.toLowerCase().includes(q) || (t.notes||'').toLowerCase().includes(q) || (t.owner||'').toLowerCase().includes(q));
+  const now = todayD();
+  const weekEnd = new Date(now); weekEnd.setDate(now.getDate()+7);
+  if (activeFilter==='overdue') list = list.filter(t => !t.done && t.due && parseD(t.due) < now);
+  else if (activeFilter==='today') list = list.filter(t => !t.done && t.due === today());
+  else if (activeFilter==='week') list = list.filter(t => !t.done && t.due && parseD(t.due)>=now && parseD(t.due)<=weekEnd);
+  else if (activeFilter==='open') list = list.filter(t => !t.done);
+  else if (activeFilter==='done') list = list.filter(t => t.done);
+  // Sort: overdue high → overdue med → due today → due this week → no date → done
+  list.sort((a,b) => {
+    if (a.done !== b.done) return a.done?1:-1;
+    const da = a.due ? daysUntil(a.due) : 9999;
+    const db = b.due ? daysUntil(b.due) : 9999;
+    const pa = {high:0,med:1,low:2}[a.pri]??1;
+    const pb = {high:0,med:1,low:2}[b.pri]??1;
+    if (da !== db) return da-db;
+    return pa-pb;
+  });
+  return list;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  const list = getFiltered();
+  const main = document.getElementById('main');
+  if (!list.length) {
+    main.innerHTML = `<div class="empty"><strong>No tasks here</strong>Add tasks above or try a different filter.</div>`;
+  } else {
+    const open = list.filter(t=>!t.done);
+    const done = list.filter(t=>t.done);
+    let html = '';
+    if (open.length) {
+      html += `<div class="section-hdr"><span class="section-hdr-label">Open — ${open.length} task${open.length!==1?'s':''}</span></div><div class="task-list" id="open-list">`;
+      open.forEach(t => html += taskCard(t));
+      html += '</div>';
+    }
+    if (done.length) {
+      html += `<div class="section-hdr"><span class="section-hdr-label">Done — ${done.length}</span><span class="section-hdr-action" onclick="clearDoneConfirm()">Clear all completed</span></div><div class="task-list" id="done-list">`;
+      done.forEach(t => html += taskCard(t));
+      html += '</div>';
+    }
+    main.innerHTML = html;
+  }
+  updateStats();
+  updateBanner();
+  document.getElementById('footer-count').textContent = list.length + ' task' + (list.length!==1?'s':'');
+}
+
+function taskCard(t) {
+  const du = t.due ? daysUntil(t.due) : null;
+  let dueCls = 'due-ok', dueLabel = t.due ? 'Due '+fmtDate(t.due) : 'No date';
+  if (t.done) { dueCls='due-done'; dueLabel = t.completedAt ? 'Done '+fmtDate(t.completedAt) : 'Done'; }
+  else if (du !== null) {
+    if (du < 0) { dueCls='due-late'; dueLabel = Math.abs(du)+'d overdue'; }
+    else if (du === 0) { dueCls='due-soon'; dueLabel='Due today'; }
+    else if (du === 1) { dueCls='due-soon'; dueLabel='Due tomorrow'; }
+    else if (du <= 3) { dueCls='due-soon'; dueLabel='Due in '+du+'d'; }
+  }
+  let cardCls = 'task-card';
+  if (!t.done && du !== null && du < 0) cardCls += ' is-overdue';
+  else if (!t.done && du !== null && du <= 1) cardCls += ' is-soon';
+  if (t.done) cardCls += ' is-done';
+
+  const priLabel = {high:'High',med:'Med',low:'Low'}[t.pri]||'Med';
+  const ownerPill = t.owner ? `<span class="pill owner"><div class="avt">${esc(initials(t.owner))}</div>${esc(t.owner)}</span>` : '';
+  const catPill = t.cat ? `<span class="pill cat">${esc(t.cat)}</span>` : '';
+  const priPill = `<span class="pill pri-${t.pri}">${priLabel}</span>`;
+  const duePill = `<span class="pill ${dueCls}">${dueLabel}</span>`;
+
+  return `<div class="${cardCls}" id="tc-${t.id}">
+    <div class="chk ${t.done?'on':''}" onclick="toggleDone(${t.id})"></div>
+    <div class="task-body" onclick="openEdit(${t.id})" style="cursor:pointer">
+      <div class="task-text ${t.done?'done-text':''}">${esc(t.text)}</div>
+      <div class="task-pills">${ownerPill}${duePill}${priPill}${catPill}</div>
+      ${t.notes?`<div style="font-size:12px;color:var(--td);margin-top:4px;padding-top:6px;border-top:1px dashed var(--br);line-height:1.5">${esc(t.notes)}</div>`:''}
+    </div>
+    <div class="task-actions">
+      <div style="position:relative">
+        <button class="act" title="Snooze due date" onclick="toggleSnooze(${t.id},event)">⏱</button>
+        <div class="snooze-menu" id="sm-${t.id}">
+          <div class="snooze-opt" onclick="snooze(${t.id},1)">+1 day</div>
+          <div class="snooze-opt" onclick="snooze(${t.id},3)">+3 days</div>
+          <div class="snooze-opt" onclick="snooze(${t.id},7)">+1 week</div>
+          <div class="snooze-opt" onclick="snooze(${t.id},14)">+2 weeks</div>
+        </div>
+      </div>
+      <button class="act" title="Edit" onclick="openEdit(${t.id})">✎</button>
+      <button class="act del" title="Delete" onclick="event.stopPropagation();if(confirm('Delete this task?'))deleteTask(${t.id})">✕</button>
+    </div>
+  </div>`;
+}
+
+function toggleSnooze(id, e) {
+  e.stopPropagation();
+  const menu = document.getElementById('sm-'+id);
+  const wasOpen = menu.classList.contains('open');
+  document.querySelectorAll('.snooze-menu').forEach(m => m.classList.remove('open'));
+  if (!wasOpen) menu.classList.add('open');
+}
+document.addEventListener('click', () => document.querySelectorAll('.snooze-menu').forEach(m => m.classList.remove('open')));
+
+// ── Stats & Banner ───────────────────────────────────────────────────────────
+function updateStats() {
+  const now = todayD();
+  const open = tasks.filter(t=>!t.done);
+  const ov = open.filter(t=>t.due&&parseD(t.due)<now);
+  const dt = open.filter(t=>t.due===today());
+  const hp = open.filter(t=>t.pri==='high');
+  const dn = tasks.filter(t=>t.done);
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-item"><div class="stat-num">${open.length}</div><div class="stat-lbl">Open</div></div>
+    <div class="stat-item"><div class="stat-num red">${ov.length}</div><div class="stat-lbl">Overdue</div></div>
+    <div class="stat-item"><div class="stat-num amb">${dt.length}</div><div class="stat-lbl">Due Today</div></div>
+    <div class="stat-item"><div class="stat-num red">${hp.length}</div><div class="stat-lbl">High Priority</div></div>
+    <div class="stat-item"><div class="stat-num grn">${dn.length}</div><div class="stat-lbl">Completed</div></div>
+    <div class="stat-item"><div class="stat-num blue">${tasks.length}</div><div class="stat-lbl">Total</div></div>`;
+}
+
+function updateBanner() {
+  const now = todayD();
+  const ov = tasks.filter(t=>!t.done&&t.due&&parseD(t.due)<now);
+  const b = document.getElementById('od-banner');
+  if (ov.length) {
+    b.classList.add('show');
+    const owners = [...new Set(ov.map(t=>t.owner).filter(Boolean))];
+    document.getElementById('od-text').textContent =
+      `${ov.length} overdue task${ov.length>1?'s':''} — ${owners.length?'owners: '+owners.join(', '):'assign owners'} — address these before anything else`;
+  } else {
+    b.classList.remove('show');
+  }
+}
+
+// ── Export ───────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const rows = [['ID','Task','Owner','Category','Priority','Due Date','Status','Completed','Notes']];
+  tasks.forEach(t => rows.push([t.id,t.text,t.owner,t.cat,t.pri,t.due,t.done?'Done':'Open',t.completedAt||'',t.notes]));
+  const csv = rows.map(r => r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  dl('data:text/csv;charset=utf-8,'+encodeURIComponent(csv), `Driven_Tasks_${today()}.csv`);
+  toast('CSV exported','ok');
+}
+
+function exportL10() {
+  const now = todayD();
+  const open = tasks.filter(t=>!t.done).sort((a,b)=>{
+    const da=a.due?daysUntil(a.due):9999, db=b.due?daysUntil(b.due):9999;
+    const pa={high:0,med:1,low:2}[a.pri]??1, pb={high:0,med:1,low:2}[b.pri]??1;
+    return da!==db?da-db:pa-pb;
+  });
+  const ov = open.filter(t=>t.due&&parseD(t.due)<now);
+  const rest = open.filter(t=>!t.due||parseD(t.due)>=now);
+  let out = `DRIVEN SOLUTIONS — TASK LIST FOR L10 MEETING\n`;
+  out += `${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}\n`;
+  out += `${'═'.repeat(55)}\n\n`;
+  if (ov.length) {
+    out += `OVERDUE — ADDRESS FIRST (${ov.length})\n${'─'.repeat(40)}\n`;
+    ov.forEach(t => { out += `☐  ${t.text}\n   Owner: ${t.owner||'—'}  |  ${Math.abs(daysUntil(t.due))}d overdue\n${t.notes?'   Note: '+t.notes+'\n':''}\n`; });
+  }
+  out += `OPEN TASKS (${rest.length})\n${'─'.repeat(40)}\n`;
+  rest.forEach(t => { out += `☐  ${t.text}\n   Owner: ${t.owner||'—'}  |  Due: ${t.due?fmtDate(t.due):'No date'}  |  ${t.pri.toUpperCase()}\n${t.notes?'   Note: '+t.notes+'\n':''}\n`; });
+  out += `\nDONE THIS WEEK (${tasks.filter(t=>t.done).length})\n${'─'.repeat(40)}\n`;
+  tasks.filter(t=>t.done).forEach(t => { out += `✓  ${t.text}  (${t.owner||'—'})\n`; });
+  const blob = new Blob([out],{type:'text/plain'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`Driven_L10_Tasks_${today()}.txt`; a.click();
+  toast('L10 export ready','ok');
+}
+
+function dl(href, name) {
+  const a = document.createElement('a'); a.href=href; a.download=name; a.click();
+}
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, type='ok', dur=2500) {
+  const w = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className='toast '+type; t.textContent=msg; w.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(12px)'; t.style.transition='all .25s'; setTimeout(()=>t.remove(),250); }, dur);
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+load(); render();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const { createClient: _createClient } = supabase;
+const _tdb = _createClient('https://igaylyhkssahczubiztb.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnYXlseWhrc3NhaGN6dWJpenRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyOTk3MzQsImV4cCI6MjA5Mjg3NTczNH0.iiRC320be1-kLa8tQoTupqWTu_8yTaEaJGVpdI4dnAo');
+let _syncEnabled = false;
+
+async function supaLoad() {
+  try {
+    const { data, error } = await _tdb.from('tasks').select('*').eq('id','main').single();
+    if (error) throw error;
+    if (data && data.task_list && data.task_list.length) {
+      tasks = data.task_list;
+      nid   = data.next_id || (tasks.length + 100);
+      render();
+      document.getElementById('sync-label').textContent = 'Live — synced with team';
+    }
+    _syncEnabled = true;
+  } catch(e) { console.log('Task load:', e.message); }
+}
+
+async function supaSync() {
+  if (!_syncEnabled) return;
+  try {
+    await _tdb.from('tasks').upsert({
+      id: 'main',
+      task_list: tasks,
+      next_id: nid,
+      updated_at: new Date().toISOString(),
+    });
+  } catch(e) { console.log('Task sync err:', e); }
+}
+
+// Hook into existing save function
+const _origSave = window.save;
+window.save = function(showToast) {
+  _origSave(showToast);
+  supaSync();
+};
+
+// Realtime — when any team member changes a task, everyone sees it
+_tdb.channel('tasks-live')
+  .on('postgres_changes', {event:'UPDATE',schema:'public',table:'tasks',filter:'id=eq.main'}, payload => {
+    const d = payload.new;
+    if (d.task_list) {
+      tasks = d.task_list;
+      nid   = d.next_id || nid;
+      render();
+      document.getElementById('sync-label').textContent = 'Updated by team ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    }
+  })
+  .subscribe();
+
+supaLoad();
+</script>
+
+</body>
+</html>

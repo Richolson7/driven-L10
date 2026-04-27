@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driven Solutions — L10 Meeting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#39FF14;--green-dim:#2ECC0E;--green-bg:#0D1F0A;
+  --dark:#0E0E0E;--surface:#161616;--surface2:#1E1E1E;--surface3:#252525;
+  --border:rgba(255,255,255,0.08);--border-active:rgba(57,255,20,0.3);
+  --text:#F0F0F0;--text-dim:#888;--text-muted:#555;
+  --gold:#FFD700;--gold-bg:#1A1500;--gold-dim:#D4B800;
+  --red:#E24B4A;--red-bg:#2A0808;--amber:#EF9F27;--amber-bg:#1A1000;
+  --radius:8px;--radius-lg:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--dark);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.6;min-height:100vh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:2px}
+
+/* ── Top bar ── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(8,14,8,0.97);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(12px);
+  display:grid;grid-template-columns:auto 1fr auto auto;
+  align-items:center;gap:16px;padding:0 24px;height:58px;
+}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:800;letter-spacing:1px;white-space:nowrap}
+.logo em{color:var(--green);font-style:normal}
+.logo span{color:var(--gold);font-size:13px;font-weight:600;margin-left:10px;letter-spacing:.5px}
+.meeting-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.meta-pill{
+  font-size:11px;color:var(--text-dim);background:var(--surface2);
+  border:1px solid var(--border);padding:3px 10px;border-radius:99px;
+  display:flex;align-items:center;gap:6px;
+}
+.meta-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted)}
+.meta-pill .dot.live{background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ── Timer ── */
+.timer-cluster{display:flex;align-items:center;gap:8px}
+.timer-box{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:4px 12px;
+  display:flex;flex-direction:column;align-items:center;min-width:62px;
+}
+.timer-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.timer-val{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--text);line-height:1.2}
+.timer-val.warn{color:var(--amber)}.timer-val.over{color:var(--red)}.timer-val.green{color:var(--green)}
+.tbtn{
+  height:32px;padding:0 14px;border-radius:var(--radius);
+  border:1px solid var(--border);background:var(--surface2);
+  color:var(--text-dim);font-family:'Inter',sans-serif;font-size:12px;
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.tbtn:hover{border-color:rgba(255,255,255,0.2);color:var(--text)}
+.tbtn.start{border-color:var(--green-dim);color:var(--green);background:var(--green-bg)}
+.tbtn.start:hover{background:#152a0f}
+.nav-btns{display:flex;gap:6px}
+.nbtn{
+  height:32px;padding:0 16px;border-radius:var(--radius);
+  border:1px solid var(--border);background:var(--surface2);
+  color:var(--text-dim);font-size:12px;cursor:pointer;
+  transition:all .15s;font-family:'Inter',sans-serif;
+}
+.nbtn:hover{color:var(--text);border-color:rgba(255,255,255,0.2)}
+.nbtn.primary{border-color:var(--green-dim);color:var(--green);background:var(--green-bg)}
+.nbtn.primary:hover{background:#152a0f}
+
+/* ── Progress ── */
+.progress-track{height:2px;background:var(--surface2)}
+.progress-fill{height:100%;background:var(--green);transition:width .4s ease;width:0}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 60px)}
+
+/* ── Sidebar ── */
+.sidebar{
+  border-right:1px solid var(--border);background:var(--surface);
+  padding:16px 0;position:sticky;top:60px;
+  height:calc(100vh - 60px);overflow-y:auto;
+}
+.sidebar-header{
+  padding:0 16px 12px;font-size:10px;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--text-muted);
+  border-bottom:1px solid var(--border);margin-bottom:8px;
+}
+.seg-item{
+  display:flex;align-items:center;gap:10px;padding:9px 16px;
+  cursor:pointer;transition:background .12s;border-left:2px solid transparent;
+}
+.seg-item:hover{background:var(--surface2)}
+.seg-item.active{background:var(--green-bg);border-left-color:var(--green)}
+.seg-item.done{opacity:.55}
+.seg-icon{
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;flex-shrink:0;
+  background:var(--surface3);color:var(--text-muted);
+  border:1px solid var(--border);font-family:'DM Mono',monospace;
+}
+.seg-icon.active{background:var(--green-bg);color:var(--green);border-color:var(--green-dim)}
+.seg-icon.done{background:rgba(92,184,0,0.1);color:var(--green-dim);border-color:rgba(92,184,0,0.2)}
+.seg-info{flex:1;min-width:0}
+.seg-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg-item.active .seg-name{color:var(--green)}
+.seg-mins{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace}
+.seg-status{font-size:10px;padding:2px 6px;border-radius:99px;font-weight:600;background:var(--surface3);color:var(--text-muted)}
+.seg-status.ot{background:rgba(92,184,0,0.12);color:var(--green-dim)}
+.seg-status.oft{background:var(--red-bg);color:var(--red)}
+.seg-status.done{background:rgba(92,184,0,0.08);color:var(--green-dim)}
+.sidebar-footer{padding:12px 16px;margin-top:8px;border-top:1px solid var(--border)}
+.sf-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:11px}
+.sf-label{color:var(--text-muted)}
+.sf-val{font-family:'DM Mono',monospace;color:var(--text-dim)}
+.sf-val.green{color:var(--green)}.sf-val.red{color:var(--red)}.sf-val.gold{color:var(--gold)}
+
+/* ── BP bar ── */
+.bp-strip{
+  background:var(--green-bg);border-bottom:1px solid var(--border-active);
+  padding:6px 32px;display:flex;align-items:center;gap:20px;font-size:11px;flex-wrap:wrap;
+}
+.bp-item{display:flex;align-items:center;gap:6px;color:var(--text-muted)}
+.bp-item.current{color:var(--gold)}
+.bp-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);flex-shrink:0}
+.bp-item.current .bp-dot{background:var(--gold)}
+.bp-item.future .bp-dot{background:var(--green-dim)}
+.bp-item.future{color:var(--green-dim)}
+.bp-val{font-family:'DM Mono',monospace;font-weight:500}
+
+/* ── Main ── */
+.main{padding:28px 32px;max-width:960px}
+.section-head{margin-bottom:22px}
+.section-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;letter-spacing:.5px;display:flex;align-items:baseline;gap:12px}
+.section-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px;background:var(--surface2);color:var(--text-muted);font-family:'Inter',sans-serif;letter-spacing:.04em}
+.section-desc{font-size:13px;color:var(--text-dim);margin-top:6px;line-height:1.6;max-width:640px}
+.rule{height:1px;background:var(--border);margin:18px 0}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.card-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);font-weight:600;margin-bottom:12px}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat-tile{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.stat-tile-label{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.stat-tile-val{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:var(--green)}
+
+/* ── Tables ── */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)}
+.data-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--surface2)}
+
+/* ── Inputs ── */
+input[type=text],textarea,select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;width:100%;transition:border .15s}
+input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:var(--border-active)}
+textarea{resize:vertical;min-height:60px}
+select option{background:var(--surface2)}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:rgba(255,255,255,0.2);color:var(--text)}
+.btn.green{border-color:var(--green-dim);color:var(--green);background:var(--green-bg)}
+.btn.green:hover{background:#152a0f}
+.btn.red{border-color:#993333;color:var(--red);background:var(--red-bg)}
+.btn.amber{border-color:#805500;color:var(--amber);background:var(--amber-bg)}
+.btn.gold{border-color:var(--gold-dim);color:var(--gold);background:var(--gold-bg)}
+.btn.xs{padding:4px 9px;font-size:11px}
+.del-btn{width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--surface3);color:var(--text-muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.del-btn:hover{border-color:#993333;color:var(--red);background:var(--red-bg)}
+
+/* ── Pills ── */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all .15s}
+.pill.green{background:rgba(92,184,0,0.12);color:var(--green-dim)}
+.pill.red{background:var(--red-bg);color:var(--red)}
+.pill.gray{background:var(--surface3);color:var(--text-muted)}
+.pill.amber{background:var(--amber-bg);color:var(--amber)}
+.pill.gold{background:var(--gold-bg);color:var(--gold)}
+
+/* ── Checkbox ── */
+.chk{width:18px;height:18px;border-radius:4px;border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--surface2);transition:all .15s}
+.chk.on{background:var(--green-bg);border-color:var(--green-dim)}
+.chk.on::after{content:'';width:10px;height:6px;border-left:2px solid var(--green);border-bottom:2px solid var(--green);transform:rotate(-45deg) translateY(-1px);display:block}
+
+/* ── Row layouts ── */
+.add-row{display:flex;gap:8px;margin-top:14px;align-items:center;padding-top:12px;border-top:1px solid var(--border)}
+.add-row input{flex:1}
+.rock-row{display:grid;grid-template-columns:1fr 110px 90px auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.rock-row:last-child{border-bottom:none}
+.r-btn{padding:3px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface3);color:var(--text-muted);font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.r-btn.ot{background:rgba(92,184,0,0.12);border-color:var(--green-dim);color:var(--green)}
+.r-btn.oft{background:var(--red-bg);border-color:#993333;color:var(--red)}
+.todo-row{display:grid;grid-template-columns:22px 1fr 110px 100px auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.todo-row:last-child{border-bottom:none}
+.todo-text.done{text-decoration:line-through;color:var(--text-muted)}
+.issue-row{display:grid;grid-template-columns:24px 1fr auto 100px auto;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.issue-row:last-child{border-bottom:none}
+.issue-idx{width:22px;height:22px;border-radius:50%;background:var(--surface3);color:var(--text-muted);font-size:11px;font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.issue-content{min-width:0}
+.hl-row{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px}
+.hl-row:last-child{border-bottom:none}
+.hl-type{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--surface3);color:var(--text-muted);white-space:nowrap}
+.segue-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.segue-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+.conclude-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.rating-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.r-num{width:34px;height:34px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:center}
+.r-num:hover{border-color:rgba(255,255,255,0.3);color:var(--text)}
+.r-num.sel{background:var(--green-bg);border-color:var(--green-dim);color:var(--green)}
+
+/* ── Red lines ── */
+.rl-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+.rl-card{border-radius:var(--radius);padding:10px 14px;border:1px solid}
+.rl-card.ok{background:#0D1F0D;border-color:#2a5a2a}
+.rl-card.warn{background:#1a1000;border-color:#5a3a00}
+.rl-card.crit{background:#2a0808;border-color:#993333}
+.rl-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+.rl-val{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;margin-bottom:1px}
+.rl-floor{font-size:10px}
+.rl-card.ok .rl-title{color:#8DD840}.rl-card.ok .rl-val{color:var(--green)}.rl-card.ok .rl-floor{color:var(--green-dim)}
+.rl-card.warn .rl-title{color:#FAC775}.rl-card.warn .rl-val{color:var(--amber)}.rl-card.warn .rl-floor{color:#805500}
+.rl-card.crit .rl-title{color:#F09595}.rl-card.crit .rl-val{color:var(--red)}.rl-card.crit .rl-floor{color:#993333}
+
+/* ── Toasts ── */
+.toast-wrap{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+.toast{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-size:13px;color:var(--text);animation:slideIn .2s ease;min-width:220px;display:flex;align-items:center;gap:10px}
+.toast.success{border-color:var(--green-dim);background:var(--green-bg);color:var(--green)}
+.toast.error{border-color:#993333;background:var(--red-bg);color:var(--red)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.empty{color:var(--text-muted);font-size:13px;padding:8px 0}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Supabase connection for Driven Solutions
+const _SUPA_URL = 'https://igaylyhkssahczubiztb.supabase.co';
+const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnYXlseWhrc3NhaGN6dWJpenRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyOTk3MzQsImV4cCI6MjA5Mjg3NTczNH0.iiRC320be1-kLa8tQoTupqWTu_8yTaEaJGVpdI4dnAo';
+</script>
+</head>
+<body>
+
+<div id="toasts" class="toast-wrap"></div>
+
+<!-- ── TOP BAR ── -->
+<header class="topbar">
+  <div class="logo">DRIVEN <em>SOLUTIONS</em> <span>L10</span></div>
+  <div class="meeting-meta">
+    <div class="meta-pill" style="cursor:pointer;position:relative" onclick="toggleDatePicker()" title="Click to change meeting date & time">
+      <div class="dot live"></div>
+      <span id="meeting-date-label">Loading…</span>
+      <span style="color:var(--text-muted);font-size:10px;margin-left:4px">✎</span>
+    </div>
+    <!-- Date/Time Picker Dropdown -->
+    <div id="date-picker-panel" style="display:none;position:absolute;top:58px;left:0;z-index:200;background:var(--surface);border:1px solid var(--border-active);border-radius:var(--radius-lg);padding:16px;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Meeting Date & Time</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Date</label>
+          <input type="date" id="meeting-date-input" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;width:100%" onchange="updateMeetingDateTime()">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Time</label>
+          <input type="time" id="meeting-time-input" value="08:00" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;width:100%" onchange="updateMeetingDateTime()">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Location</label>
+          <input type="text" id="meeting-location-input" placeholder="e.g. Shop Conference Room" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;width:100%" oninput="state.meetingLocation=this.value;saveState()">
+        </div>
+      </div>
+      <button class="btn green" style="width:100%;justify-content:center;margin-top:12px" onclick="toggleDatePicker()">Done</button>
+    </div>
+    <div class="meta-pill" id="week-num-pill">Week —</div>
+    <div class="meta-pill" id="facilitator-pill" contenteditable="true" style="cursor:text;min-width:80px" title="Click to edit">Owner</div>
+    <div class="meta-pill" id="bp-pill" style="color:var(--gold)">BP1 → $3M by Jan 2026</div>
+  </div>
+  <div class="timer-cluster">
+    <div class="timer-box"><div class="timer-label">Total</div><div class="timer-val green" id="total-timer">0:00</div></div>
+    <div class="timer-box"><div class="timer-label" id="seg-label-timer">Segment</div><div class="timer-val" id="seg-timer">5:00</div></div>
+    <button class="tbtn" id="start-btn" onclick="toggleTimer()">&#9654; Start</button>
+    <button class="tbtn" onclick="resetSeg()">Reset</button>
+  </div>
+  <div class="nav-btns">
+    <button class="nbtn" onclick="prevSeg()">&#8592; Back</button>
+    <button class="nbtn primary" onclick="nextSeg()">Next &#8594;</button>
+  </div>
+</header>
+
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+
+<!-- ── BP STRIP ── -->
+<div class="bp-strip">
+  <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Breakpoints:</span>
+  <span class="bp-item current"><span class="bp-dot"></span><span class="bp-val">$3M</span> Jan 2026</span>
+  <span class="bp-item future"><span class="bp-dot"></span><span class="bp-val">$10M</span> Jan 2027</span>
+  <span class="bp-item future"><span class="bp-dot"></span><span class="bp-val">$25M</span> Jan 2028</span>
+  <span class="bp-item future"><span class="bp-dot"></span><span class="bp-val">$50M</span> Jan 2029</span>
+  <span class="bp-item future"><span class="bp-dot"></span><span class="bp-val">$100M</span> Jan 2030</span>
+  <span style="margin-left:auto;font-family:'DM Mono',monospace;color:var(--text-dim);font-size:11px">Move Fast. Take Ownership. Deliver Results.</span>
+</div>
+
+<!-- ── LAYOUT ── -->
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-header">Meeting Agenda</div>
+  <div id="sidebar-segs"></div>
+  <div class="sidebar-footer">
+    <div class="sf-row"><span class="sf-label">Rocks on track</span><span class="sf-val green" id="sf-rocks">—</span></div>
+    <div class="sf-row"><span class="sf-label">Open issues</span><span class="sf-val" id="sf-issues">—</span></div>
+    <div class="sf-row"><span class="sf-label">Open to-dos</span><span class="sf-val" id="sf-todos">—</span></div>
+    <div class="sf-row"><span class="sf-label">KPIs green</span><span class="sf-val green" id="sf-kpis">—</span></div>
+    <div class="sf-row"><span class="sf-label">Red lines</span><span class="sf-val" id="sf-redlines">—</span></div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px">
+      <button class="btn green" style="width:100%;justify-content:center" onclick="saveMeeting()">&#10003; Save meeting</button>
+      <button class="btn gold" style="width:100%;justify-content:center;font-size:11px" onclick="exportWordDoc()">&#128196; Export Word doc</button>
+      <button class="btn" style="width:100%;justify-content:center;font-size:11px" onclick="exportMeeting()">&#8615; Export text file</button>
+      <button class="btn" style="width:100%;justify-content:center;font-size:11px" onclick="showHistory()">&#128337; Past meetings</button>
+      <button class="btn gold" style="width:100%;justify-content:center;font-size:11px" onclick="newWeek()">&#43; New week</button>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main" id="main-content"></main>
+
+</div>
+
+<script>
+const SEGS_DEF=[
+  {id:'segue',    label:'Segue',      mins:5,  desc:'One win — personal or professional. 30 seconds each. President goes last. Sets the energy.'},
+  {id:'scorecard',label:'Scorecard',  mins:10, desc:'Every KPI gets Green or Red. Red → Issues List immediately. No discussion on reds — just flag and move.'},
+  {id:'rocks',    label:'Rocks',      mins:5,  desc:'Each owner: On Track or Off Track. Off Track → Issues List. No explanations — just status.'},
+  {id:'headlines',label:'Headlines',  mins:5,  desc:'Customer & employee news — good and bad. 30 seconds each. Flag anything needing Issues time.'},
+  {id:'todos',    label:'To-Dos',     mins:5,  desc:"Last week's list: Done or Not Done. Not Done carries forward or becomes an issue."},
+  {id:'ids',      label:'IDS',        mins:55, desc:'Identify. Discuss. Solve. 5 minutes per issue max. Every issue ends with a to-do or decision — never "we\'ll think about it."'},
+  {id:'conclude', label:'Conclude',   mins:5,  desc:'Confirm all to-dos have owners and dates. Rate the meeting. Cascade to team. Same time next Monday.'},
+];
+const TOTAL_MINS=SEGS_DEF.reduce((a,s)=>a+s.mins,0);
+
+let state={
+  currentSeg:0,timerRunning:false,totalElapsed:0,segElapsed:0,timerRef:null,
+  rating:null,cascadeMsg:'',nextId:100,meetingHistory:[],
+
+  // ── Q2 2026 ROCKS ──────────────────────────────────────────
+  rocks:[
+    {id:1,  text:'Hire & onboard Ops/Logistics Coordinator',                    owner:'President',  due:'Q1 2025', status:null},
+    {id:2,  text:'Account Executive #2 hired — both AEs at $600K+ run rate',    owner:'President',  due:'Q2 2025', status:null},
+    {id:3,  text:'Freight brokerage at $400K–$700K annual contribution',        owner:'AE Team',    due:'Q3 2025', status:null},
+    {id:4,  text:'40+ Google reviews by year end',                              owner:'All',        due:'Q4 2025', status:null},
+    {id:5,  text:'Recurring revenue ≥ 40% of total revenue',                    owner:'Sales',      due:'Q4 2025', status:null},
+    {id:6,  text:'CRM 100% adopted — all pipeline in HubSpot, no exceptions',  owner:'Admin',      due:'Q1 2025', status:null},
+    {id:7,  text:'Close rate at 60%+ sustained 30 consecutive days',            owner:'AE',         due:'Q2 2025', status:null},
+    {id:8,  text:'L10 running 13 consecutive Mondays without a miss',           owner:'President',  due:'Q4 2025', status:null},
+  ],
+
+  // ── THIS WEEK'S TO-DOs ──────────────────────────────────────
+  todos:[
+    {id:1, text:'Post Account Executive job on LinkedIn + Indeed',                  owner:'President', due:'Today',     done:false},
+    {id:2, text:'Send Touch 2 on all open quotes from last week',                   owner:'AE',        due:'Today',     done:false},
+    {id:3, text:'Update CRM — all open quotes must have a next touch scheduled',   owner:'AE',        due:'Today',     done:false},
+    {id:4, text:'Update 13-week cash model with this week\'s actuals',             owner:'President', due:'Friday',    done:false},
+    {id:5, text:'Block Monday 8AM L10 as permanent recurring event',               owner:'President', due:'Today',     done:false},
+    {id:6, text:'Review AR aging — call any invoice 30+ days outstanding',         owner:'Ops Coord', due:'Today',     done:false},
+    {id:7, text:'Send weekly scorecard to leadership team by 5PM Friday',          owner:'President', due:'Friday',    done:false},
+  ],
+
+  // ── HEADLINES ──────────────────────────────────────────────
+  headlines:[],
+
+  // ── OPEN ISSUES ────────────────────────────────────────────
+  issues:[
+    {id:1, text:'Pipeline below 25 quotes — outbound consistency needs attention',      priority:'high', owner:'AE',        solved:false, resolution:''},
+    {id:2, text:'CRM not fully adopted — some quotes tracked outside HubSpot',          priority:'high', owner:'Admin',     solved:false, resolution:''},
+    {id:3, text:'Ops Coordinator hire not started — reps still handling admin tasks',   priority:'high', owner:'President', solved:false, resolution:''},
+    {id:4, text:'AR days at 38 — above the 35-day floor, 3 invoices need calls today', priority:'med',  owner:'Ops Coord', solved:false, resolution:''},
+  ],
+
+  // ── MASTER SCORECARD ───────────────────────────────────────
+  kpis:[
+    // Revenue
+    {id:1,  cat:'Revenue',    name:'Weekly revenue closed',       floor:'$46K',  target:'$96K',   actual:'', status:null, low:false},
+    {id:2,  cat:'Revenue',    name:'Daily revenue (avg this wk)', floor:'$9.2K', target:'$19.2K', actual:'', status:null, low:false},
+    {id:3,  cat:'Revenue',    name:'Annual run rate',             floor:'$2M',   target:'$5M',    actual:'', status:null, low:false},
+    // Sales
+    {id:4,  cat:'Sales',      name:'Close rate (rolling 30d)',    floor:'50%',   target:'65%',    actual:'', status:null, low:false},
+    {id:5,  cat:'Sales',      name:'Active pipeline (quotes)',    floor:'20',    target:'75+',    actual:'', status:null, low:false},
+    {id:6,  cat:'Sales',      name:'Outbound touches/rep/day',    floor:'10',    target:'20',     actual:'', status:null, low:false},
+    {id:7,  cat:'Sales',      name:'New quotes sent / week',      floor:'15',    target:'40+',    actual:'', status:null, low:false},
+    {id:8,  cat:'Sales',      name:'Avg account value (annual)',  floor:'$30K',  target:'$50K',   actual:'', status:null, low:false},
+    {id:9,  cat:'Sales',      name:'Retainer pitches made %',     floor:'100%',  target:'100%',   actual:'', status:null, low:false},
+    // Operations
+    {id:10, cat:'Operations', name:'OTIF rate',                   floor:'88%',   target:'95%',    actual:'', status:null, low:false},
+    {id:11, cat:'Operations', name:'Same-day invoicing rate',     floor:'95%',   target:'100%',   actual:'', status:null, low:false},
+    {id:12, cat:'Operations', name:'Customer complaints',         floor:'0',     target:'0',      actual:'', status:null, low:true},
+    {id:13, cat:'Operations', name:'AR days outstanding',         floor:'<35d',  target:'<25d',   actual:'', status:null, low:true},
+    // Finance
+    {id:14, cat:'Finance',    name:'Cash runway (weeks)',         floor:'4 wks', target:'8+ wks', actual:'', status:null, low:false},
+    {id:15, cat:'Finance',    name:'Gross margin %',              floor:'26%',   target:'32%',    actual:'', status:null, low:false},
+    {id:16, cat:'Finance',    name:'DSCR',                       floor:'1.10x', target:'1.25x',  actual:'', status:null, low:false},
+    {id:17, cat:'Finance',    name:'EBITDA margin %',            floor:'10%',   target:'15%',    actual:'', status:null, low:false},
+    // Marketing
+    {id:18, cat:'Marketing',  name:'Google reviews added',        floor:'0',     target:'5+',     actual:'', status:null, low:false},
+    {id:19, cat:'Marketing',  name:'LinkedIn posts (all reps)',   floor:'3',     target:'5+',     actual:'', status:null, low:false},
+    {id:20, cat:'Marketing',  name:'Inbound MQLs / month',       floor:'3',     target:'8+',     actual:'', status:null, low:false},
+  ],
+
+  // ── SEGUE ──────────────────────────────────────────────────
+  segue:[
+    {id:1,name:'Owner / President',text:''},
+    {id:2,name:'Account Executive',text:''},
+    {id:3,name:'Ops Coordinator',text:''},
+    {id:4,name:'Admin / Bookkeeper',text:''},
+  ],
+
+  // ── RED LINES ──────────────────────────────────────────────
+  redLines:{
+    cashRunway:{val:'',label:'Cash runway',floor:'8 wks',unit:'wk',ok:null},
+    dscr:{val:'',label:'DSCR',floor:'1.10x',unit:'x',ok:null},
+    grossMargin:{val:'',label:'Gross margin',floor:'24%',unit:'%',ok:null},
+  },
+
+  // ── MEETING META ───────────────────────────────────────────
+  meetingDate: '',
+  meetingTime: '08:00',
+  meetingLocation: '',
+};
+
+function nid(){return ++state.nextId}
+
+/* ── Date/Time Picker ── */
+function toggleDatePicker(){
+  const panel=document.getElementById('date-picker-panel');
+  panel.style.display=panel.style.display==='none'?'block':'none';
+}
+document.addEventListener('click',function(e){
+  const panel=document.getElementById('date-picker-panel');
+  if(panel&&panel.style.display==='block'){
+    if(!panel.contains(e.target)&&!e.target.closest('[onclick="toggleDatePicker()"]')){
+      panel.style.display='none';
+    }
+  }
+});
+function updateMeetingDateTime(){
+  const d=document.getElementById('meeting-date-input').value;
+  const t=document.getElementById('meeting-time-input').value;
+  const l=document.getElementById('meeting-location-input');
+  if(d){
+    const dt=new Date(d+'T'+(t||'08:00'));
+    state.meetingDate=d;
+    state.meetingTime=t||'08:00';
+    document.getElementById('meeting-date-label').textContent=
+      dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})+
+      ' @ '+(t||'08:00');
+    const start=new Date(dt.getFullYear(),0,1);
+    const wk=Math.ceil(((dt-start)/86400000+start.getDay()+1)/7);
+    document.getElementById('week-num-pill').textContent='Week '+wk;
+    saveState();
+  }
+}
+
+/* ── Word Document Export ── */
+function exportWordDoc(){
+  const d=state.meetingDate?new Date(state.meetingDate+'T12:00:00'):new Date();
+  const dateStr=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const timeStr=state.meetingTime||'08:00';
+  const loc=state.meetingLocation||'—';
+  const fac=document.getElementById('facilitator-pill').textContent||'President';
+  const cats=[...new Set(state.kpis.map(k=>k.cat))];
+
+  const statusIcon=s=>s==='green'?'✅':s==='red'?'🔴':'—';
+  const rockIcon=s=>s==='ot'?'✅ ON TRACK':s==='oft'?'🔴 OFF TRACK':'— Not set';
+  const priColor=p=>p==='high'?'#B83030':p==='med'?'#C87800':'#3B6D11';
+
+  // Build the HTML doc (opens in Word perfectly)
+  const html=`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Driven Solutions L10 — ${dateStr}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:11pt;color:#111;margin:0;padding:0}
+  .page{max-width:7.5in;margin:0 auto;padding:.75in .75in .75in .75in}
+  /* Header */
+  .doc-header{background:#0D1F0D;padding:20px 24px;margin-bottom:0}
+  .doc-title{font-size:22pt;font-weight:700;color:#E8C820;letter-spacing:1px;margin-bottom:4px}
+  .doc-sub{font-size:11pt;color:#8DD840;margin-bottom:8px}
+  .doc-meta-row{display:flex;gap:24px;flex-wrap:wrap}
+  .doc-meta{font-size:9pt;color:#aaa}
+  .doc-meta strong{color:#E8C820}
+  /* Stats bar */
+  .stats-bar{display:flex;background:#161E16;border:1px solid #2a4a2a;border-top:none;padding:12px 24px;gap:0;margin-bottom:24px}
+  .stat-box{flex:1;text-align:center;padding:8px 4px;border-right:1px solid #2a4a2a}
+  .stat-box:last-child{border-right:none}
+  .stat-num{font-size:20pt;font-weight:700;font-family:'Courier New',monospace;margin-bottom:2px}
+  .stat-lbl{font-size:8pt;color:#888;text-transform:uppercase;letter-spacing:.06em}
+  .stat-green{color:#5CB800}.stat-red{color:#E24B4A}.stat-amber{color:#EF9F27}.stat-gold{color:#E8C820}
+  /* Sections */
+  .section{margin-bottom:22px;page-break-inside:avoid}
+  .section-hdr{background:#174A17;color:#E8C820;font-size:11pt;font-weight:700;padding:7px 14px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:0;border-radius:4px 4px 0 0}
+  /* Tables */
+  table{width:100%;border-collapse:collapse;font-size:10pt;margin-bottom:0}
+  th{background:#0D1F0D;color:#E8C820;padding:7px 10px;font-size:9pt;text-align:left;font-weight:600;text-transform:uppercase;letter-spacing:.06em;border:1px solid #2a4a2a}
+  td{padding:7px 10px;border:1px solid #ddd;vertical-align:top}
+  tr:nth-child(even) td{background:#f7faf5}
+  .status-green{color:#3B6D11;font-weight:700}.status-red{color:#B83030;font-weight:700}.status-na{color:#999}
+  .floor{color:#B83030;font-size:9pt;font-family:'Courier New',monospace}
+  .target{color:#3B6D11;font-size:9pt;font-family:'Courier New',monospace}
+  .actual{font-weight:600;font-family:'Courier New',monospace}
+  /* Red lines */
+  .rl-row{display:flex;gap:12px;margin-bottom:18px}
+  .rl-card{flex:1;border-radius:4px;padding:10px 14px;border:2px solid}
+  .rl-ok{background:#eaf3de;border-color:#3B6D11}.rl-warn{background:#fff5e0;border-color:#C87800}.rl-crit{background:#fdf0f0;border-color:#B83030}
+  .rl-label{font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+  .rl-value{font-size:16pt;font-weight:700;font-family:'Courier New',monospace;margin-bottom:1px}
+  .rl-floor{font-size:8pt;color:#666}
+  .rl-ok .rl-label{color:#3B6D11}.rl-ok .rl-value{color:#3B6D11}
+  .rl-warn .rl-label{color:#C87800}.rl-warn .rl-value{color:#C87800}
+  .rl-crit .rl-label{color:#B83030}.rl-crit .rl-value{color:#B83030}
+  /* Issues */
+  .issue-block{border:1px solid #ddd;border-radius:4px;padding:10px 14px;margin-bottom:8px;page-break-inside:avoid}
+  .issue-block.solved{background:#f7faf5;border-color:#aad490;opacity:.8}
+  .issue-text{font-size:11pt;font-weight:500;margin-bottom:5px}
+  .issue-text.solved-text{text-decoration:line-through;color:#888}
+  .issue-resolution{font-size:10pt;color:#444;font-style:italic;margin-top:4px}
+  .issue-meta{font-size:9pt;color:#888;margin-top:6px}
+  .pri-high{color:#B83030;font-weight:700}.pri-med{color:#C87800;font-weight:600}.pri-low{color:#3B6D11}
+  /* Rocks */
+  .rock-ot{color:#3B6D11;font-weight:700}.rock-oft{color:#B83030;font-weight:700}.rock-na{color:#888}
+  /* Segue */
+  .segue-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .segue-card{background:#f5faf0;border:1px solid #c5dfa8;border-radius:4px;padding:10px 12px}
+  .segue-name{font-weight:600;font-size:10pt;color:#174A17;margin-bottom:4px}
+  .segue-win{font-size:10pt;color:#333;font-style:italic}
+  /* Cascade / Rating */
+  .cascade-box{background:#fffbe6;border:1px solid #C8A800;border-radius:4px;padding:12px 14px;margin-top:8px}
+  .rating-big{font-size:28pt;font-weight:700;font-family:'Courier New',monospace;color:#3B6D11}
+  /* Footer */
+  .doc-footer{background:#0D1F0D;padding:12px 24px;margin-top:24px;text-align:center}
+  .doc-footer p{color:#8DD840;font-size:9pt;margin:0}
+  /* Page break helper */
+  .pb{page-break-before:always}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HEADER -->
+<div class="doc-header">
+  <div class="doc-title">DRIVEN SOLUTIONS — L10 MEETING NOTES</div>
+  <div class="doc-sub">Move Fast. Take Ownership. Deliver Results. | $100M by January 2030</div>
+  <div class="doc-meta-row">
+    <div class="doc-meta"><strong>Date:</strong> ${dateStr}</div>
+    <div class="doc-meta"><strong>Time:</strong> ${timeStr}</div>
+    <div class="doc-meta"><strong>Location:</strong> ${loc}</div>
+    <div class="doc-meta"><strong>Facilitator:</strong> ${esc(fac)}</div>
+    <div class="doc-meta"><strong>Breakpoint:</strong> BP1 — $3M by January 2026</div>
+    ${state.rating?`<div class="doc-meta"><strong>Meeting Rating:</strong> ${state.rating}/10</div>`:''}
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-box"><div class="stat-num stat-green">${state.kpis.filter(k=>k.status==='green').length}</div><div class="stat-lbl">Green KPIs</div></div>
+  <div class="stat-box"><div class="stat-num stat-red">${state.kpis.filter(k=>k.status==='red').length}</div><div class="stat-lbl">Red KPIs</div></div>
+  <div class="stat-box"><div class="stat-num stat-green">${state.rocks.filter(r=>r.status==='ot').length}</div><div class="stat-lbl">Rocks OT</div></div>
+  <div class="stat-box"><div class="stat-num stat-red">${state.rocks.filter(r=>r.status==='oft').length}</div><div class="stat-lbl">Rocks OFT</div></div>
+  <div class="stat-box"><div class="stat-num stat-red">${state.issues.filter(i=>!i.solved).length}</div><div class="stat-lbl">Open Issues</div></div>
+  <div class="stat-box"><div class="stat-num stat-amber">${state.todos.filter(t=>!t.done).length}</div><div class="stat-lbl">Open To-Dos</div></div>
+  ${state.rating?`<div class="stat-box"><div class="stat-num stat-gold">${state.rating}/10</div><div class="stat-lbl">Rating</div></div>`:''}
+</div>
+
+<!-- RED LINES -->
+<div class="section">
+  <div class="section-hdr">🔴 Red Line Monitors</div>
+  <div class="rl-row" style="padding:14px 0 0 0">
+    ${Object.entries(state.redLines).map(([k,rl])=>{
+      const n=parseFloat(rl.val);
+      const ok=rl.ok;
+      const cls=ok===null?'rl-warn':ok?'rl-ok':'rl-crit';
+      const status=ok===null?'Not entered':ok?'✅ OK':'🔴 BREACH — freeze growth';
+      return `<div class="rl-card ${cls}">
+        <div class="rl-label">${esc(rl.label)}</div>
+        <div class="rl-value">${rl.val||'—'}</div>
+        <div class="rl-floor">Floor: ${esc(rl.floor)} | ${status}</div>
+      </div>`;
+    }).join('')}
+  </div>
+</div>
+
+<!-- SCORECARD -->
+<div class="section">
+  <div class="section-hdr">📊 Scorecard — Weekly KPIs</div>
+  ${cats.map(cat=>`
+    <table style="margin-bottom:0;border-top:none">
+      <thead><tr>
+        <th colspan="5" style="background:#1D251D;color:#8DD840;font-size:9pt">${cat}</th>
+      </tr>
+      <tr>
+        <th style="width:35%">KPI</th>
+        <th style="width:12%;text-align:center">Floor</th>
+        <th style="width:12%;text-align:center">Target</th>
+        <th style="width:16%;text-align:center">Actual</th>
+        <th style="width:14%;text-align:center">Status</th>
+      </tr></thead>
+      <tbody>
+        ${state.kpis.filter(k=>k.cat===cat).map(k=>`
+        <tr>
+          <td>${esc(k.name)}</td>
+          <td class="floor" style="text-align:center">${esc(k.floor)}</td>
+          <td class="target" style="text-align:center">${esc(k.target)}</td>
+          <td class="actual" style="text-align:center">${esc(k.actual)||'—'}</td>
+          <td style="text-align:center" class="${k.status==='green'?'status-green':k.status==='red'?'status-red':'status-na'}">${statusIcon(k.status)} ${k.status||'—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`).join('<div style="height:8px"></div>')}
+</div>
+
+<!-- ROCKS -->
+<div class="section">
+  <div class="section-hdr">🪨 90-Day Rocks</div>
+  <table>
+    <thead><tr>
+      <th style="width:45%">Rock</th>
+      <th style="width:15%">Owner</th>
+      <th style="width:15%">Due</th>
+      <th style="width:18%">Status</th>
+    </tr></thead>
+    <tbody>
+      ${state.rocks.map(r=>`
+      <tr>
+        <td>${esc(r.text)}</td>
+        <td>${esc(r.owner)}</td>
+        <td>${esc(r.due)}</td>
+        <td class="${r.status==='ot'?'rock-ot':r.status==='oft'?'rock-oft':'rock-na'}">${rockIcon(r.status)}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>
+
+<!-- HEADLINES -->
+<div class="section">
+  <div class="section-hdr">📣 Headlines</div>
+  ${state.headlines.length?`
+  <table>
+    <thead><tr><th style="width:18%">Type</th><th>Headline</th></tr></thead>
+    <tbody>
+      ${state.headlines.map(h=>`<tr><td><strong>${esc(h.type)}</strong></td><td>${esc(h.text)}</td></tr>`).join('')}
+    </tbody>
+  </table>`:`<div style="padding:10px 14px;color:#888;font-size:10pt;background:#f9f9f9;border:1px solid #ddd;border-radius:0 0 4px 4px">No headlines this week.</div>`}
+</div>
+
+<!-- TO-DOS -->
+<div class="section">
+  <div class="section-hdr">✅ To-Do List</div>
+  <table>
+    <thead><tr>
+      <th style="width:6%">Done</th>
+      <th style="width:50%">To-Do</th>
+      <th style="width:20%">Owner</th>
+      <th style="width:18%">Due</th>
+    </tr></thead>
+    <tbody>
+      ${state.todos.map(t=>`
+      <tr${t.done?' style="opacity:.65"':''}>
+        <td style="text-align:center;font-size:14pt">${t.done?'✅':'☐'}</td>
+        <td style="${t.done?'text-decoration:line-through;color:#999':'font-weight:500'}">${esc(t.text)}</td>
+        <td>${esc(t.owner)}</td>
+        <td>${esc(t.due)}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>
+
+<!-- ISSUES / IDS -->
+<div class="section">
+  <div class="section-hdr">🔍 IDS — Issues List</div>
+  <div style="padding:10px 0 0 0">
+    ${state.issues.length?[...state.issues].sort((a,b)=>({high:0,med:1,low:2}[a.priority]-{high:0,med:1,low:2}[b.priority])).map((iss,i)=>`
+    <div class="issue-block${iss.solved?' solved':''}">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="background:${iss.solved?'#3B6D11':'#B83030'};color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11pt;font-weight:700;flex-shrink:0;margin-top:1px">${i+1}</div>
+        <div style="flex:1">
+          <div class="issue-text${iss.solved?' solved-text':''}">${esc(iss.text)}</div>
+          ${iss.resolution?`<div class="issue-resolution">→ Resolution: ${esc(iss.resolution)}</div>`:'<div class="issue-resolution" style="color:#bbb">→ Resolution: pending</div>'}
+          <div class="issue-meta">
+            Owner: <strong>${esc(iss.owner)}</strong> &nbsp;|&nbsp;
+            Priority: <span class="pri-${iss.priority}">${iss.priority.toUpperCase()}</span> &nbsp;|&nbsp;
+            Status: <strong>${iss.solved?'✅ SOLVED':'🔴 OPEN'}</strong>
+          </div>
+        </div>
+      </div>
+    </div>`).join(''):`<div style="padding:10px 14px;color:#888;font-size:10pt;background:#f9f9f9;border:1px solid #ddd;border-radius:0 0 4px 4px">No issues this meeting. Excellent.</div>`}
+  </div>
+</div>
+
+<!-- SEGUE -->
+${state.segue.some(s=>s.text)?`
+<div class="section">
+  <div class="section-hdr">🎙 Segue — Team Wins</div>
+  <div class="segue-grid" style="padding:12px 0 0 0">
+    ${state.segue.filter(s=>s.name||s.text).map(s=>`
+    <div class="segue-card">
+      <div class="segue-name">${esc(s.name)}</div>
+      <div class="segue-win">${esc(s.text)||'—'}</div>
+    </div>`).join('')}
+  </div>
+</div>`:''}
+
+<!-- CONCLUDE / RATING / CASCADE -->
+<div class="section">
+  <div class="section-hdr">🏁 Conclude</div>
+  <div style="display:flex;gap:20px;padding:14px 0 0 0;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px">
+      <div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:8px">Meeting Rating</div>
+      ${state.rating?`<div class="rating-big">${state.rating}<span style="font-size:14pt">/10</span></div>
+      <div style="font-size:10pt;color:${state.rating<=6?'#C87800':state.rating<=8?'#555':'#3B6D11'};margin-top:4px">
+        ${state.rating<=6?'Below 8 — discuss what would improve it.':state.rating<=8?'Good meeting. What would make it a 9?':'Excellent. Keep running it this way.'}
+      </div>`:`<div style="font-size:11pt;color:#999;font-style:italic">Not rated</div>`}
+    </div>
+    <div style="flex:2;min-width:260px">
+      <div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:8px">Cascade Message</div>
+      <div class="cascade-box">${state.cascadeMsg?esc(state.cascadeMsg):'<em style="color:#aaa">No cascade message recorded.</em>'}</div>
+    </div>
+  </div>
+  <div style="margin-top:16px;padding:12px 14px;background:#f5faf0;border:1px solid #c5dfa8;border-radius:4px">
+    <div style="font-size:9pt;font-weight:700;color:#174A17;margin-bottom:4px">Next Meeting</div>
+    <div style="font-size:11pt;font-weight:600;color:#3B6D11">${getNextMonday()}</div>
+    <div style="font-size:9pt;color:#888">Monday 8:00 AM — same place — 90 minutes</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="doc-footer">
+  <p>Driven Solutions &nbsp;|&nbsp; River Falls, WI &nbsp;|&nbsp; drivensol.com &nbsp;|&nbsp; $100M by January 2030</p>
+  <p style="margin-top:4px;color:#39FF14">Integrity · Discipline · Growth · Loyalty · Good-Natured · Persistence</p>
+</div>
+
+</div>
+</body>
+</html>`;
+
+  // Download as .doc (Word opens this HTML natively)
+  const blob=new Blob([html],{type:'application/msword'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const dateSlug=(state.meetingDate||new Date().toISOString().slice(0,10));
+  a.download=`Driven_L10_${dateSlug}.doc`;
+  a.click();
+  toast('Word document exported — open in Word or Google Docs','success');
+}
+
+/* ── Persistence ── */
+function saveState(){
+  try{localStorage.setItem('driven_l10_state',JSON.stringify(state));return true;}
+  catch(e){return false;}
+}
+function loadState(){
+  try{
+    const s=localStorage.getItem('driven_l10_state');
+    if(s){const p=JSON.parse(s);Object.assign(state,p);state.timerRunning=false;state.timerRef=null;}
+  }catch(e){}
+}
+function saveMeeting(){
+  const ok=saveState();
+  toast(ok?'Meeting saved successfully':'Could not save — check browser storage',ok?'success':'error');
+  updateSidebar();
+}
+function newWeek(){
+  if(!confirm('Start a new week? This will clear To-Dos (done), KPI actuals, and headlines. Rocks, issues, and history are kept.'))return;
+  state.todos=state.todos.filter(t=>!t.done);
+  state.kpis.forEach(k=>{k.actual='';k.status=null;});
+  state.headlines=[];
+  state.cascadeMsg='';
+  state.rating=null;
+  state.totalElapsed=0;
+  state.segElapsed=0;
+  state.currentSeg=0;
+  saveState();
+  renderSidebar();
+  renderMain();
+  toast('New week started. KPI actuals cleared. Rocks and issues preserved.','success');
+}
+function exportMeeting(){
+  const d=new Date();
+  const cats=[...new Set(state.kpis.map(k=>k.cat))];
+  const lines=[
+    'DRIVEN SOLUTIONS — L10 MEETING NOTES',
+    `Date: ${d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`,
+    `Facilitator: ${document.getElementById('facilitator-pill').textContent}`,
+    `Breakpoint Target: BP1 — $3M by January 2026`,
+    '',
+    '=== SCORECARD ===',
+    ...cats.map(cat=>[`[${cat}]`,...state.kpis.filter(k=>k.cat===cat).map(k=>`  ${k.name}: ${k.actual||'—'} (floor:${k.floor} target:${k.target}) [${k.status||'not set'}]`)]).flat(),
+    '',
+    '=== ROCKS ===',
+    ...state.rocks.map(r=>`[${r.status==='ot'?'ON TRACK':r.status==='oft'?'OFF TRACK':'NOT SET'}] ${r.text} — ${r.owner} — due ${r.due}`),
+    '',
+    '=== HEADLINES ===',
+    ...state.headlines.map(h=>`[${h.type.toUpperCase()}] ${h.text}`),
+    '',
+    '=== TO-DOs REVIEWED ===',
+    ...state.todos.map(t=>`[${t.done?'DONE':'NOT DONE'}] ${t.text} — ${t.owner} by ${t.due}`),
+    '',
+    '=== ISSUES / IDS ===',
+    ...state.issues.map(i=>`[${i.solved?'SOLVED':'OPEN'}][${i.priority.toUpperCase()}] ${i.text} (${i.owner})\n  Resolution: ${i.resolution||'—'}`),
+    '',
+    `=== MEETING RATING: ${state.rating||'—'}/10 ===`,
+    '',
+    '=== CASCADE MESSAGE ===',
+    state.cascadeMsg||'(none)',
+    '',
+    '=== RED LINES ===',
+    `Cash Runway: ${state.redLines.cashRunway.val||'—'} (floor: 4 wks)`,
+    `DSCR: ${state.redLines.dscr.val||'—'} (floor: 1.10x)`,
+    `Gross Margin: ${state.redLines.grossMargin.val||'—'} (floor: 24%)`,
+  ];
+  const blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`Driven_L10_${d.toISOString().split('T')[0]}.txt`;
+  a.click();
+  toast('Meeting notes exported','success');
+}
+function showHistory(){
+  const modal=document.getElementById('history-modal');
+  if(modal){modal.remove();return;}
+  const m=document.createElement('div');
+  m.id='history-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9998;display:flex;align-items:center;justify-content:center;padding:24px';
+  m.onclick=e=>{if(e.target===m)m.remove();};
+  const h=state.meetingHistory.length?[...state.meetingHistory].reverse():[];
+  m.innerHTML=`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:820px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--green)">Driven L10 — Meeting History</div>
+        <button class="btn" onclick="document.getElementById('history-modal').remove()">&#10005; Close</button>
+      </div>
+      <div style="overflow-y:auto;padding:16px 20px;flex:1">
+        ${!h.length?'<div class="empty">No saved meetings yet. Close a meeting in the Conclude segment to save a record.</div>':
+          h.map((rec,i)=>`
+          <div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;background:var(--surface2)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-weight:600;font-size:14px">${esc(rec.date||'—')}</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--gold)">${rec.rating||'—'}/10</span>
+                <button class="btn xs" onclick="exportRecord(${state.meetingHistory.length-1-i})">&#8615; Export</button>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12px">
+              <div style="background:var(--surface3);border-radius:6px;padding:8px 10px">
+                <div style="color:var(--text-muted);margin-bottom:3px">Green KPIs</div>
+                <div style="font-family:'DM Mono',monospace;color:var(--green);font-size:16px;font-weight:500">${rec.greenKpis||0}</div>
+              </div>
+              <div style="background:var(--surface3);border-radius:6px;padding:8px 10px">
+                <div style="color:var(--text-muted);margin-bottom:3px">Open issues</div>
+                <div style="font-family:'DM Mono',monospace;color:${rec.openIssues>0?'var(--red)':'var(--green)'};font-size:16px;font-weight:500">${rec.openIssues||0}</div>
+              </div>
+              <div style="background:var(--surface3);border-radius:6px;padding:8px 10px">
+                <div style="color:var(--text-muted);margin-bottom:3px">Open to-dos</div>
+                <div style="font-family:'DM Mono',monospace;color:${rec.openTodos>0?'var(--amber)':'var(--green)'};font-size:16px;font-weight:500">${rec.openTodos||0}</div>
+              </div>
+              <div style="background:var(--surface3);border-radius:6px;padding:8px 10px">
+                <div style="color:var(--text-muted);margin-bottom:3px">Rocks on track</div>
+                <div style="font-family:'DM Mono',monospace;color:var(--green);font-size:16px;font-weight:500">${rec.rocksOnTrack||'—'}</div>
+              </div>
+            </div>
+            ${rec.cascade?`<div style="margin-top:10px;font-size:12px;color:var(--text-dim);border-top:1px solid var(--border);padding-top:8px"><span style="color:var(--text-muted);text-transform:uppercase;font-size:10px;letter-spacing:.08em">Cascade: </span>${esc(rec.cascade)}</div>`:''}
+            ${rec.fullNotes?`<details style="margin-top:8px"><summary style="font-size:12px;color:var(--text-muted);cursor:pointer">View full notes</summary><pre style="margin-top:8px;font-size:11px;color:var(--text-dim);white-space:pre-wrap;font-family:'DM Mono',monospace;max-height:200px;overflow-y:auto">${esc(rec.fullNotes)}</pre></details>`:''}
+          </div>`).join('')}
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px">
+        <button class="btn green" onclick="exportAllHistory()">&#8615; Export all history</button>
+        <button class="btn" style="color:var(--red);border-color:#993333" onclick="if(confirm('Clear ALL meeting history? This cannot be undone.')){state.meetingHistory=[];saveState();document.getElementById('history-modal').remove();toast('History cleared','success')}">&#128465; Clear history</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+}
+
+function exportRecord(idx){
+  const rec=state.meetingHistory[idx];
+  if(!rec)return;
+  const blob=new Blob([rec.fullNotes||JSON.stringify(rec,null,2)],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`Driven_L10_${(rec.date||'record').replace(/[^a-z0-9]/gi,'_')}.txt`;
+  a.click();
+  toast('Meeting exported','success');
+}
+
+function exportAllHistory(){
+  if(!state.meetingHistory.length){toast('No history to export','error');return;}
+  const lines=['DRIVEN SOLUTIONS — COMPLETE L10 MEETING HISTORY','='.repeat(50),''];
+  [...state.meetingHistory].reverse().forEach((rec,i)=>{
+    lines.push(`MEETING ${state.meetingHistory.length-i}: ${rec.date||'Unknown date'}`);
+    lines.push(`Rating: ${rec.rating||'—'}/10  |  Green KPIs: ${rec.greenKpis||0}  |  Open Issues: ${rec.openIssues||0}  |  Open To-Dos: ${rec.openTodos||0}  |  Rocks On Track: ${rec.rocksOnTrack||'—'}`);
+    if(rec.cascade)lines.push(`Cascade: ${rec.cascade}`);
+    if(rec.fullNotes)lines.push('',rec.fullNotes);
+    lines.push('','-'.repeat(50),'');
+  });
+  const blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`Driven_L10_History_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  toast(`Exported ${state.meetingHistory.length} meeting records`,'success');
+}
+
+/* ── Toast ── */
+function toast(msg,type='success',dur=3500){
+  const w=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;t.textContent=msg;
+  w.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(20px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},dur);
+}
+
+/* ── Timer ── */
+function fmt(s){const m=Math.floor(Math.abs(s)/60),sc=Math.abs(s)%60;return(s<0?'-':'')+m+':'+(sc<10?'0':'')+sc}
+function toggleTimer(){
+  state.timerRunning=!state.timerRunning;
+  const btn=document.getElementById('start-btn');
+  if(state.timerRunning){
+    btn.textContent='⏸ Pause';btn.classList.remove('start');
+    state.timerRef=setInterval(()=>{
+      state.totalElapsed++;state.segElapsed++;
+      updateTimerDisplay();
+    },1000);
+  }else{
+    btn.textContent='▶ Resume';btn.classList.add('start');
+    clearInterval(state.timerRef);
+  }
+}
+function resetSeg(){
+  state.segElapsed=0;
+  updateTimerDisplay();
+}
+function updateTimerDisplay(){
+  const tot=document.getElementById('total-timer');
+  const seg=document.getElementById('seg-timer');
+  const segDef=SEGS_DEF[state.currentSeg];
+  const segMax=segDef.mins*60;
+  const rem=segMax-state.segElapsed;
+  tot.textContent=fmt(state.totalElapsed);
+  tot.className='timer-val green';
+  if(state.totalElapsed>TOTAL_MINS*60){tot.className='timer-val over';}
+  seg.textContent=fmt(Math.abs(rem));
+  if(rem<0){seg.className='timer-val over';}
+  else if(rem<60){seg.className='timer-val warn';}
+  else{seg.className='timer-val';}
+}
+
+/* ── Navigation ── */
+function nextSeg(){
+  if(state.currentSeg<SEGS_DEF.length-1){
+    state.currentSeg++;state.segElapsed=0;
+    const d=document.getElementById('seg-timer');
+    d.textContent=fmt(SEGS_DEF[state.currentSeg].mins*60);
+    d.className='timer-val';
+    document.getElementById('seg-label-timer').textContent=SEGS_DEF[state.currentSeg].label;
+    renderSidebar();renderMain();
+    document.querySelector('.main').scrollTop=0;
+  }
+}
+function prevSeg(){
+  if(state.currentSeg>0){
+    state.currentSeg--;state.segElapsed=0;
+    document.getElementById('seg-timer').textContent=fmt(SEGS_DEF[state.currentSeg].mins*60);
+    document.getElementById('seg-label-timer').textContent=SEGS_DEF[state.currentSeg].label;
+    renderSidebar();renderMain();
+    document.querySelector('.main').scrollTop=0;
+  }
+}
+function goSeg(n){state.currentSeg=n;state.segElapsed=0;document.getElementById('seg-timer').textContent=fmt(SEGS_DEF[n].mins*60);document.getElementById('seg-label-timer').textContent=SEGS_DEF[n].label;renderSidebar();renderMain();}
+
+/* ── Sidebar ── */
+function renderSidebar(){
+  const c=document.getElementById('sidebar-segs');
+  c.innerHTML='';
+  SEGS_DEF.forEach((s,i)=>{
+    const active=i===state.currentSeg;
+    const done=i<state.currentSeg;
+    const div=document.createElement('div');
+    div.className='seg-item'+(active?' active':'')+(done?' done':'');
+    div.onclick=()=>goSeg(i);
+    div.innerHTML=`
+      <div class="seg-icon${active?' active':done?' done':''}">${done?'✓':(i+1)}</div>
+      <div class="seg-info">
+        <div class="seg-name">${s.label}</div>
+        <div class="seg-mins">${s.mins} min</div>
+      </div>`;
+    c.appendChild(div);
+  });
+  updateSidebar();
+}
+function updateSidebar(){
+  const ot=state.rocks.filter(r=>r.status==='ot').length;
+  const total=state.rocks.filter(r=>r.status!==null).length;
+  document.getElementById('sf-rocks').textContent=total>0?`${ot}/${total}`:'—';
+  const oi=state.issues.filter(i=>!i.solved).length;
+  const sfI=document.getElementById('sf-issues');
+  sfI.textContent=oi;
+  sfI.className='sf-val'+(oi>0?' red':' green');
+  const ot2=state.todos.filter(t=>!t.done).length;
+  document.getElementById('sf-todos').textContent=ot2;
+  const gk=state.kpis.filter(k=>k.status==='green').length;
+  const tk=state.kpis.filter(k=>k.status!==null).length;
+  document.getElementById('sf-kpis').textContent=tk>0?`${gk}/${tk}`:'—';
+  const rl=Object.values(state.redLines).filter(r=>r.ok===false).length;
+  const sfrl=document.getElementById('sf-redlines');
+  sfrl.textContent=rl>0?`${rl} BREACH`:'All clear';
+  sfrl.className='sf-val'+(rl>0?' red':' green');
+  const prog=document.getElementById('prog');
+  if(prog)prog.style.width=(state.currentSeg/(SEGS_DEF.length-1)*100)+'%';
+}
+
+/* ── Main render dispatcher ── */
+function renderMain(){
+  const seg=SEGS_DEF[state.currentSeg];
+  const fn={segue:renderSegue,scorecard:renderScorecard,rocks:renderRocks,headlines:renderHeadlines,todos:renderTodos,ids:renderIDS,conclude:renderConclude}[seg.id];
+  document.getElementById('main-content').innerHTML=`
+    <div class="section-head">
+      <div class="section-title">${seg.label} <span class="section-badge">${seg.mins} min</span></div>
+      <div class="section-desc">${seg.desc}</div>
+    </div>
+    <div id="seg-inner"></div>`;
+  if(fn)fn();
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ── SEGMENT 1: SEGUE ── */
+function renderSegue(){
+  const c=document.getElementById('seg-inner');
+  c.innerHTML=`
+    <div style="background:var(--green-bg);border:1px solid var(--border-active);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--green)">
+      Go around the table. Each person shares one win — personal or professional — in 30 seconds or less. No discussion. Owner goes last. Sets the energy for the meeting. Do NOT skip this.
+    </div>
+    <div class="segue-grid" id="segue-grid"></div>
+    <div class="add-row">
+      <input type="text" id="nseg-name" placeholder="Name" style="max-width:140px">
+      <input type="text" id="nseg-text" placeholder="Their win...">
+      <button class="btn" onclick="addSegue()">+ Add</button>
+    </div>`;
+  renderSegueCards();
+}
+function renderSegueCards(){
+  const g=document.getElementById('segue-grid');if(!g)return;
+  g.innerHTML='';
+  state.segue.forEach((p,i)=>{
+    g.innerHTML+=`
+      <div class="segue-card">
+        <input type="text" class="segue-name-input" value="${esc(p.name)}" placeholder="Name" oninput="state.segue[${i}].name=this.value;saveState()" style="font-weight:600;font-size:13px;background:transparent;border:none;color:var(--text);width:100%;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:4px">
+        <textarea rows="2" placeholder="Win this week..." oninput="state.segue[${i}].text=this.value;saveState()" style="min-height:48px">${esc(p.text)}</textarea>
+      </div>`;
+  });
+}
+function addSegue(){
+  const n=document.getElementById('nseg-name').value.trim();
+  const t=document.getElementById('nseg-text').value.trim();
+  state.segue.push({id:nid(),name:n||'Team member',text:t});
+  document.getElementById('nseg-name').value='';document.getElementById('nseg-text').value='';
+  renderSegueCards();saveState();
+}
+
+/* ── SEGMENT 2: SCORECARD ── */
+function renderScorecard(){
+  const c=document.getElementById('seg-inner');
+  const green=state.kpis.filter(k=>k.status==='green').length;
+  const red=state.kpis.filter(k=>k.status==='red').length;
+  const cats=[...new Set(state.kpis.map(k=>k.cat))];
+
+  c.innerHTML=`
+    <div style="background:var(--green-bg);border:1px solid var(--border-active);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--green)">
+      Call each KPI: Green or Red. Owner states the actual number. Red = goes to Issues List. No discussion on reds — just flag and move. 10 minutes total.
+    </div>
+    <div class="rl-strip" id="rl-strip"></div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <div class="pill green">${green} Green</div>
+      <div class="pill red">${red} Red</div>
+      <div class="pill gray">${state.kpis.length-green-red} Not set</div>
+      <button class="btn xs" style="margin-left:auto" onclick="addAllRedToIssues()">+ All reds → Issues</button>
+    </div>
+    <div id="kpi-tables"></div>`;
+
+  renderRedLines();
+
+  const kt=document.getElementById('kpi-tables');
+  cats.forEach(cat=>{
+    const kpis=state.kpis.filter(k=>k.cat===cat);
+    const div=document.createElement('div');
+    div.innerHTML=`
+      <div class="card-label" style="margin-top:16px">${cat}</div>
+      <div class="card" style="padding:0">
+        <table class="data-table">
+          <thead><tr>
+            <th>KPI</th><th>Floor</th><th>Target</th>
+            <th>Actual</th><th>Status</th><th></th>
+          </tr></thead>
+          <tbody id="kpi-body-${cat.replace(/\s/g,'_')}"></tbody>
+        </table>
+      </div>`;
+    kt.appendChild(div);
+    renderKpiRows(cat);
+  });
+}
+function renderRedLines(){
+  const strip=document.getElementById('rl-strip');if(!strip)return;
+  const rls=[
+    {key:'cashRunway',label:'Cash runway',floor:'< 4 wks',tip:'RED LINE — freeze all growth'},
+    {key:'dscr',     label:'DSCR',        floor:'< 1.10x', tip:'RED LINE — call lender today'},
+    {key:'grossMargin',label:'Gross margin',floor:'< 24%', tip:'RED LINE — job cost audit now'},
+  ];
+  strip.innerHTML=rls.map(rl=>{
+    const v=state.redLines[rl.key].val;
+    const ok=state.redLines[rl.key].ok;
+    const cls=ok===null?'warn':ok?'ok':'crit';
+    return `<div class="rl-card ${cls}">
+      <div class="rl-title">${rl.label}</div>
+      <div class="rl-val">
+        <input type="text" value="${esc(v)}" placeholder="Enter value"
+          style="background:transparent;border:none;font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:inherit;padding:0;width:100%;border-bottom:1px dashed rgba(255,255,255,0.2)"
+          oninput="updateRL('${rl.key}',this.value)">
+      </div>
+      <div class="rl-floor">${rl.floor} = freeze  |  ${rl.tip}</div>
+    </div>`;
+  }).join('');
+}
+function updateRL(key,val){
+  state.redLines[key].val=val;
+  const n=parseFloat(val);
+  if(isNaN(n)){state.redLines[key].ok=null;}
+  else if(key==='cashRunway'){state.redLines[key].ok=n>=4;}
+  else if(key==='dscr'){state.redLines[key].ok=n>=1.10;}
+  else if(key==='grossMargin'){state.redLines[key].ok=n>=24;}
+  saveState();renderRedLines();updateSidebar();
+}
+function renderKpiRows(cat){
+  const tbody=document.getElementById('kpi-body-'+cat.replace(/\s/g,'_'));
+  if(!tbody)return;
+  tbody.innerHTML='';
+  state.kpis.filter(k=>k.cat===cat).forEach(kpi=>{
+    const idx=state.kpis.findIndex(k=>k.id===kpi.id);
+    const sc=kpi.status;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="font-weight:500">${esc(kpi.name)}</td>
+      <td style="color:var(--red);font-family:'DM Mono',monospace;font-size:12px">${esc(kpi.floor)}</td>
+      <td style="color:var(--green);font-family:'DM Mono',monospace;font-size:12px">${esc(kpi.target)}</td>
+      <td><input type="text" value="${esc(kpi.actual)}" placeholder="Enter actual..." class="kpi-actual" style="max-width:110px"
+        oninput="state.kpis[${idx}].actual=this.value;saveState()"></td>
+      <td>
+        <div style="display:flex;gap:5px">
+          <button class="pill${sc==='green'?' green':' gray'}" onclick="setKpiStatus(${idx},'green')">&#10003; Green</button>
+          <button class="pill${sc==='red'?' red':' gray'}" onclick="setKpiStatus(${idx},'red')">&#10005; Red</button>
+        </div>
+      </td>
+      <td>
+        ${sc==='red'?`<button class="btn xs red" onclick="redToIssue(${idx})">→ Issues</button>`:''}
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+function setKpiStatus(idx,status){
+  state.kpis[idx].status=status;
+  saveState();
+  renderScorecard();
+  updateSidebar();
+}
+function redToIssue(idx){
+  const k=state.kpis[idx];
+  state.issues.push({id:nid(),text:`${k.name} below floor — actual: ${k.actual||'?'} (floor: ${k.floor})`,priority:'high',owner:'—',solved:false,resolution:''});
+  toast(`"${k.name}" added to Issues List`,'success');
+  saveState();updateSidebar();
+}
+function addAllRedToIssues(){
+  const reds=state.kpis.filter(k=>k.status==='red');
+  reds.forEach(k=>{
+    if(!state.issues.find(i=>i.text.startsWith(k.name))){
+      state.issues.push({id:nid(),text:`${k.name} below floor — actual: ${k.actual||'?'} (floor: ${k.floor})`,priority:'high',owner:'—',solved:false,resolution:''});
+    }
+  });
+  toast(`${reds.length} red KPIs added to Issues`,'success');
+  saveState();updateSidebar();
+}
+
+/* ── SEGMENT 3: ROCKS ── */
+function renderRocks(){
+  const c=document.getElementById('seg-inner');
+  const ot=state.rocks.filter(r=>r.status==='ot').length;
+  const oft=state.rocks.filter(r=>r.status==='oft').length;
+  c.innerHTML=`
+    <div style="background:var(--green-bg);border:1px solid var(--border-active);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--green)">
+      Each Rock owner says "On Track" or "Off Track." Off Track Rocks go immediately to the Issues List. No debate — just status. If Off Track for 2+ consecutive weeks it is automatically an Issue.
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div class="pill green">${ot} On Track</div>
+      <div class="pill red">${oft} Off Track</div>
+      <div class="pill gray">${state.rocks.filter(r=>r.status===null).length} Not set</div>
+    </div>
+    <div class="card" style="padding:14px 20px"><div id="rocks-inner"></div></div>
+    <div class="add-row">
+      <input type="text" id="nrock-text" placeholder="Rock (outcome, not task)..." style="flex:2">
+      <input type="text" id="nrock-owner" placeholder="Owner" style="max-width:120px">
+      <input type="text" id="nrock-due" placeholder="Due date" style="max-width:110px">
+      <button class="btn" onclick="addRock()">+ Rock</button>
+    </div>`;
+  renderRockRows();
+}
+function renderRockRows(){
+  const c=document.getElementById('rocks-inner');if(!c)return;
+  if(!state.rocks.length){c.innerHTML='<div class="empty">No rocks set yet.</div>';return;}
+  c.innerHTML='';
+  state.rocks.forEach((rock,i)=>{
+    const d=document.createElement('div');
+    d.className='rock-row';
+    d.innerHTML=`
+      <div>
+        <input type="text" value="${esc(rock.text)}" placeholder="Rock description..."
+          style="background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:2px 4px;color:var(--text);width:100%;font-size:13px"
+          onchange="state.rocks[${i}].text=this.value;saveState()">
+      </div>
+      <input type="text" value="${esc(rock.owner)}" placeholder="Owner"
+        style="background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:2px 4px;color:var(--text-dim);font-size:12px"
+        onchange="state.rocks[${i}].owner=this.value;saveState()">
+      <input type="text" value="${esc(rock.due)}" placeholder="Due"
+        style="background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:2px 4px;color:var(--text-dim);font-size:12px"
+        onchange="state.rocks[${i}].due=this.value;saveState()">
+      <div style="display:flex;gap:5px;align-items:center">
+        <button class="r-btn${rock.status==='ot'?' ot':''}" onclick="setRock(${i},'ot')">OT</button>
+        <button class="r-btn${rock.status==='oft'?' oft':''}" onclick="setRock(${i},'oft')">OFT</button>
+        <button class="del-btn" onclick="state.rocks.splice(${i},1);renderRockRows();saveState();updateSidebar()" title="Remove">&#215;</button>
+      </div>`;
+    c.appendChild(d);
+  });
+}
+function setRock(i,status){
+  state.rocks[i].status=status;
+  if(status==='oft'){
+    const text=`Rock off track: "${state.rocks[i].text}" — ${state.rocks[i].owner}`;
+    if(!state.issues.find(iss=>iss.text===text)){
+      state.issues.push({id:nid(),text,priority:'high',owner:state.rocks[i].owner,solved:false,resolution:''});
+      toast('Off Track Rock added to Issues List','success');
+    }
+  }
+  renderRockRows();saveState();updateSidebar();
+}
+function addRock(){
+  const t=document.getElementById('nrock-text').value.trim();if(!t)return;
+  state.rocks.push({id:nid(),text:t,owner:document.getElementById('nrock-owner').value||'—',due:document.getElementById('nrock-due').value||'Q2 2026',status:null});
+  document.getElementById('nrock-text').value='';document.getElementById('nrock-owner').value='';document.getElementById('nrock-due').value='';
+  renderRockRows();saveState();updateSidebar();
+}
+
+/* ── SEGMENT 4: HEADLINES ── */
+function renderHeadlines(){
+  const c=document.getElementById('seg-inner');
+  c.innerHTML=`
+    <div style="background:var(--green-bg);border:1px solid var(--border-active);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--green)">
+      Customer and employee news — good and bad. 30 seconds per headline. No deep discussion. Flag anything that needs IDS time.
+    </div>
+    <div class="card" style="padding:14px 20px">
+      <div id="hl-inner"></div>
+    </div>
+    <div class="add-row">
+      <select id="nhl-type" style="max-width:130px">
+        <option value="customer win">Customer Win</option>
+        <option value="customer issue">Customer Issue</option>
+        <option value="employee win">Employee Win</option>
+        <option value="employee issue">Employee Issue</option>
+        <option value="market news">Market News</option>
+      </select>
+      <input type="text" id="nhl-text" placeholder="Headline (30 seconds to explain)...">
+      <button class="btn" onclick="addHeadline()">+ Add</button>
+    </div>`;
+  renderHLRows();
+}
+function renderHLRows(){
+  const c=document.getElementById('hl-inner');if(!c)return;
+  if(!state.headlines.length){c.innerHTML='<div class="empty">No headlines yet — add as you go.</div>';return;}
+  c.innerHTML='';
+  state.headlines.forEach((h,i)=>{
+    const typeColor={
+      'customer win':'green','employee win':'green',
+      'customer issue':'red','employee issue':'amber','market news':'gold'
+    }[h.type]||'gray';
+    c.innerHTML+=`
+      <div class="hl-row">
+        <span class="hl-type">${esc(h.type)}</span>
+        <span style="flex:1">${esc(h.text)}</span>
+        <button class="del-btn" onclick="state.headlines.splice(${i},1);renderHLRows();saveState()">&#215;</button>
+      </div>`;
+  });
+}
+function addHeadline(){
+  const t=document.getElementById('nhl-text').value.trim();if(!t)return;
+  state.headlines.push({id:nid(),type:document.getElementById('nhl-type').value,text:t});
+  document.getElementById('nhl-text').value='';
+  renderHLRows();saveState();
+}
+
+/* ── SEGMENT 5: TO-DOS ── */
+function renderTodos(){
+  const c=document.getElementById('seg-inner');
+  const done=state.todos.filter(t=>t.done).length;
+  c.innerHTML=`
+    <div style="background:var(--green-bg);border:1px solid var(--border-active);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--green)">
+      Review last week's to-do list. Each owner says: Done or Not Done. Not Done = carries forward or becomes an Issue. Pattern of Not Done = accountability conversation.
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div class="pill green">${done} Done</div>
+      <div class="pill red">${state.todos.length-done} Not Done</div>
+    </div>
+    <div class="card" style="padding:14px 20px"><div id="todos-inner"></div></div>
+    <div class="add-row">
+      <input type="text" id="ntodo-text" placeholder="To-do (assign an owner and a date — always)..." style="flex:2">
+      <input type="text" id="ntodo-owner" placeholder="Owner" style="max-width:110px">
+      <input type="text" id="ntodo-due" placeholder="Due" style="max-width:100px">
+      <button class="btn" onclick="addTodo()">+ To-Do</button>
+    </div>`;
+  renderTodoRows();
+}
+function renderTodoRows(){
+  const c=document.getElementById('todos-inner');if(!c)return;
+  if(!state.todos.length){c.innerHTML='<div class="empty">No to-dos — clean slate.</div>';return;}
+  c.innerHTML='';
+  state.todos.forEach((todo,i)=>{
+    const d=document.createElement('div');
+    d.className='todo-row';
+    d.innerHTML=`
+      <div class="chk${todo.done?' on':''}" onclick="state.todos[${i}].done=!state.todos[${i}].done;renderTodoRows();saveState();updateSidebar()"></div>
+      <span class="todo-text${todo.done?' done':''}">${esc(todo.text)}</span>
+      <input type="text" value="${esc(todo.owner)}" placeholder="Owner"
+        style="background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:2px 4px;color:var(--text-dim);font-size:12px"
+        onchange="state.todos[${i}].owner=this.value;saveState()">
+      <input type="text" value="${esc(todo.due)}" placeholder="Due"
+        style="background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:2px 4px;color:var(--text-dim);font-size:12px"
+        onchange="state.todos[${i}].due=this.value;saveState()">
+      <button class="del-btn" onclick="state.todos.splice(${i},1);renderTodoRows();saveState();updateSidebar()" title="Remove">&#215;</button>`;
+    c.appendChild(d);
+  });
+}
+function addTodo(){
+  const t=document.getElementById('ntodo-text').value.trim();if(!t)return;
+  state.todos.push({id:nid(),text:t,owner:document.getElementById('ntodo-owner').value||'—',due:document.getElementById('ntodo-due').value||'This week',done:false});
+  document.getElementById('ntodo-text').value='';document.getElementById('ntodo-owner').value='';document.getElementById('ntodo-due').value='';
+  renderTodoRows();saveState();updateSidebar();
+}
+
+/* ── SEGMENT 6: IDS ── */
+function renderIDS(){
+  const c=document.getElementById('seg-inner');
+  const open=state.issues.filter(i=>!i.solved).length;
+  const solved=state.issues.filter(i=>i.solved).length;
+  c.innerHTML=`
+    <div style="background:var(--green-bg);border:1px solid var(--border-active);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--green)">
+      Identify. Discuss. Solve. 5 minutes per issue maximum. Start with the highest priority. Every issue ends with a specific to-do (name + date) or a decision. Never "we'll think about it." If not solved in 5 min — Rock it or drop it.
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div class="pill red">${open} Open</div>
+      <div class="pill green">${solved} Solved</div>
+    </div>
+    <div class="card" style="padding:16px 20px"><div id="iss-inner"></div></div>
+    <div class="add-row">
+      <input type="text" id="niss-text" placeholder="Issue (state the root cause, not the symptom)..." style="flex:2">
+      <select id="niss-pri" style="max-width:100px">
+        <option value="high">High</option>
+        <option value="med" selected>Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <input type="text" id="niss-owner" placeholder="Owner" style="max-width:100px">
+      <button class="btn" onclick="addIssue()">+ Issue</button>
+    </div>`;
+  renderIssueRows();
+}
+function renderIssueRows(){
+  const c=document.getElementById('iss-inner');if(!c)return;
+  if(!state.issues.length){c.innerHTML='<div class="empty">No issues — great meeting ahead.</div>';return;}
+  const sorted=[...state.issues].sort((a,b)=>({high:0,med:1,low:2}[a.priority]-{high:0,med:1,low:2}[b.priority]));
+  c.innerHTML='';
+  sorted.forEach((iss,si)=>{
+    const origIdx=state.issues.findIndex(x=>x.id===iss.id);
+    const d=document.createElement('div');d.className='issue-row';
+    d.innerHTML=`
+      <div class="issue-idx">${si+1}</div>
+      <div class="issue-content">
+        <input type="text" value="${esc(iss.text)}" class="issue-text ${iss.solved?'solved':''}"
+          style="background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:2px 4px;color:${iss.solved?'var(--text-muted)':'var(--text)'};width:100%;font-size:13px;${iss.solved?'text-decoration:line-through':''}"
+          onchange="state.issues[${origIdx}].text=this.value;saveState()">
+        <input type="text" value="${esc(iss.resolution)}" placeholder="To-do / decision from IDS (name + date required)..."
+          style="background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:2px 4px;color:var(--text-dim);font-size:12px;margin-top:6px;width:100%"
+          onchange="state.issues[${origIdx}].resolution=this.value;saveState()">
+      </div>
+      <div>
+        <span class="pill ${iss.priority==='high'?'red':iss.priority==='med'?'amber':'green'}" style="font-size:11px">${iss.priority}</span>
+      </div>
+      <input type="text" value="${esc(iss.owner)}" placeholder="Owner"
+        style="background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:2px 4px;color:var(--text-dim);font-size:12px"
+        onchange="state.issues[${origIdx}].owner=this.value;saveState()">
+      <div style="display:flex;gap:5px;align-items:flex-start;padding-top:2px">
+        <button class="btn xs ${iss.solved?'green':''}" onclick="state.issues[${origIdx}].solved=!state.issues[${origIdx}].solved;renderIssueRows();saveState();updateSidebar()">
+          ${iss.solved?'Reopen':'Solved'}
+        </button>
+        <button class="del-btn" onclick="state.issues.splice(${origIdx},1);renderIssueRows();saveState();updateSidebar()" title="Remove">&#215;</button>
+      </div>`;
+    c.appendChild(d);
+  });
+}
+function addIssue(){
+  const t=document.getElementById('niss-text').value.trim();if(!t)return;
+  state.issues.push({id:nid(),text:t,priority:document.getElementById('niss-pri').value,owner:document.getElementById('niss-owner').value||'—',solved:false,resolution:''});
+  document.getElementById('niss-text').value='';document.getElementById('niss-owner').value='';
+  renderIssueRows();saveState();updateSidebar();
+}
+
+/* ── SEGMENT 7: CONCLUDE ── */
+function renderConclude(){
+  const c=document.getElementById('seg-inner');
+  const openTodos=state.todos.filter(t=>!t.done);
+  const openIssues=state.issues.filter(i=>!i.solved);
+  const rockOft=state.rocks.filter(r=>r.status==='oft');
+  const nextMon=getNextMonday();
+
+  // Red line summary
+  const rlBreach=Object.entries(state.redLines).filter(([k,v])=>v.ok===false);
+
+  c.innerHTML=`
+    <div class="conclude-grid">
+      <div>
+        <div class="card-label">Red lines status (${rlBreach.length===0?'All clear':'BREACH — freeze growth'})</div>
+        <div class="card" style="padding:12px 16px;margin-bottom:14px;${rlBreach.length?'border-color:#993333;background:var(--red-bg)':'border-color:var(--green-dim);background:var(--green-bg)'}">
+          ${rlBreach.length?rlBreach.map(([k,v])=>`<div style="color:var(--red);font-size:13px">&#9888; ${v.label}: ${v.val} — floor ${v.floor}</div>`).join(''):'<div style="color:var(--green);font-size:13px">&#10003; All three red lines within acceptable range.</div>'}
+        </div>
+        <div class="card-label">Open to-dos (${openTodos.length})</div>
+        <div class="card" style="padding:14px;margin-bottom:14px">
+          ${openTodos.length?openTodos.map(t=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${esc(t.text)}</span><span style="color:var(--text-muted);font-size:12px">${esc(t.owner)} — ${esc(t.due)}</span></div>`).join(''):'<div style="color:var(--text-muted);font-size:13px">All to-dos complete. Excellent discipline.</div>'}
+        </div>
+        <div class="card-label">Open issues (${openIssues.length})</div>
+        <div class="card" style="padding:14px;margin-bottom:14px">
+          ${openIssues.length?openIssues.map(i=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--red)">${esc(i.text)}</span><span style="color:var(--text-muted);font-size:12px">${esc(i.owner)}</span></div>`).join(''):'<div style="color:var(--green-dim);font-size:13px">All issues resolved. Outstanding.</div>'}
+        </div>
+        <div class="card-label">Cascade message (what goes to the broader team)</div>
+        <textarea rows="4" placeholder="What does the broader team need to know from this meeting?" oninput="state.cascadeMsg=this.value;saveState()">${esc(state.cascadeMsg)}</textarea>
+      </div>
+      <div>
+        <div class="card-label">Rate this meeting (1–10)</div>
+        <div class="rating-row" id="rating-row"></div>
+        <div id="rating-note" style="font-size:13px;color:var(--text-dim);margin-top:10px;min-height:20px"></div>
+        <div style="margin-top:20px">
+          <div class="card-label">Off track rocks (${rockOft.length})</div>
+          ${rockOft.length?rockOft.map(r=>`<div style="font-size:13px;color:var(--red);padding:4px 0">&#9888; ${esc(r.text)} — ${esc(r.owner)}</div>`).join(''):'<div style="font-size:13px;color:var(--green-dim)">&#10003; All rocks on track.</div>'}
+        </div>
+        <div style="margin-top:20px">
+          <div class="card-label">Next meeting</div>
+          <div style="font-size:18px;font-weight:500;color:var(--green)">${nextMon}</div>
+          <div style="font-size:12px;color:var(--text-muted)">Monday 8:00 AM — same place — 90 minutes</div>
+        </div>
+        <div style="margin-top:20px">
+          <div class="card-label">Weekly march targets (remind the team)</div>
+          <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-dim);line-height:2">
+            Revenue floor: <span style="color:var(--red)">$46K/wk</span> | Target: <span style="color:var(--green)">$57.7K/wk</span><br>
+            Close rate floor: <span style="color:var(--red)">55%</span> | Target: <span style="color:var(--green)">65%</span><br>
+            Crew util floor: <span style="color:var(--red)">75%</span> | Target: <span style="color:var(--green)">88%</span><br>
+            Margin floor: <span style="color:var(--red)">28%</span> | Target: <span style="color:var(--green)">32%</span>
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <button class="btn green" style="width:100%;justify-content:center;padding:10px" onclick="closeMeeting()">
+            &#10003; Close &amp; save meeting record
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  const rr=document.getElementById('rating-row');
+  for(let n=1;n<=10;n++){
+    const b=document.createElement('button');
+    b.className='r-num'+(state.rating===n?' sel':'');
+    b.textContent=n;b.onclick=()=>{state.rating=n;renderConclude();saveState();};
+    rr.appendChild(b);
+  }
+  if(state.rating){
+    const note=document.getElementById('rating-note');
+    note.textContent=state.rating<=6?'Below 8 — what would have made it better? Discuss now. Fix next week.':state.rating<=8?'Good meeting. What would push it to a 9? Name one thing.':'Excellent. Keep running it exactly this way.';
+    note.style.color=state.rating<=6?'var(--amber)':state.rating<=8?'var(--text-dim)':'var(--green-dim)';
+  }
+}
+function closeMeeting(){
+  const d=new Date();
+  // Build full notes snapshot
+  const cats=[...new Set(state.kpis.map(k=>k.cat))];
+  const lines=[
+    'DRIVEN SOLUTIONS — L10 MEETING NOTES',
+    `Date: ${d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`,
+    `Facilitator: ${document.getElementById('facilitator-pill').textContent}`,
+    `Breakpoint Target: BP1 — $3M by January 2026`,
+    `Meeting Rating: ${state.rating||'—'}/10`,
+    '',
+    '=== SCORECARD ===',
+    ...cats.map(cat=>[`[${cat}]`,...state.kpis.filter(k=>k.cat===cat).map(k=>`  ${k.name}: ${k.actual||'—'} [${k.status||'not set'}] Floor:${k.floor} Target:${k.target}`)]).flat(),
+    '',
+    '=== RED LINES ===',
+    `Cash Runway: ${state.redLines.cashRunway.val||'—'} (floor: 4 wks)`,
+    `DSCR: ${state.redLines.dscr.val||'—'} (floor: 1.10x)`,
+    `Gross Margin: ${state.redLines.grossMargin.val||'—'} (floor: 24%)`,
+    '',
+    '=== ROCKS ===',
+    ...state.rocks.map(r=>`[${r.status==='ot'?'ON TRACK':r.status==='oft'?'OFF TRACK':'NOT SET'}] ${r.text} — ${r.owner} — due ${r.due}`),
+    '',
+    '=== HEADLINES ===',
+    ...(state.headlines.length?state.headlines.map(h=>`[${h.type.toUpperCase()}] ${h.text}`):['(none)']),
+    '',
+    '=== TO-DOs ===',
+    ...state.todos.map(t=>`[${t.done?'DONE':'NOT DONE'}] ${t.text} — ${t.owner} by ${t.due}`),
+    '',
+    '=== ISSUES / IDS ===',
+    ...state.issues.map(i=>`[${i.solved?'SOLVED':'OPEN'}][${i.priority.toUpperCase()}] ${i.text} (${i.owner})\n  Resolution: ${i.resolution||'—'}`),
+    '',
+    '=== CASCADE MESSAGE ===',
+    state.cascadeMsg||'(none)',
+  ];
+  const fullNotes=lines.join('\n');
+
+  const record={
+    date: d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}),
+    timestamp: d.toISOString(),
+    rating: state.rating||'—',
+    openIssues: state.issues.filter(i=>!i.solved).length,
+    openTodos: state.todos.filter(t=>!t.done).length,
+    greenKpis: state.kpis.filter(k=>k.status==='green').length,
+    rocksOnTrack: state.rocks.filter(r=>r.status==='ot').length,
+    cascade: state.cascadeMsg||'',
+    fullNotes,
+  };
+  state.meetingHistory.push(record);
+  const ok=saveState();
+
+  // Auto-export the notes file
+  const blob=new Blob([fullNotes],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`Driven_L10_${d.toISOString().slice(0,10)}.txt`;
+  a.click();
+
+  toast(ok?`Meeting saved & exported. Rated ${state.rating||'—'}/10. See you Monday.`:'Could not save to browser',ok?'success':'error');
+  updateSidebar();
+}
+function getNextMonday(){
+  const d=new Date();
+  const day=d.getDay();
+  const diff=day===1?7:((8-day)%7)||7;
+  d.setDate(d.getDate()+diff);
+  return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+}
+
+/* ── Date / meta ── */
+function initMeta(){
+  const d=state.meetingDate?new Date(state.meetingDate+'T12:00:00'):new Date();
+  const dateInput=document.getElementById('meeting-date-input');
+  if(dateInput) dateInput.value=state.meetingDate||new Date().toISOString().slice(0,10);
+  const timeInput=document.getElementById('meeting-time-input');
+  if(timeInput) timeInput.value=state.meetingTime||'08:00';
+  const locInput=document.getElementById('meeting-location-input');
+  if(locInput) locInput.value=state.meetingLocation||'';
+  const timeStr=state.meetingTime||'08:00';
+  document.getElementById('meeting-date-label').textContent=
+    d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})+' @ '+timeStr;
+  const start=new Date(d.getFullYear(),0,1);
+  const wk=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);
+  document.getElementById('week-num-pill').textContent=`Week ${wk}`;
+  if(!state.meetingDate){
+    state.meetingDate=new Date().toISOString().slice(0,10);
+    if(dateInput) dateInput.value=state.meetingDate;
+  }
+}
+
+/* ── Boot ── */
+function init(){
+  loadState();
+  initMeta();
+  renderSidebar();
+  renderMain();
+  document.getElementById('seg-timer').textContent=fmt(SEGS_DEF[0].mins*60);
+  document.getElementById('seg-label-timer').textContent=SEGS_DEF[0].label;
+}
+init();
+</script>
+</body>
+</html>
