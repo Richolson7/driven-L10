@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driven Solutions — HQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --g:#39FF14;--gd:#2ECC0E;--gbg:#0D1F0A;
+  --dk:#0E0E0E;--s:#161616;--s2:#1E1E1E;--s3:#252525;
+  --br:rgba(255,255,255,0.08);--bra:rgba(57,255,20,0.3);
+  --tx:#F0F0F0;--td:#888;--tm:#555;
+  --red:#FF4444;--rbg:#2A0808;--rbr:#993333;
+  --amb:#FFB800;--abg:#1F1500;--abr:#996600;
+  --blue:#4A9EFF;--bbg:#0A1A2E;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--dk);color:var(--tx);font-family:'Barlow',sans-serif;font-size:14px;min-height:100vh}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--s)}::-webkit-scrollbar-thumb{background:var(--s3);border-radius:3px}
+
+/* ── TOP BAR ── */
+.topbar{background:#080E08;border-bottom:3px solid var(--g);padding:0 28px;height:56px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;flex-shrink:0}
+.logo em{color:var(--g);font-style:normal}
+.sync-info{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--td);font-family:'DM Mono',monospace}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--g);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.topbar-right{margin-left:auto;display:flex;gap:8px}
+.tbtn{height:32px;padding:0 14px;border-radius:4px;border:1px solid var(--br);background:var(--s2);color:var(--td);font-size:12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.tbtn:hover{color:var(--tx);border-color:rgba(255,255,255,.2)}
+.tbtn.green{border-color:var(--gd);color:var(--g);background:var(--gbg)}
+.tbtn.red{border-color:var(--rbr);color:var(--red);background:var(--rbg)}
+
+/* ── MAIN NAV TABS ── */
+.main-tabs{display:flex;gap:2px;background:#080E08;border-bottom:2px solid var(--br);padding:0 28px;overflow-x:auto}
+.main-tab{padding:13px 22px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--td);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.main-tab:hover{color:var(--tx)}
+.main-tab.active{color:var(--g);border-bottom-color:var(--g)}
+.badge-count{background:var(--red);color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;font-family:'DM Mono',monospace}
+
+/* ── PAGE SECTIONS ── */
+.page{display:none;padding:24px 28px 48px}
+.page.active{display:block}
+
+/* ════════════════════════════════
+   TASK TRACKER STYLES
+════════════════════════════════ */
+.stats-bar{display:flex;gap:0;background:var(--s);border:1px solid var(--br);border-radius:8px;overflow:hidden;margin-bottom:16px}
+.stat-item{padding:12px 20px;border-right:1px solid var(--br);text-align:center;flex:1}
+.stat-item:last-child{border-right:none}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;line-height:1}
+.stat-lbl{font-size:10px;color:var(--td);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.stat-num.red{color:var(--red)}.stat-num.amb{color:var(--amb)}.stat-num.grn{color:var(--g)}.stat-num.blue{color:var(--blue)}
+.od-banner{background:var(--rbg);border:1px solid var(--rbr);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--red);display:none;align-items:center;gap:10px;margin-bottom:12px}
+.od-banner.show{display:flex}
+.add-bar{background:var(--s2);border:1px solid var(--br);border-radius:8px;padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.add-input{flex:2;min-width:200px;height:36px;background:var(--s);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:14px;padding:0 12px}
+.add-input:focus{outline:none;border-color:var(--bra)}
+.add-select{height:36px;background:var(--s);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:13px;padding:0 8px;cursor:pointer}
+.add-select:focus{outline:none;border-color:var(--bra)}
+.add-date{height:36px;background:var(--s);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:13px;padding:0 8px;width:130px}
+.add-btn{height:36px;padding:0 20px;border-radius:4px;border:1px solid var(--gd);background:var(--gbg);color:var(--g);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;font-size:14px;cursor:pointer;white-space:nowrap}
+.filter-bar{padding:8px 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.flt{padding:4px 12px;border-radius:99px;border:1px solid var(--br);background:none;color:var(--td);font-size:12px;cursor:pointer;font-family:'Barlow',sans-serif;transition:all .15s}
+.flt:hover{color:var(--tx)}
+.flt.active{background:var(--s2);color:var(--tx);border-color:rgba(255,255,255,.3)}
+.flt.danger{background:var(--rbg);border-color:var(--rbr);color:var(--red)}
+.flt-select{height:30px;background:var(--s);border:1px solid var(--br);border-radius:99px;color:var(--td);font-size:12px;padding:0 10px;font-family:'Barlow',sans-serif}
+.search-box{height:30px;background:var(--s);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-size:12px;padding:0 10px;font-family:'Barlow',sans-serif;min-width:150px;margin-left:auto}
+.search-box:focus{outline:none;border-color:var(--bra)}
+.task-list{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.task-card{background:var(--s);border:1px solid var(--br);border-radius:8px;display:grid;grid-template-columns:26px 1fr auto;gap:12px;padding:13px 16px;align-items:start;transition:border-color .15s;position:relative}
+.task-card:hover{border-color:rgba(255,255,255,.15)}
+.task-card.is-overdue{border-left:3px solid var(--red);padding-left:13px}
+.task-card.is-soon{border-left:3px solid var(--amb);padding-left:13px}
+.task-card.is-done{opacity:.5}
+.chk{width:22px;height:22px;border-radius:5px;border:1px solid rgba(255,255,255,.2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s;background:none}
+.chk:hover{border-color:var(--gd)}
+.chk.on{background:var(--gbg);border-color:var(--gd)}
+.chk.on::after{content:'';display:block;width:11px;height:7px;border-left:2px solid var(--g);border-bottom:2px solid var(--g);transform:rotate(-45deg) translate(1px,-1px)}
+.task-body{min-width:0;cursor:pointer}
+.task-text{font-size:14px;color:var(--tx);line-height:1.5;margin-bottom:7px;word-break:break-word}
+.task-text.done-text{text-decoration:line-through;color:var(--tm)}
+.task-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
+.pill.owner{background:var(--s3);color:var(--td);border:1px solid var(--br)}
+.pill.due-ok{background:var(--s3);color:var(--td);border:1px solid var(--br)}
+.pill.due-soon{background:var(--abg);color:var(--amb);border:1px solid var(--abr)}
+.pill.due-late{background:var(--rbg);color:var(--red);border:1px solid var(--rbr)}
+.pill.due-done{background:var(--gbg);color:var(--g);border:1px solid var(--gd)}
+.pill.pri-high{background:var(--rbg);color:var(--red);border:1px solid var(--rbr)}
+.pill.pri-med{background:var(--abg);color:var(--amb);border:1px solid var(--abr)}
+.pill.pri-low{background:var(--s3);color:var(--tm);border:1px solid var(--br)}
+.pill.cat{background:var(--bbg);color:var(--blue);border:1px solid rgba(74,158,255,.3)}
+.avt{width:16px;height:16px;border-radius:50%;background:var(--gbg);color:var(--g);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.task-actions{display:flex;gap:4px;flex-shrink:0}
+.act{width:28px;height:28px;border-radius:4px;border:1px solid var(--br);background:none;color:var(--tm);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;position:relative}
+.act:hover{border-color:rgba(255,255,255,.2);color:var(--tx)}
+.act.del:hover{background:var(--rbg);border-color:var(--rbr);color:var(--red)}
+.snooze-menu{display:none;position:absolute;right:0;top:32px;background:var(--s2);border:1px solid var(--br);border-radius:6px;z-index:50;min-width:120px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.snooze-menu.open{display:block}
+.snooze-opt{padding:8px 14px;font-size:12px;cursor:pointer;color:var(--td)}
+.snooze-opt:hover{background:var(--s3);color:var(--tx)}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 0;margin-bottom:8px;border-bottom:1px solid var(--br)}
+.section-hdr-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--td)}
+.empty{padding:40px;text-align:center;color:var(--tm);font-size:14px;background:var(--s);border:1px dashed var(--br);border-radius:8px}
+
+/* EDIT MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--s2);border:1px solid var(--br);border-radius:8px;width:100%;max-width:540px;max-height:80vh;overflow-y:auto}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;color:var(--g)}
+.modal-body{padding:20px}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--td);margin-bottom:5px;font-family:'Barlow Condensed',sans-serif;font-weight:600}
+.form-row input,.form-row select,.form-row textarea{width:100%;background:var(--s);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:14px;padding:8px 10px}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{outline:none;border-color:var(--bra)}
+.form-row textarea{resize:vertical;min-height:70px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--br);display:flex;justify-content:flex-end;gap:8px}
+
+/* ════════════════════════════════
+   L10 MEETING STYLES
+════════════════════════════════ */
+.l10-layout{display:grid;grid-template-columns:200px 1fr;gap:20px;min-height:600px}
+.l10-sidebar{background:var(--s);border:1px solid var(--br);border-radius:8px;padding:12px 0;height:fit-content;position:sticky;top:80px}
+.l10-sb-title{padding:0 14px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--tm);border-bottom:1px solid var(--br);margin-bottom:6px}
+.l10-seg{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;transition:background .12s;border-left:2px solid transparent}
+.l10-seg:hover{background:var(--s2)}
+.l10-seg.active{background:var(--gbg);border-left-color:var(--g)}
+.l10-seg-icon{width:24px;height:24px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;font-family:'DM Mono',monospace;color:var(--td);border:1px solid var(--br)}
+.l10-seg.active .l10-seg-icon{background:var(--gbg);color:var(--g);border-color:var(--gd)}
+.l10-seg.done .l10-seg-icon{background:rgba(46,204,14,.1);color:var(--gd);border-color:rgba(46,204,14,.2)}
+.l10-seg-name{font-size:12px;font-weight:500;color:var(--td)}
+.l10-seg.active .l10-seg-name{color:var(--g)}
+.l10-seg-mins{font-size:10px;color:var(--tm);font-family:'DM Mono',monospace}
+.l10-sb-stats{padding:12px 14px;border-top:1px solid var(--br);margin-top:8px}
+.l10-sf-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.l10-sf-lbl{color:var(--tm)}.l10-sf-val{font-family:'DM Mono',monospace;color:var(--td)}
+.l10-sf-val.g{color:var(--g)}.l10-sf-val.r{color:var(--red)}.l10-sf-val.a{color:var(--amb)}
+.l10-main{min-width:0}
+.l10-seg-content{display:none}
+.l10-seg-content.active{display:block}
+.l10-seg-hdr{margin-bottom:20px}
+.l10-seg-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:var(--g);margin-bottom:4px}
+.l10-seg-desc{font-size:13px;color:var(--td);line-height:1.6}
+.l10-card{background:var(--s);border:1px solid var(--br);border-radius:8px;padding:16px;margin-bottom:12px}
+.l10-card-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--tm);margin-bottom:10px}
+.l10-timer-cluster{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.l10-tbox{background:var(--s2);border:1px solid var(--br);border-radius:4px;padding:4px 12px;text-align:center;min-width:64px}
+.l10-tlbl{font-size:10px;color:var(--tm);text-transform:uppercase;letter-spacing:.08em}
+.l10-tval{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--tx)}
+.l10-tval.warn{color:var(--amb)}.l10-tval.over{color:var(--red)}.l10-tval.grn{color:var(--g)}
+.l10-btn{height:32px;padding:0 14px;border-radius:4px;border:1px solid var(--br);background:var(--s2);color:var(--td);font-size:12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:1px;transition:all .15s}
+.l10-btn:hover{color:var(--tx);border-color:rgba(255,255,255,.2)}
+.l10-btn.go{border-color:var(--gd);color:var(--g);background:var(--gbg)}
+.l10-nav-btns{display:flex;gap:6px;margin-top:16px}
+.kpi-table{width:100%;border-collapse:collapse;font-size:13px}
+.kpi-table th{text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--tm);border-bottom:1px solid var(--br)}
+.kpi-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.kpi-table tr:hover td{background:var(--s2)}
+.kpi-actual{width:90px;background:var(--s2);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:13px;padding:4px 8px}
+.kpi-actual:focus{outline:none;border-color:var(--bra)}
+.status-pill{display:inline-flex;align-items:center;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:'Barlow',sans-serif;transition:all .15s}
+.status-pill.g{background:rgba(46,204,14,.12);color:var(--gd)}
+.status-pill.r{background:var(--rbg);color:var(--red)}
+.status-pill.gr{background:var(--s3);color:var(--tm)}
+.rock-row{display:grid;grid-template-columns:1fr 100px 80px auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.rock-row:last-child{border-bottom:none}
+.r-btn{padding:3px 8px;border-radius:4px;border:1px solid var(--br);background:var(--s3);color:var(--tm);font-size:11px;cursor:pointer;font-family:'Barlow',sans-serif;transition:all .15s}
+.r-btn.ot{background:rgba(46,204,14,.12);border-color:var(--gd);color:var(--g)}
+.r-btn.oft{background:var(--rbg);border-color:var(--rbr);color:var(--red)}
+.todo-row{display:grid;grid-template-columns:22px 1fr 90px 90px auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.todo-row:last-child{border-bottom:none}
+.issue-row{display:grid;grid-template-columns:22px 1fr auto 90px auto;gap:8px;align-items:start;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.issue-row:last-child{border-bottom:none}
+.iss-idx{width:20px;height:20px;border-radius:50%;background:var(--s3);color:var(--tm);font-size:10px;font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.il-input{width:100%;background:transparent;border:none;border-bottom:1px dashed var(--br);color:var(--tx);font-family:'Barlow',sans-serif;font-size:13px;padding:2px 4px}
+.il-input:focus{outline:none;border-bottom-color:var(--bra)}
+.il-input.dim{color:var(--td);font-size:12px}
+.segue-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.segue-card{background:var(--s2);border:1px solid var(--br);border-radius:6px;padding:12px}
+.seg-name-inp{font-weight:600;font-size:13px;background:transparent;border:none;color:var(--tx);width:100%;margin-bottom:6px;border-bottom:1px solid var(--br);padding-bottom:4px}
+.seg-name-inp:focus{outline:none;border-bottom-color:var(--bra)}
+.l10-textarea{width:100%;background:var(--s2);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:13px;padding:8px 10px;resize:vertical;min-height:70px}
+.l10-textarea:focus{outline:none;border-color:var(--bra)}
+.rating-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.rnum{width:34px;height:34px;border-radius:4px;border:1px solid var(--br);background:var(--s2);color:var(--td);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:center}
+.rnum.sel{background:var(--gbg);border-color:var(--gd);color:var(--g)}
+.add-row{display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--br)}
+.add-row input,.add-row select{background:var(--s2);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:13px;padding:6px 10px}
+.add-row input:focus,.add-row select:focus{outline:none;border-color:var(--bra)}
+.add-row input{flex:1}
+.del{width:24px;height:24px;border-radius:4px;border:1px solid var(--br);background:none;color:var(--tm);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.del:hover{border-color:var(--rbr);color:var(--red);background:var(--rbg)}
+.conclude-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.info-box{background:var(--gbg);border:1px solid var(--bra);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--g);margin-bottom:14px}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--s2);border:1px solid var(--br);border-radius:6px;padding:10px 16px;font-size:13px;color:var(--tx);animation:tin .2s ease;min-width:200px}
+.toast.ok{border-color:var(--gd);color:var(--g);background:var(--gbg)}
+.toast.err{border-color:var(--rbr);color:var(--red);background:var(--rbg)}
+@keyframes tin{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+
+select option{background:var(--s2)}
+</style>
+</head>
+<body>
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modal-title">Edit Task</h3><button class="tbtn" onclick="closeModal()">✕ Close</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Task</label><textarea id="edit-text" rows="2"></textarea></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Owner</label>
+          <select id="edit-owner"><option value="">No owner</option><option>Owner / President</option><option>Account Executive</option><option>Ops Coordinator</option><option>Admin / Bookkeeper</option><option>All</option></select></div>
+        <div class="form-row"><label>Category</label>
+          <select id="edit-cat"><option value="">No category</option><option>Sales</option><option>Operations</option><option>Finance</option><option>Marketing</option><option>Hiring</option><option>L10 Rock</option><option>Customer</option><option>Other</option></select></div>
+        <div class="form-row"><label>Priority</label>
+          <select id="edit-pri"><option value="high">High</option><option value="med" selected>Medium</option><option value="low">Low</option></select></div>
+        <div class="form-row"><label>Due Date</label><input type="date" id="edit-due"></div>
+      </div>
+      <div class="form-row"><label>Notes</label><textarea id="edit-notes" rows="3" placeholder="Context, blockers, links..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="tbtn" onclick="closeModal()">Cancel</button><button class="tbtn green" onclick="saveEdit()">Save</button></div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">DRIVEN <em>SOLUTIONS</em> HQ</div>
+  <div class="sync-info"><div class="sync-dot"></div><span id="sync-label">Loading...</span></div>
+  <div class="topbar-right">
+    <button class="tbtn" onclick="exportL10()">Export L10 Notes</button>
+    <button class="tbtn" onclick="exportCSV()">Export Tasks CSV</button>
+  </div>
+</div>
+
+<!-- MAIN TABS -->
+<div class="main-tabs">
+  <div class="main-tab active" onclick="showPage('tasks',this)">📋 Task Tracker <span class="badge-count" id="overdue-badge" style="display:none">0</span></div>
+  <div class="main-tab" onclick="showPage('l10',this)">⚡ L10 Meeting</div>
+</div>
+
+<!-- ════════════════════
+     TASK TRACKER PAGE
+════════════════════ -->
+<div class="page active" id="page-tasks">
+  <div class="stats-bar" id="stats-bar"></div>
+  <div class="od-banner" id="od-banner"><span>⚠</span><span id="od-text"></span></div>
+
+  <div class="add-bar">
+    <input class="add-input" type="text" id="new-text" placeholder="Add a task and press Enter..." onkeydown="if(event.key==='Enter')addTask()">
+    <select class="add-select" id="new-owner"><option value="">Owner</option><option>Owner / President</option><option>Account Executive</option><option>Ops Coordinator</option><option>Admin / Bookkeeper</option><option>All</option></select>
+    <select class="add-select" id="new-cat"><option value="">Category</option><option>Sales</option><option>Operations</option><option>Finance</option><option>Marketing</option><option>Hiring</option><option>L10 Rock</option><option>Customer</option><option>Other</option></select>
+    <select class="add-select" id="new-pri"><option value="high">High</option><option value="med" selected>Medium</option><option value="low">Low</option></select>
+    <input class="add-date" type="date" id="new-due">
+    <button class="add-btn" onclick="addTask()">+ Add Task</button>
+  </div>
+
+  <div class="filter-bar">
+    <button class="flt active" onclick="setFilter('all',this)">All</button>
+    <button class="flt danger" onclick="setFilter('overdue',this)">Overdue</button>
+    <button class="flt" onclick="setFilter('today',this)">Due Today</button>
+    <button class="flt" onclick="setFilter('week',this)">This Week</button>
+    <button class="flt" onclick="setFilter('open',this)">Open</button>
+    <button class="flt" onclick="setFilter('done',this)">Done</button>
+    <select class="flt-select" id="owner-flt" onchange="renderTasks()"><option value="">All owners</option><option>Owner / President</option><option>Account Executive</option><option>Ops Coordinator</option><option>Admin / Bookkeeper</option><option>All</option></select>
+    <select class="flt-select" id="cat-flt" onchange="renderTasks()"><option value="">All categories</option><option>Sales</option><option>Operations</option><option>Finance</option><option>Marketing</option><option>Hiring</option><option>L10 Rock</option><option>Customer</option><option>Other</option></select>
+    <input class="search-box" type="text" id="search" placeholder="Search..." oninput="renderTasks()">
+  </div>
+
+  <div id="task-main"></div>
+  <div style="font-size:12px;color:var(--tm);padding:4px 0" id="task-footer-count"></div>
+</div>
+
+<!-- ════════════════════
+     L10 MEETING PAGE
+════════════════════ -->
+<div class="page" id="page-l10">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:2px;color:var(--g)">Level 10 Meeting</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+        <input type="date" id="l10-date-input" style="background:var(--s2);border:1px solid var(--br);border-radius:4px;color:var(--g);font-family:'DM Mono',monospace;font-size:13px;padding:4px 10px;cursor:pointer" onchange="saveL10MeetingDate(this.value)">
+        <div style="font-size:12px;color:var(--td)" id="l10-date-label">Monday 8:00 AM · 90 minutes</div>
+      </div>
+    </div>
+    <div class="l10-timer-cluster">
+      <div class="l10-tbox"><div class="l10-tlbl">Total</div><div class="l10-tval grn" id="total-timer">0:00</div></div>
+      <div class="l10-tbox"><div class="l10-tlbl" id="seg-timer-lbl">Segment</div><div class="l10-tval" id="seg-timer">5:00</div></div>
+      <button class="l10-btn" id="start-btn" onclick="toggleTimer()">▶ Start</button>
+      <button class="l10-btn" onclick="resetSeg()">Reset</button>
+      <button class="l10-btn" onclick="nextL10Seg()">Next →</button>
+    </div>
+  </div>
+
+  <div class="l10-layout">
+    <div class="l10-sidebar">
+      <div class="l10-sb-title">Agenda</div>
+      <div id="l10-sidebar"></div>
+      <div class="l10-sb-stats">
+        <div class="l10-sf-row"><span class="l10-sf-lbl">Rocks OT</span><span class="l10-sf-val g" id="sf-rocks">—</span></div>
+        <div class="l10-sf-row"><span class="l10-sf-lbl">Open issues</span><span class="l10-sf-val" id="sf-iss">—</span></div>
+        <div class="l10-sf-row"><span class="l10-sf-lbl">Open to-dos</span><span class="l10-sf-val" id="sf-td">—</span></div>
+        <div class="l10-sf-row"><span class="l10-sf-lbl">KPIs green</span><span class="l10-sf-val g" id="sf-kpi">—</span></div>
+        <button class="tbtn green" style="width:100%;margin-top:10px;justify-content:center" onclick="saveL10()">✓ Save Meeting</button>
+      </div>
+    </div>
+    <div class="l10-main" id="l10-main"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+// SUPABASE
+// ════════════════════════════════════════════════════
+const { createClient } = supabase;
+const db = createClient(
+  'https://igaylyhkssahczubiztb.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnYXlseWhrc3NhaGN6dWJpenRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyOTk3MzQsImV4cCI6MjA5Mjg3NTczNH0.iiRC320be1-kLa8tQoTupqWTu_8yTaEaJGVpdI4dnAo'
+);
+
+// ════════════════════════════════════════════════════
+// PAGE NAVIGATION
+// ════════════════════════════════════════════════════
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ════════════════════════════════════════════════════
+// SHARED UTILS
+// ════════════════════════════════════════════════════
+const today = () => new Date().toISOString().split('T')[0];
+const todayD = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+const parseD = s => { if(!s)return null; const[y,m,d]=s.split('-'); return new Date(y,+m-1,+d); };
+const daysUntil = s => { if(!s)return null; return Math.round((parseD(s)-todayD())/86400000); };
+const fmtDate = s => { if(!s)return '—'; return parseD(s).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); };
+const initials = n => !n?'?':n.split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+let saveDebounce = null;
+
+function toast(msg, type='ok', dur=2500) {
+  const w=document.getElementById('toasts'); const t=document.createElement('div');
+  t.className='toast '+type; t.textContent=msg; w.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='all .25s';setTimeout(()=>t.remove(),250);},dur);
+}
+function setSyncLabel(txt) { document.getElementById('sync-label').textContent=txt; }
+
+// ════════════════════════════════════════════════════
+// TASK TRACKER
+// ════════════════════════════════════════════════════
+let tasks=[], nid=1, taskFilter='all', editingId=null;
+
+const DEFAULTS=[
+  {text:'Post Account Executive job on LinkedIn + Indeed',owner:'Owner / President',cat:'Hiring',pri:'high',due:today(),notes:'Use the exact job post from the Hiring System doc',done:false,completedAt:null,created:today()},
+  {text:'Send Touch 2 on every open quote from last week',owner:'Account Executive',cat:'Sales',pri:'high',due:today(),notes:'5-touch system — no quote dies without all 5 touches',done:false,completedAt:null,created:today()},
+  {text:'Update CRM — all open quotes must have a next touch',owner:'Account Executive',cat:'Sales',pri:'high',due:today(),notes:'CRM 100% current before end of day',done:false,completedAt:null,created:today()},
+  {text:'Call every invoice 30+ days outstanding',owner:'Ops Coordinator',cat:'Operations',pri:'high',due:today(),notes:'AR floor is 35 days. Fix this today.',done:false,completedAt:null,created:today()},
+  {text:'Block Monday 8AM L10 as permanent recurring event',owner:'Owner / President',cat:'L10 Rock',pri:'high',due:today(),notes:'Never move this meeting',done:false,completedAt:null,created:today()},
+  {text:'Update 13-week cash model with this week\'s actuals',owner:'Owner / President',cat:'Finance',pri:'med',due:'',notes:'Every Friday by 5PM',done:false,completedAt:null,created:today()},
+  {text:'Build top 50 ICP target account list in HubSpot',owner:'Account Executive',cat:'Sales',pri:'med',due:'',notes:'Use ICP criteria: $5M–$100M manufacturers',done:false,completedAt:null,created:today()},
+  {text:'Ask 5 current customers for a Google review',owner:'All',cat:'Marketing',pri:'med',due:'',notes:'Text link converts better than email',done:false,completedAt:null,created:today()},
+];
+
+async function loadTasks() {
+  try {
+    const {data,error}=await db.from('tasks').select('*').eq('id','main').single();
+    if(error)throw error;
+    if(data&&data.task_list&&data.task_list.length){tasks=data.task_list;nid=data.next_id||200;}
+    else{tasks=DEFAULTS.map((t,i)=>({...t,id:i+1}));nid=50;await syncTasks();}
+    setSyncLabel('Live — synced');
+  }catch(e){tasks=DEFAULTS.map((t,i)=>({...t,id:i+1}));nid=50;setSyncLabel('Offline — local only');}
+  renderTasks();
+}
+
+async function syncTasks(showToast=false) {
+  try{
+    await db.from('tasks').upsert({id:'main',task_list:tasks,next_id:nid,updated_at:new Date().toISOString()});
+    setSyncLabel('Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+    if(showToast)toast('Saved','ok');
+  }catch(e){setSyncLabel('Save failed');}
+}
+
+function debouncedSyncTasks(){clearTimeout(saveDebounce);saveDebounce=setTimeout(()=>syncTasks(),600);}
+
+// Subscribe to realtime task changes
+db.channel('tasks-live').on('postgres_changes',{event:'UPDATE',schema:'public',table:'tasks',filter:'id=eq.main'},payload=>{
+  if(payload.new.task_list){tasks=payload.new.task_list;nid=payload.new.next_id||nid;renderTasks();setSyncLabel('Updated by team '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));}
+}).subscribe();
+
+function addTask(){
+  const text=document.getElementById('new-text').value.trim();if(!text)return;
+  tasks.unshift({id:++nid,text,owner:document.getElementById('new-owner').value||'',cat:document.getElementById('new-cat').value||'',pri:document.getElementById('new-pri').value||'med',due:document.getElementById('new-due').value||'',done:false,completedAt:null,notes:'',created:today()});
+  document.getElementById('new-text').value='';document.getElementById('new-due').value='';
+  debouncedSyncTasks();renderTasks();document.getElementById('new-text').focus();
+}
+function toggleDone(id){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  t.done=!t.done;t.completedAt=t.done?today():null;
+  // If this task matches an L10 to-do, sync the done state back
+  const l10match=l10.todos.find(x=>x.text===t.text);
+  if(l10match&&l10match.done!==t.done){l10match.done=t.done;saveL10();}
+  debouncedSyncTasks();renderTasks();
+}
+function deleteTask(id){tasks=tasks.filter(x=>x.id!==id);debouncedSyncTasks();renderTasks();}
+function snooze(id,days){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const base=t.due&&parseD(t.due)>todayD()?parseD(t.due):todayD();base.setDate(base.getDate()+days);
+  t.due=base.toISOString().split('T')[0];debouncedSyncTasks();renderTasks();
+  document.querySelectorAll('.snooze-menu').forEach(m=>m.classList.remove('open'));
+}
+function toggleSnooze(id,e){e.stopPropagation();const m=document.getElementById('sm-'+id);const was=m.classList.contains('open');document.querySelectorAll('.snooze-menu').forEach(x=>x.classList.remove('open'));if(!was)m.classList.add('open');}
+document.addEventListener('click',()=>document.querySelectorAll('.snooze-menu').forEach(m=>m.classList.remove('open')));
+
+function openEdit(id){const t=tasks.find(x=>x.id===id);if(!t)return;editingId=id;document.getElementById('edit-text').value=t.text;document.getElementById('edit-owner').value=t.owner||'';document.getElementById('edit-cat').value=t.cat||'';document.getElementById('edit-pri').value=t.pri||'med';document.getElementById('edit-due').value=t.due||'';document.getElementById('edit-notes').value=t.notes||'';document.getElementById('edit-modal').classList.add('open');}
+function closeModal(){document.getElementById('edit-modal').classList.remove('open');editingId=null;}
+function saveEdit(){const t=tasks.find(x=>x.id===editingId);if(!t)return;t.text=document.getElementById('edit-text').value.trim()||t.text;t.owner=document.getElementById('edit-owner').value;t.cat=document.getElementById('edit-cat').value;t.pri=document.getElementById('edit-pri').value;t.due=document.getElementById('edit-due').value;t.notes=document.getElementById('edit-notes').value;closeModal();debouncedSyncTasks();renderTasks();}
+document.getElementById('edit-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+
+function setFilter(f,btn){taskFilter=f;document.querySelectorAll('.flt').forEach(b=>b.classList.remove('active','danger'));btn.classList.add('active');if(f==='overdue')btn.classList.add('danger');renderTasks();}
+
+function getFiltered(){
+  let list=[...tasks];
+  const ownerF=document.getElementById('owner-flt').value;
+  const catF=document.getElementById('cat-flt').value;
+  const q=document.getElementById('search').value.toLowerCase();
+  if(ownerF)list=list.filter(t=>t.owner===ownerF);
+  if(catF)list=list.filter(t=>t.cat===catF);
+  if(q)list=list.filter(t=>t.text.toLowerCase().includes(q)||(t.notes||'').toLowerCase().includes(q));
+  const now=todayD();const weekEnd=new Date(now);weekEnd.setDate(now.getDate()+7);
+  if(taskFilter==='overdue')list=list.filter(t=>!t.done&&t.due&&parseD(t.due)<now);
+  else if(taskFilter==='today')list=list.filter(t=>!t.done&&t.due===today());
+  else if(taskFilter==='week')list=list.filter(t=>!t.done&&t.due&&parseD(t.due)>=now&&parseD(t.due)<=weekEnd);
+  else if(taskFilter==='open')list=list.filter(t=>!t.done);
+  else if(taskFilter==='done')list=list.filter(t=>t.done);
+  list.sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;const da=a.due?daysUntil(a.due):9999,db=b.due?daysUntil(b.due):9999;const pa={high:0,med:1,low:2}[a.pri]??1,pb={high:0,med:1,low:2}[b.pri]??1;if(da!==db)return da-db;return pa-pb;});
+  return list;
+}
+
+function taskCardHTML(t){
+  const du=t.due?daysUntil(t.due):null;
+  let dueCls='due-ok',dueLabel=t.due?'Due '+fmtDate(t.due):'No date';
+  if(t.done){dueCls='due-done';dueLabel=t.completedAt?'Done '+fmtDate(t.completedAt):'Done';}
+  else if(du!==null){if(du<0){dueCls='due-late';dueLabel=Math.abs(du)+'d overdue';}else if(du===0){dueCls='due-soon';dueLabel='Due today';}else if(du===1){dueCls='due-soon';dueLabel='Due tomorrow';}else if(du<=3){dueCls='due-soon';dueLabel='Due in '+du+'d';}}
+  let cls='task-card';if(!t.done&&du!==null&&du<0)cls+=' is-overdue';else if(!t.done&&du!==null&&du<=1)cls+=' is-soon';if(t.done)cls+=' is-done';
+  const ownerPill=t.owner?`<span class="pill owner"><div class="avt">${esc(initials(t.owner))}</div>${esc(t.owner)}</span>`:'';
+  const catPill=t.cat?`<span class="pill cat">${esc(t.cat)}</span>`:'';
+  return `<div class="${cls}" id="tc-${t.id}">
+    <div class="chk ${t.done?'on':''}" onclick="toggleDone(${t.id})"></div>
+    <div class="task-body" onclick="openEdit(${t.id})">
+      <div class="task-text ${t.done?'done-text':''}">${esc(t.text)}</div>
+      <div class="task-pills">${ownerPill}<span class="pill ${dueCls}">${dueLabel}</span><span class="pill pri-${t.pri}">${t.pri}</span>${catPill}</div>
+      ${t.notes?`<div style="font-size:12px;color:var(--td);margin-top:6px;padding-top:5px;border-top:1px dashed var(--br)">${esc(t.notes)}</div>`:''}
+    </div>
+    <div class="task-actions">
+      <div style="position:relative">
+        <button class="act" onclick="toggleSnooze(${t.id},event)" title="Snooze">⏱</button>
+        <div class="snooze-menu" id="sm-${t.id}">
+          <div class="snooze-opt" onclick="snooze(${t.id},1)">+1 day</div>
+          <div class="snooze-opt" onclick="snooze(${t.id},3)">+3 days</div>
+          <div class="snooze-opt" onclick="snooze(${t.id},7)">+1 week</div>
+          <div class="snooze-opt" onclick="snooze(${t.id},14)">+2 weeks</div>
+        </div>
+      </div>
+      <button class="act" onclick="openEdit(${t.id})" title="Edit">✎</button>
+      <button class="act del" onclick="event.stopPropagation();if(confirm('Delete?'))deleteTask(${t.id})" title="Delete">✕</button>
+    </div>
+  </div>`;
+}
+
+function renderTasks(){
+  const list=getFiltered();const main=document.getElementById('task-main');
+  if(!list.length){main.innerHTML='<div class="empty">No tasks match this filter. Add one above.</div>';return;}
+  const open=list.filter(t=>!t.done),done=list.filter(t=>t.done);
+  let html='';
+  if(open.length){html+=`<div class="section-hdr"><span class="section-hdr-label">Open — ${open.length}</span></div><div class="task-list">`;open.forEach(t=>html+=taskCardHTML(t));html+='</div>';}
+  if(done.length){html+=`<div class="section-hdr"><span class="section-hdr-label">Done — ${done.length}</span><span style="font-size:11px;cursor:pointer;color:var(--tm)" onclick="if(confirm('Clear all completed?')){tasks=tasks.filter(t=>!t.done);debouncedSyncTasks();renderTasks()}">Clear all</span></div><div class="task-list">`;done.forEach(t=>html+=taskCardHTML(t));html+='</div>';}
+  main.innerHTML=html;
+  // Stats
+  const now=todayD();const ov=tasks.filter(t=>!t.done&&t.due&&parseD(t.due)<now);const dt=tasks.filter(t=>!t.done&&t.due===today());const hp=tasks.filter(t=>!t.done&&t.pri==='high');const dn=tasks.filter(t=>t.done);const op=tasks.filter(t=>!t.done);
+  document.getElementById('stats-bar').innerHTML=`<div class="stat-item"><div class="stat-num">${op.length}</div><div class="stat-lbl">Open</div></div><div class="stat-item"><div class="stat-num red">${ov.length}</div><div class="stat-lbl">Overdue</div></div><div class="stat-item"><div class="stat-num amb">${dt.length}</div><div class="stat-lbl">Due Today</div></div><div class="stat-item"><div class="stat-num red">${hp.length}</div><div class="stat-lbl">High Priority</div></div><div class="stat-item"><div class="stat-num grn">${dn.length}</div><div class="stat-lbl">Completed</div></div>`;
+  // Overdue banner
+  const b=document.getElementById('od-banner');
+  if(ov.length){b.classList.add('show');const owners=[...new Set(ov.map(t=>t.owner).filter(Boolean))];document.getElementById('od-text').textContent=`${ov.length} overdue task${ov.length>1?'s':''} — ${owners.length?'owners: '+owners.join(', '):''} — fix these first`;}
+  else b.classList.remove('show');
+  // Badge on tab
+  const badge=document.getElementById('overdue-badge');if(ov.length){badge.textContent=ov.length;badge.style.display='inline';}else badge.style.display='none';
+  document.getElementById('task-footer-count').textContent=list.length+' task'+(list.length!==1?'s':'');
+}
+
+function exportCSV(){
+  const rows=[['Task','Owner','Category','Priority','Due Date','Status','Notes']];
+  tasks.forEach(t=>rows.push([t.text,t.owner,t.cat,t.pri,t.due,t.done?'Done':'Open',t.notes]));
+  const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`Driven_Tasks_${today()}.csv`;a.click();
+}
+
+// ════════════════════════════════════════════════════
+// L10 MEETING
+// ════════════════════════════════════════════════════
+const L10_SEGS=[
+  {id:'segue',label:'Segue',mins:5,desc:'One good thing — personal or professional. 30 sec each.'},
+  {id:'scorecard',label:'Scorecard',mins:10,desc:'Every KPI gets Green or Red. Red → Issues List. No discussion.'},
+  {id:'rocks',label:'Rocks',mins:5,desc:'On Track or Off Track. OFT → Issues List.'},
+  {id:'headlines',label:'Headlines',mins:5,desc:'Customer & employee news. Good and bad.'},
+  {id:'todos',label:'To-Dos',mins:5,desc:'Done or Not Done. Not Done carries forward.'},
+  {id:'ids',label:'IDS',mins:55,desc:'Identify, Discuss, Solve. Every issue ends with a to-do or decision.'},
+  {id:'conclude',label:'Conclude',mins:5,desc:'Confirm to-dos have owners. Rate the meeting.'},
+];
+const TOTAL_SECS=L10_SEGS.reduce((a,s)=>a+s.mins*60,0);
+
+let l10={
+  currentSeg:0,timerRunning:false,totalElapsed:0,segElapsed:0,timerRef:null,rating:null,cascadeMsg:'',nextId:500,
+  rocks:[{id:1,text:'Hire & onboard Ops/Logistics Coordinator',owner:'President',due:'Q1 2025',status:null},{id:2,text:'Account Executive #2 hired — both AEs at $600K+ run rate',owner:'President',due:'Q2 2025',status:null},{id:3,text:'Freight brokerage at $400K+ annual contribution',owner:'AE Team',due:'Q3 2025',status:null},{id:4,text:'40+ Google reviews by year end',owner:'All',due:'Q4 2025',status:null},{id:5,text:'Recurring revenue ≥ 40% of total revenue',owner:'Sales',due:'Q4 2025',status:null}],
+  todos:[{id:1,text:'Post AE job on LinkedIn + Indeed',owner:'President',due:'Today',done:false},{id:2,text:'Send Touch 2 on all open quotes',owner:'AE',due:'Today',done:false},{id:3,text:'Update CRM — all quotes need next touch',owner:'AE',due:'Today',done:false},{id:4,text:'Update 13-week cash model',owner:'President',due:'Friday',done:false}],
+  issues:[{id:1,text:'Pipeline below 25 quotes — outbound consistency',priority:'high',owner:'AE',solved:false,resolution:''},{id:2,text:'CRM not fully adopted — quotes tracked outside HubSpot',priority:'med',owner:'Admin',solved:false,resolution:''}],
+  kpis:[{id:1,name:'Weekly revenue closed',floor:'$46K',target:'$96K',actual:'',status:null},{id:2,name:'Close rate (30d)',floor:'50%',target:'65%',actual:'',status:null},{id:3,name:'Active pipeline (quotes)',floor:'20',target:'75+',actual:'',status:null},{id:4,name:'Outbound touches/rep/day',floor:'10',target:'20',actual:'',status:null},{id:5,name:'OTIF rate',floor:'88%',target:'95%',actual:'',status:null},{id:6,name:'AR days outstanding',floor:'<35d',target:'<25d',actual:'',status:null},{id:7,name:'Gross margin',floor:'26%',target:'32%',actual:'',status:null},{id:8,name:'Cash runway (weeks)',floor:'4 wks',target:'8+ wks',actual:'',status:null}],
+  segue:[{id:1,name:'Owner / President',text:''},{id:2,name:'Account Executive',text:''},{id:3,name:'Ops Coordinator',text:''},{id:4,name:'Admin',text:''}],
+  meetingDate:'',
+  meetingHistory:[],
+};
+
+async function loadL10(){
+  try{
+    const {data,error}=await db.from('l10_state').select('*').eq('id','main').single();
+    if(error)throw error;
+    if(data){
+      if(data.rocks&&data.rocks.length)l10.rocks=data.rocks;
+      if(data.todos&&data.todos.length)l10.todos=data.todos;
+      if(data.issues&&data.issues.length)l10.issues=data.issues;
+      if(data.kpis&&data.kpis.length)l10.kpis=data.kpis;
+      if(data.segue&&data.segue.length)l10.segue=data.segue;
+      if(data.cascade_msg)l10.cascadeMsg=data.cascade_msg;
+      if(data.rating)l10.rating=data.rating;
+      if(data.meeting_history)l10.meetingHistory=data.meeting_history;
+      if(data.meeting_date)l10.meetingDate=data.meeting_date;
+      if(data.next_id)l10.nextId=data.next_id;
+    }
+  }catch(e){}
+  renderL10();
+}
+
+async function saveL10(showToast=false){
+  try{
+    await db.from('l10_state').upsert({id:'main',rocks:l10.rocks,todos:l10.todos,issues:l10.issues,kpis:l10.kpis,segue:l10.segue,cascade_msg:l10.cascadeMsg,rating:l10.rating,meeting_history:l10.meetingHistory,next_id:l10.nextId,meeting_date:l10.meetingDate,updated_at:new Date().toISOString()});
+    if(showToast)toast('Meeting saved','ok');
+    setSyncLabel('Meeting saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+  }catch(e){toast('Save failed','err');}
+}
+
+db.channel('l10-live').on('postgres_changes',{event:'UPDATE',schema:'public',table:'l10_state',filter:'id=eq.main'},payload=>{
+  const d=payload.new;
+  if(d.rocks)l10.rocks=d.rocks;if(d.todos)l10.todos=d.todos;if(d.issues)l10.issues=d.issues;if(d.kpis)l10.kpis=d.kpis;
+  renderL10();setSyncLabel('Updated by team');
+}).subscribe();
+
+function l10nid(){return++l10.nextId;}
+const fmtT=s=>{const neg=s<0;const a=Math.abs(s);return(neg?'-':'')+Math.floor(a/60)+':'+(a%60<10?'0':'')+a%60;};
+
+function toggleTimer(){
+  l10.timerRunning=!l10.timerRunning;
+  const btn=document.getElementById('start-btn');
+  if(l10.timerRunning){btn.textContent='⏸ Pause';btn.classList.add('go');l10.timerRef=setInterval(()=>{l10.totalElapsed++;l10.segElapsed++;const rem=L10_SEGS[l10.currentSeg].mins*60-l10.segElapsed;const sd=document.getElementById('seg-timer');sd.textContent=rem>=0?fmtT(rem):'-'+fmtT(-rem);sd.className='l10-tval'+(rem<=0?' over':rem<=30?' warn':'');document.getElementById('total-timer').textContent=fmtT(l10.totalElapsed);},1000);}
+  else{btn.textContent='▶ Resume';btn.classList.remove('go');clearInterval(l10.timerRef);}
+}
+function resetSeg(){l10.segElapsed=0;document.getElementById('seg-timer').textContent=fmtT(L10_SEGS[l10.currentSeg].mins*60);document.getElementById('seg-timer').className='l10-tval';}
+function nextL10Seg(){if(l10.currentSeg<6){l10.currentSeg++;resetSeg();document.getElementById('seg-timer-lbl').textContent=L10_SEGS[l10.currentSeg].label;renderL10Sidebar();renderL10Content();}}
+
+function saveL10MeetingDate(val){l10.meetingDate=val;saveL10();}
+function renderL10(){
+  // Set date input - use saved date or today
+  const di=document.getElementById('l10-date-input');
+  if(di){di.value=l10.meetingDate||today();}
+  const dateStr=l10.meetingDate?new Date(l10.meetingDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}):new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('l10-date-label').textContent=dateStr+' · 90 minutes';
+  renderL10Sidebar();renderL10Content();updateL10Stats();
+}
+
+function renderL10Sidebar(){
+  const c=document.getElementById('l10-sidebar');c.innerHTML='';
+  L10_SEGS.forEach((s,i)=>{
+    const act=i===l10.currentSeg,dn=i<l10.currentSeg;
+    const d=document.createElement('div');d.className=`l10-seg${act?' active':''}${dn?' done':''}`;d.onclick=()=>{l10.currentSeg=i;resetSeg();renderL10Sidebar();renderL10Content();};
+    d.innerHTML=`<div class="l10-seg-icon">${dn?'✓':i+1}</div><div><div class="l10-seg-name">${s.label}</div><div class="l10-seg-mins">${s.mins} min</div></div>`;
+    c.appendChild(d);
+  });
+}
+
+function updateL10Stats(){
+  document.getElementById('sf-rocks').textContent=`${l10.rocks.filter(r=>r.status==='ot').length}/${l10.rocks.length}`;
+  const oi=l10.issues.filter(i=>!i.solved).length;document.getElementById('sf-iss').textContent=oi;document.getElementById('sf-iss').className='l10-sf-val'+(oi?' r':'');
+  const ot2=l10.todos.filter(t=>!t.done).length;document.getElementById('sf-td').textContent=ot2;document.getElementById('sf-td').className='l10-sf-val'+(ot2?'':' g');
+  const gk=l10.kpis.filter(k=>k.status==='green').length;document.getElementById('sf-kpi').textContent=`${gk}/${l10.kpis.length}`;
+}
+
+function renderL10Content(){
+  const main=document.getElementById('l10-main');
+  const s=L10_SEGS[l10.currentSeg];
+  main.innerHTML=`<div class="l10-seg-hdr"><div class="l10-seg-title">${s.label} <span style="font-size:14px;font-family:'Barlow',sans-serif;color:var(--td);font-weight:400">— ${s.mins} min</span></div><div class="l10-seg-desc">${s.desc}</div></div><div id="l10-content"></div>`;
+  const renders=[renderSegue,renderScorecard,renderRocks,renderHeadlines,renderTodosL10,renderIDS,renderConclude];
+  renders[l10.currentSeg]();
+  updateL10Stats();
+}
+
+function renderSegue(){
+  const c=document.getElementById('l10-content');
+  const g=document.createElement('div');g.className='segue-grid';
+  l10.segue.forEach((p,i)=>{const d=document.createElement('div');d.className='segue-card';d.innerHTML=`<input class="seg-name-inp" value="${esc(p.name)}" placeholder="Name..." onchange="l10.segue[${i}].name=this.value;saveL10()"><textarea class="l10-textarea" placeholder="One good thing..." rows="3" onchange="l10.segue[${i}].text=this.value;saveL10()">${esc(p.text)}</textarea>`;g.appendChild(d);});
+  c.appendChild(g);
+  const ab=document.createElement('div');ab.style.marginTop='10px';ab.innerHTML=`<button class="tbtn" onclick="l10.segue.push({id:l10nid(),name:'',text:''});renderL10Content()">+ Add person</button>`;c.appendChild(ab);
+}
+
+function renderScorecard(){
+  const c=document.getElementById('l10-content');
+  const gn=l10.kpis.filter(k=>k.status==='green').length,rd=l10.kpis.filter(k=>k.status==='red').length;
+  let html=`<div style="display:flex;gap:8px;margin-bottom:12px"><span class="status-pill g">${gn} Green</span><span class="status-pill r">${rd} Red</span><span class="status-pill gr">${l10.kpis.length-gn-rd} Unset</span></div>`;
+  html+=`<div class="l10-card" style="padding:0;overflow:hidden"><table class="kpi-table"><thead><tr><th style="width:35%">Metric</th><th>Floor</th><th>Target</th><th>This week</th><th>Status</th></tr></thead><tbody id="kpi-tbody"></tbody></table></div>`;
+  html+=`<div class="add-row"><input type="text" id="nkn" placeholder="Add metric..."><input type="text" id="nkf" placeholder="Floor" style="width:80px"><input type="text" id="nkt" placeholder="Target" style="width:80px"><button class="tbtn" onclick="addKpi()">+ Add</button></div>`;
+  c.innerHTML=html;
+  renderKpiRows();
+}
+function renderKpiRows(){
+  const tb=document.getElementById('kpi-tbody');if(!tb)return;tb.innerHTML='';
+  l10.kpis.forEach((k,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td><input class="il-input" style="width:100%" value="${esc(k.name)}" onchange="l10.kpis[${i}].name=this.value;saveL10()"></td><td style="color:var(--red);font-size:12px">${k.floor}</td><td style="color:var(--gd);font-size:12px">${k.target}</td><td><input class="kpi-actual" value="${esc(k.actual)}" placeholder="Enter..." onchange="l10.kpis[${i}].actual=this.value;saveL10()"></td><td><button class="status-pill ${k.status==='green'?'g':k.status==='red'?'r':'gr'}" onclick="cycleKpi(${i})">${k.status==='green'?'✓ Green':k.status==='red'?'✗ Red':'Set'}</button></td>`;tb.appendChild(tr);});
+}
+function cycleKpi(i){l10.kpis[i].status=l10.kpis[i].status==='green'?'red':l10.kpis[i].status==='red'?null:'green';saveL10();renderKpiRows();updateL10Stats();}
+function addKpi(){const n=document.getElementById('nkn').value.trim();if(!n)return;l10.kpis.push({id:l10nid(),name:n,floor:document.getElementById('nkf').value||'—',target:document.getElementById('nkt').value||'—',actual:'',status:null});['nkn','nkf','nkt'].forEach(id=>document.getElementById(id).value='');saveL10();renderL10Content();}
+
+function renderRocks(){
+  const c=document.getElementById('l10-content');const oft=l10.rocks.filter(r=>r.status==='oft');
+  let html='';if(oft.length)html+=`<div class="info-box" style="background:var(--rbg);border-color:var(--rbr);color:var(--red)">${oft.length} rock(s) Off Track — add to Issues List</div>`;
+  html+=`<div class="l10-card" style="padding:14px 16px"><div id="rock-rows"></div></div><div class="add-row"><input type="text" id="nrt" placeholder="Add a Rock..."><input type="text" id="nro" placeholder="Owner" style="width:90px"><input type="text" id="nrd" placeholder="Due" style="width:90px"><button class="tbtn" onclick="addRock()">+ Rock</button></div>`;
+  c.innerHTML=html;renderRockRows();
+}
+function renderRockRows(){
+  const c=document.getElementById('rock-rows');if(!c)return;if(!l10.rocks.length){c.innerHTML='<div style="color:var(--tm);font-size:13px">No rocks — add below</div>';return;}
+  c.innerHTML='';l10.rocks.forEach((r,i)=>{const d=document.createElement('div');d.className='rock-row';d.innerHTML=`<input class="il-input" style="width:100%" value="${esc(r.text)}" onchange="l10.rocks[${i}].text=this.value;saveL10()"><input class="il-input dim" value="${esc(r.owner)}" placeholder="Owner" onchange="l10.rocks[${i}].owner=this.value;saveL10()"><input class="il-input" style="color:var(--tm);font-size:11px" value="${esc(r.due)}" placeholder="Due" onchange="l10.rocks[${i}].due=this.value;saveL10()"><div style="display:flex;gap:4px;align-items:center"><button class="r-btn ${r.status==='ot'?'ot':''}" onclick="setRock(${i},'ot')">OT</button><button class="r-btn ${r.status==='oft'?'oft':''}" onclick="setRock(${i},'oft')">OFT</button><button class="del" onclick="l10.rocks.splice(${i},1);renderRocks();saveL10()">✕</button></div>`;c.appendChild(d);});
+}
+function setRock(i,s){l10.rocks[i].status=l10.rocks[i].status===s?null:s;renderRocks();saveL10();updateL10Stats();}
+function addRock(){const t=document.getElementById('nrt').value.trim();if(!t)return;l10.rocks.push({id:l10nid(),text:t,owner:document.getElementById('nro').value||'—',due:document.getElementById('nrd').value||'—',status:null});['nrt','nro','nrd'].forEach(id=>document.getElementById(id).value='');renderRocks();saveL10();updateL10Stats();}
+
+function renderHeadlines(){
+  const c=document.getElementById('l10-content');
+  c.innerHTML=`<div class="l10-card" style="padding:14px 16px"><div id="hl-rows"></div></div><div class="add-row"><input type="text" id="nht" placeholder="Add a headline..."><select id="nhty" style="width:100px"><option>Customer</option><option>Employee</option><option>Company</option><option>Win</option></select><button class="tbtn" onclick="addHL()">+ Add</button></div>`;
+  if(!l10.headlines)l10.headlines=[];renderHLRows();
+}
+function renderHLRows(){
+  const c=document.getElementById('hl-rows');if(!c)return;if(!l10.headlines||!l10.headlines.length){c.innerHTML='<div style="color:var(--tm);font-size:13px">No headlines yet</div>';return;}
+  c.innerHTML='';l10.headlines.forEach((h,i)=>{const d=document.createElement('div');d.style.cssText='display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)';d.innerHTML=`<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:var(--s3);color:var(--td);white-space:nowrap">${h.type}</span><input class="il-input" style="flex:1" value="${esc(h.text)}" onchange="l10.headlines[${i}].text=this.value;saveL10()"><button class="del" onclick="l10.headlines.splice(${i},1);renderHLRows();saveL10()">✕</button>`;c.appendChild(d);});
+}
+function addHL(){const t=document.getElementById('nht').value.trim();if(!t)return;if(!l10.headlines)l10.headlines=[];l10.headlines.push({id:l10nid(),text:t,type:document.getElementById('nhty').value});document.getElementById('nht').value='';renderHLRows();saveL10();}
+
+function renderTodosL10(){
+  const c=document.getElementById('l10-content');const done=l10.todos.filter(t=>t.done).length;
+  c.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+    <span class="status-pill g">${done} Done</span>
+    <span style="background:var(--abg);color:var(--amb);padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid var(--abr)">${l10.todos.length-done} Not Done</span>
+    <button class="tbtn green" style="margin-left:auto;font-size:11px;height:26px;padding:0 10px" onclick="syncAllTodosToTasks()" title="Push all L10 to-dos into the Task Tracker">⇄ Sync all to Task Tracker</button>
+  </div>
+  <div class="info-box" style="font-size:12px;margin-bottom:10px">New to-dos you add here are <strong>automatically added to the Task Tracker</strong>. Use "Sync all" to push existing ones.</div>
+  <div class="l10-card" style="padding:14px 16px"><div id="td-rows"></div></div>
+  <div class="add-row"><input type="text" id="ntt" placeholder="Add a to-do... (auto-adds to Task Tracker)"><input type="text" id="nto" placeholder="Owner" style="width:90px"><input type="text" id="ntd" placeholder="Due date" style="width:90px"><button class="tbtn" onclick="addTodoL10()">+ To-do</button></div>`;
+  renderTodoRows();
+}
+function renderTodoRows(){
+  const c=document.getElementById('td-rows');if(!c)return;if(!l10.todos.length){c.innerHTML='<div style="color:var(--tm);font-size:13px">No to-dos yet</div>';return;}
+  c.innerHTML='';l10.todos.forEach((t,i)=>{const d=document.createElement('div');d.className='todo-row';d.innerHTML=`<div class="chk ${t.done?'on':''}" onclick="l10.todos[${i}].done=!l10.todos[${i}].done;renderTodoRows();saveL10();updateL10Stats()"></div><input class="il-input ${t.done?'dim':''}" style="${t.done?'text-decoration:line-through;':''}" value="${esc(t.text)}" onchange="l10.todos[${i}].text=this.value;saveL10()"><input class="il-input dim" value="${esc(t.owner)}" placeholder="Owner" onchange="l10.todos[${i}].owner=this.value;saveL10()"><input class="il-input" style="color:var(--tm);font-size:11px" value="${esc(t.due)}" placeholder="Due" onchange="l10.todos[${i}].due=this.value;saveL10()"><button class="del" onclick="l10.todos.splice(${i},1);renderTodoRows();saveL10();updateL10Stats()">✕</button>`;c.appendChild(d);});
+}
+function addTodoL10(){
+  const t=document.getElementById('ntt').value.trim();if(!t)return;
+  const owner=document.getElementById('nto').value||'—';
+  const due=document.getElementById('ntd').value||'';
+  const newTodo={id:l10nid(),text:t,owner,due,done:false};
+  l10.todos.push(newTodo);
+  ['ntt','nto','ntd'].forEach(id=>document.getElementById(id).value='');
+  renderTodoRows();saveL10();updateL10Stats();
+  // Auto-add to task tracker
+  syncTodoToTasks(newTodo);
+}
+
+function syncTodoToTasks(todo){
+  // Check if already in tasks (avoid duplicates)
+  const exists=tasks.find(t=>t.text===todo.text&&t.owner===todo.owner);
+  if(exists)return;
+  tasks.unshift({
+    id:++nid,
+    text:todo.text,
+    owner:todo.owner==='—'?'':todo.owner,
+    cat:'L10 Rock',
+    pri:'high',
+    due:todo.due||'',
+    done:false,
+    completedAt:null,
+    notes:'Added from L10 meeting',
+    created:today(),
+  });
+  debouncedSyncTasks();
+  // Show toast
+  toast('To-do added to Task Tracker automatically','ok');
+}
+
+function syncAllTodosToTasks(){
+  let added=0;
+  l10.todos.forEach(todo=>{
+    const exists=tasks.find(t=>t.text===todo.text);
+    if(!exists){
+      tasks.unshift({id:++nid,text:todo.text,owner:todo.owner==='—'?'':todo.owner,cat:'L10 Rock',pri:todo.done?'low':'high',due:todo.due||'',done:todo.done,completedAt:todo.done?today():null,notes:'Synced from L10 meeting',created:today()});
+      added++;
+    }
+  });
+  if(added>0){debouncedSyncTasks();renderTasks();toast(added+' L10 to-do'+( added>1?'s':'')+' added to Task Tracker','ok');}
+  else toast('All L10 to-dos already in Task Tracker','ok');
+}
+
+function renderIDS(){
+  const c=document.getElementById('l10-content');const open=l10.issues.filter(i=>!i.solved).length,solved=l10.issues.filter(i=>i.solved).length;
+  c.innerHTML=`<div class="info-box">Prioritize before starting. Every issue ends with a to-do or decision — never "we'll think about it."</div><div style="display:flex;gap:8px;margin-bottom:12px"><span class="status-pill r">${open} Open</span><span class="status-pill g">${solved} Solved</span></div><div class="l10-card" style="padding:14px 16px"><div id="iss-rows"></div></div><div class="add-row"><input type="text" id="nit" placeholder="Add an issue (root cause)..." style="flex:2"><select id="nip" style="width:80px"><option value="high">High</option><option value="med" selected>Med</option><option value="low">Low</option></select><input type="text" id="nio" placeholder="Owner" style="width:80px"><button class="tbtn" onclick="addIssue()">+ Issue</button></div>`;
+  renderIssueRows();
+}
+function renderIssueRows(){
+  const c=document.getElementById('iss-rows');if(!c)return;if(!l10.issues.length){c.innerHTML='<div style="color:var(--tm);font-size:13px">No issues — great meeting ahead</div>';return;}
+  const sorted=[...l10.issues].sort((a,b)=>({high:0,med:1,low:2}[a.priority]-{high:0,med:1,low:2}[b.priority]));
+  c.innerHTML='';sorted.forEach((iss,si)=>{const oi=l10.issues.findIndex(x=>x.id===iss.id);const d=document.createElement('div');d.className='issue-row';d.innerHTML=`<div class="iss-idx">${si+1}</div><div><input class="il-input ${iss.solved?'dim':''}" style="${iss.solved?'text-decoration:line-through;':''};width:100%" value="${esc(iss.text)}" onchange="l10.issues[${oi}].text=this.value;saveL10()"><input class="il-input dim" style="width:100%;margin-top:5px" value="${esc(iss.resolution)}" placeholder="To-do / decision from IDS..." onchange="l10.issues[${oi}].resolution=this.value;saveL10()"></div><span class="status-pill ${iss.priority==='high'?'r':iss.priority==='med'?'gr':'g'}" style="font-size:10px;cursor:default;margin-top:2px">${iss.priority}</span><input class="il-input dim" value="${esc(iss.owner)}" placeholder="Owner" onchange="l10.issues[${oi}].owner=this.value;saveL10()"><div style="display:flex;gap:4px;margin-top:2px"><button class="tbtn ${iss.solved?'green':''}" style="font-size:11px;height:26px;padding:0 8px" onclick="l10.issues[${oi}].solved=!l10.issues[${oi}].solved;renderIssueRows();saveL10();updateL10Stats()">${iss.solved?'Reopen':'Solved'}</button><button class="del" onclick="l10.issues.splice(${oi},1);renderIssueRows();saveL10();updateL10Stats()">✕</button></div>`;c.appendChild(d);});
+}
+function addIssue(){const t=document.getElementById('nit').value.trim();if(!t)return;l10.issues.push({id:l10nid(),text:t,priority:document.getElementById('nip').value,owner:document.getElementById('nio').value||'—',solved:false,resolution:''});['nit','nio'].forEach(id=>document.getElementById(id).value='');renderIssueRows();saveL10();updateL10Stats();}
+
+function renderConclude(){
+  const c=document.getElementById('l10-content');const ot=l10.todos.filter(t=>!t.done),oi=l10.issues.filter(i=>!i.solved),rOft=l10.rocks.filter(r=>r.status==='oft');
+  const nm=getNextMonday();
+  c.innerHTML=`<div class="conclude-grid">
+    <div>
+      <div class="l10-card-label">Open to-dos (${ot.length})</div>
+      <div class="l10-card">${ot.length?ot.map(t=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:13px"><span>${esc(t.text)}</span><span style="color:var(--td);font-size:12px">${esc(t.owner)}</span></div>`).join(''):'<div style="color:var(--gd);font-size:13px">All to-dos complete.</div>'}</div>
+      <div class="l10-card-label" style="margin-top:12px">Open issues (${oi.length})</div>
+      <div class="l10-card">${oi.length?oi.map(i=>`<div style="padding:5px 0;border-bottom:1px solid var(--br);font-size:13px;color:var(--red)">${esc(i.text)} <span style="color:var(--td)">${esc(i.owner)}</span></div>`).join(''):'<div style="color:var(--gd);font-size:13px">All issues resolved.</div>'}</div>
+      <div class="l10-card-label" style="margin-top:12px">Cascade message</div>
+      <textarea class="l10-textarea" rows="3" placeholder="What does the broader team need to know?" onchange="l10.cascadeMsg=this.value;saveL10()">${esc(l10.cascadeMsg)}</textarea>
+    </div>
+    <div>
+      <div class="l10-card-label">Rate this meeting (1–10)</div>
+      <div class="rating-row" id="rr"></div>
+      <div id="rnote" style="font-size:13px;color:var(--td);margin-top:10px;min-height:18px"></div>
+      <div style="margin-top:16px"><div class="l10-card-label">Off track rocks</div>${rOft.length?rOft.map(r=>`<div style="font-size:13px;color:var(--red);padding:4px 0">${esc(r.text)}</div>`).join(''):'<div style="color:var(--gd);font-size:13px">All on track.</div>'}</div>
+      <div style="margin-top:16px"><div class="l10-card-label">Next meeting</div><div style="font-size:15px;font-weight:500;color:var(--g)">${nm}</div><div style="font-size:12px;color:var(--td)">Monday 8:00 AM</div></div>
+      <button class="tbtn green" style="width:100%;margin-top:16px;justify-content:center;padding:10px" onclick="closeMeeting()">✓ Close & Save Meeting</button>
+    </div>
+  </div>`;
+  const rr=document.getElementById('rr');for(let n=1;n<=10;n++){const b=document.createElement('button');b.className=`rnum${l10.rating===n?' sel':''}`;b.textContent=n;b.onclick=()=>{l10.rating=n;saveL10();document.querySelectorAll('.rnum').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');const rn=document.getElementById('rnote');rn.textContent=n<=6?'What would have made it a 7 or above?':n<=8?'Good. What would push it to a 9?':'Excellent. Keep running it this way.';rn.style.color=n<=6?'var(--amb)':n<=8?'var(--td)':'var(--gd)';};rr.appendChild(b);}
+}
+function closeMeeting(){l10.meetingHistory.push({date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),rating:l10.rating||'—',openIssues:l10.issues.filter(i=>!i.solved).length});saveL10(true);}
+function getNextMonday(){const d=new Date();const day=d.getDay();const diff=day===1?7:((8-day)%7)||7;d.setDate(d.getDate()+diff);return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});}
+
+function exportL10(){
+  const d=new Date();const ot=l10.todos.filter(t=>!t.done);const oi=l10.issues.filter(i=>!i.solved);
+  let out=`DRIVEN SOLUTIONS — L10 MEETING NOTES\n${d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}\nRating: ${l10.rating||'—'}/10\n${'='.repeat(50)}\n\n`;
+  out+=`SCORECARD\n${'-'.repeat(30)}\n`;l10.kpis.forEach(k=>{out+=`[${k.status||'?'}] ${k.name}: ${k.actual||'—'}\n`;});
+  out+=`\nROCKS\n${'-'.repeat(30)}\n`;l10.rocks.forEach(r=>{out+=`[${r.status==='ot'?'OT':r.status==='oft'?'OFT':'?'}] ${r.text} (${r.owner})\n`;});
+  out+=`\nOPEN TO-DOS (${ot.length})\n${'-'.repeat(30)}\n`;ot.forEach(t=>{out+=`☐ ${t.text} — ${t.owner} by ${t.due}\n`;});
+  out+=`\nOPEN ISSUES (${oi.length})\n${'-'.repeat(30)}\n`;oi.forEach(i=>{out+=`[${i.priority.toUpperCase()}] ${i.text} (${i.owner})\n  Resolution: ${i.resolution||'—'}\n`;});
+  out+=`\nCASCADE MESSAGE\n${'-'.repeat(30)}\n${l10.cascadeMsg||'(none)'}\n`;
+  const blob=new Blob([out],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Driven_L10_${d.toISOString().split('T')[0]}.txt`;a.click();
+  toast('L10 notes exported','ok');
+}
+
+// ════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════
+async function init(){
+  await Promise.all([loadTasks(), loadL10()]);
+  setSyncLabel('Live — connected to Supabase');
+}
+init();
+</script>
+</body>
+</html>
