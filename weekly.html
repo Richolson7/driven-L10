@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driven Solutions — Weekly Scorecard Submission</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--dk:#060808;--s2:#121818;--br:rgba(255,255,255,0.09);--tx:#E8EDE8;--td:#8FA8A0;--g:#39FF14;--gd:#2ECC0E;--gbg:#0A1A08;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--dk);color:var(--tx);font-family:'Barlow',sans-serif;min-height:100vh;display:flex;justify-content:center;padding:30px 16px}
+.card{width:100%;max-width:520px}
+h1{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--g);letter-spacing:2px}
+.sub{color:var(--td);font-size:13px;margin:6px 0 26px}
+.section-hdr{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--g);margin:24px 0 10px;border-bottom:1px solid var(--br);padding-bottom:6px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;color:var(--tx);margin-bottom:6px}
+.field select,.field input{width:100%;background:var(--s2);border:1px solid var(--br);border-radius:5px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:16px;padding:12px}
+.field select:focus,.field input:focus{outline:none;border-color:var(--g)}
+.pos-field{padding:16px;background:var(--gbg);border:1px solid var(--gd);border-radius:6px;margin-bottom:6px}
+.pos-field label{color:var(--g);font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:11px}
+.name-field{margin-top:28px;padding-top:20px;border-top:1px solid var(--br)}
+button{width:100%;margin-top:24px;padding:16px;border:none;border-radius:6px;background:var(--g);color:#040804;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+button:disabled{opacity:.5}
+#msg{margin-top:16px;padding:14px;border-radius:5px;font-size:13px;text-align:center;display:none}
+#msg.ok{display:block;background:var(--gbg);border:1px solid var(--gd);color:var(--g)}
+#msg.err{display:block;background:#2A0808;border:1px solid #993333;color:#FF4444}
+.loading{color:var(--td);font-size:13px}
+.empty-hint{color:var(--td);font-size:13px;padding:20px 0;text-align:center}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>DRIVEN SOLUTIONS</h1>
+  <div class="sub">Weekly Scorecard — pick your role to see your fields</div>
+
+  <div class="pos-field">
+    <label>Your Position</label>
+    <select id="position-select" onchange="renderFields()">
+      <option value="">— Select your position —</option>
+      <option value="Sales">Sales Lead (Sales)</option>
+      <option value="Ops">CSR (Ops)</option>
+      <option value="Finance">Admin (Finance)</option>
+    </select>
+  </div>
+
+  <div id="form-fields"></div>
+  <div class="name-field" id="name-field-wrap" style="display:none">
+    <div class="field"><label>Your name</label><input id="submitted-by" placeholder="Who's submitting this?"></div>
+  </div>
+  <button id="submit-btn" onclick="submitForm()" style="display:none">Submit This Week's Numbers</button>
+  <div id="msg"></div>
+</div>
+<script>
+const {createClient} = supabase;
+const db = createClient(
+  'https://igaylyhkssahczubiztb.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnYXlseWhrc3NhaGN6dWJpenRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyOTk3MzQsImV4cCI6MjA5Mjg3NTczNH0.iiRC320be1-kLa8tQoTupqWTu_8yTaEaJGVpdI4dnAo'
+);
+const DB_ROW = 'driven_cmd';
+
+const KPIS = {
+  Sales: [
+    { key: 'revenue_weekly', label: 'Revenue ($)' },
+    { key: 'sales_by_week', label: 'Sales by Week ($)' },
+    { key: 'rigid_sales', label: 'Rigid Sales ($)' },
+    { key: 'flexible_sales', label: 'Flexible Sales ($)' },
+    { key: 'pallets_sales', label: 'Pallets Sales ($)' },
+    { key: 'commission_freight', label: 'Commission/Freight ($)' },
+    { key: 'pipeline', label: 'Pipeline ($)' },
+    { key: 'quote_close_rate', label: 'Close Rate %' },
+    { key: 'open_quotes', label: 'Open Quotes >48hrs' },
+    { key: 'new_opportunities', label: 'New Opportunities' },
+    { key: 'wins', label: 'Wins' },
+    { key: 'losses', label: 'Losses' },
+    { key: 'quote_time', label: 'Avg Quote Time (hrs)' }
+  ],
+  Ops: [
+    { key: 'fulfillment_time', label: 'Order Fulfillment (days)' },
+    { key: 'vendor_performance', label: 'Vendor Performance %' },
+    { key: 'on_time_delivery', label: 'On Time Delivery %' }
+  ],
+  Finance: [
+    { key: 'gross_margin', label: 'Gross Margin %' },
+    { key: 'net_profit', label: 'Net Profit ($)' },
+    { key: 'cash_on_hand', label: 'Cash On Hand ($)' },
+    { key: 'ar_days', label: 'A/R Days Outstanding' },
+    { key: 'revenue_per_employee', label: 'Revenue Per Employee ($)' },
+    { key: 'pct_of_target', label: '% of Target' },
+    { key: 'cash_collection_rate', label: 'Cash Collection Rate %' },
+    { key: 'labor_pct_sales', label: 'Labor % of Sales' }
+  ]
+};
+
+let currentData = {};
+
+async function loadCurrent(){
+  try {
+    const {data:row,error} = await db.from('dashboard_data').select('*').eq('id',DB_ROW).single();
+    if (error) throw error;
+    currentData = (row && row.week_data) || {};
+  } catch(e){ currentData = {}; }
+}
+
+function renderFields(){
+  const pos = document.getElementById('position-select').value;
+  const wrap = document.getElementById('form-fields');
+  const nameWrap = document.getElementById('name-field-wrap');
+  const btn = document.getElementById('submit-btn');
+  if (!pos){ wrap.innerHTML = ''; nameWrap.style.display='none'; btn.style.display='none'; return; }
+  const fields = KPIS[pos];
+  let html = `<div class="section-hdr">${pos} Fields</div>`;
+  fields.forEach(k=>{
+    const val = currentData[k.key+'_w4'] || '';
+    html += `<div class="field"><label>${k.label}</label><input type="number" step="any" id="in-${k.key}" value="${val}"></div>`;
+  });
+  wrap.innerHTML = html;
+  nameWrap.style.display = 'block';
+  btn.style.display = 'block';
+}
+
+async function submitForm(){
+  const pos = document.getElementById('position-select').value;
+  if (!pos) return;
+  const btn = document.getElementById('submit-btn');
+  const msg = document.getElementById('msg');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    const {data:row,error} = await db.from('dashboard_data').select('*').eq('id',DB_ROW).single();
+    if (error) throw error;
+    const weekData = (row && row.week_data) || {};
+    KPIS[pos].forEach(k=>{
+      const val = document.getElementById('in-'+k.key).value;
+      if (val !== '') weekData[k.key+'_w4'] = parseFloat(val);
+    });
+    const {error: upErr} = await db.from('dashboard_data').upsert({
+      id: DB_ROW, week_data: weekData, updated_at: new Date().toISOString()
+    }, {onConflict:'id'});
+    if (upErr) throw upErr;
+    msg.className = 'ok';
+    msg.textContent = '✅ Submitted — thanks! This shows up in the Command Center and L10 Hub right away.';
+    btn.textContent = 'Submitted ✓';
+  } catch(e){
+    msg.className = 'err';
+    msg.textContent = '❌ Something went wrong submitting. Try again in a moment.';
+    btn.disabled = false; btn.textContent = 'Submit This Week\'s Numbers';
+  }
+}
+
+loadCurrent();
+</script>
+</body>
+</html>
