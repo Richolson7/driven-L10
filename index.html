@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driven Solutions — L10 Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --dk:#060808;--s:#0C1010;--s2:#121818;--s3:#1A2020;
+  --br:rgba(255,255,255,0.07);--tx:#E8EDE8;--td:#8FA8A0;--tm:#4A5E58;
+  --red:#FF4444;--rbg:#2A0808;--rbr:#993333;
+  --amb:#FFB800;--abg:#1A1200;--abr:#886600;
+  --g:#39FF14;--gd:#2ECC0E;--gbg:#0A1A08;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--dk);color:var(--tx);font-family:'Barlow',sans-serif;font-size:13px;min-height:100vh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--s)}
+::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}
+select,input{color-scheme:dark}
+
+.header{border-bottom:3px solid var(--g);padding:18px 36px 14px;background:linear-gradient(135deg,#040804 0%,#0A140A 60%,#060C06 100%)}
+.h-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.h-title{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:3px;color:var(--g);line-height:1}
+.h-sub{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;color:var(--td);letter-spacing:3px;text-transform:uppercase;margin-top:3px}
+.badge{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;padding:3px 10px;border-radius:2px;text-transform:uppercase;background:var(--g);color:#040804}
+
+.sync-bar{background:#030505;border-bottom:1px solid var(--br);padding:6px 36px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sdot.live{background:var(--g);animation:pulse 2s infinite}
+.sdot.off{background:var(--tm)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sync-txt{font-size:11px;color:var(--td);font-family:'DM Mono',monospace;display:flex;align-items:center;gap:5px}
+
+.links-bar{background:#030505;border-bottom:1px solid var(--br);padding:8px 36px;display:flex;gap:8px;flex-wrap:wrap}
+.link-chip{font-size:11px;color:var(--td);border:1px solid var(--br);border-radius:3px;padding:5px 12px 5px 8px;text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.5px;transition:all .15s;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.link-chip svg{width:14px;height:14px;flex-shrink:0}
+.link-chip:hover{color:var(--g);border-color:var(--g)}
+.link-chip.todo{color:var(--amb);border-color:rgba(255,184,0,.3)}
+
+.tbtn{height:28px;padding:0 12px;border-radius:3px;border:1px solid var(--br);background:var(--s2);color:var(--td);font-size:11px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.tbtn:hover{color:var(--tx);border-color:rgba(255,255,255,.2)}
+.tbtn.green{border-color:var(--gd);color:var(--g);background:var(--gbg)}
+
+.content{padding:22px 36px 48px;max-width:1600px}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;color:var(--g);margin:22px 0 5px}
+.sec-title:first-child{margin-top:0}
+.sec-sub{font-size:12px;color:var(--td);margin-bottom:16px;line-height:1.6}
+
+.tabs{display:flex;background:#030505;border-top:1px solid var(--gd);border-bottom:1px solid var(--gd);padding:0 36px;overflow-x:auto;gap:36px}
+.tab{display:flex;align-items:center;gap:10px;padding:14px 0;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap}
+.tab:hover{color:var(--tx)}
+.tab.active{color:var(--g);border-bottom-color:var(--g)}
+.tab .tab-icon{font-size:16px}
+.tab-badge{background:var(--red);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:1px 8px;font-family:'Barlow',sans-serif;letter-spacing:0}
+.panel{display:none}.panel.active{display:block}
+
+/* ── TASK TRACKER ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--br);border-radius:4px;overflow:hidden;margin-bottom:16px}
+.stat-card{padding:18px;text-align:center;border-right:1px solid var(--br);background:var(--s2)}
+.stat-card:last-child{border-right:none}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;line-height:1;color:var(--tx)}
+.stat-num.red{color:var(--red)}.stat-num.amb{color:var(--amb)}
+.stat-lbl{font-size:10px;color:var(--td);letter-spacing:1.5px;text-transform:uppercase;margin-top:4px}
+.overdue-banner{background:var(--rbg);border:1px solid var(--rbr);border-radius:4px;padding:10px 16px;font-size:12px;color:var(--red);margin-bottom:16px}
+.task-add-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.task-add-bar input[type=text]{flex:1;min-width:220px}
+.tinp,.tsel{background:var(--s2);border:1px solid var(--br);border-radius:3px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:12px;padding:8px 10px}
+.tinp:focus,.tsel:focus{outline:none;border-color:var(--g)}
+.filter-row{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.pill{padding:6px 14px;border-radius:99px;border:1px solid var(--br);background:var(--s2);color:var(--td);font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase}
+.pill.active{background:var(--red);color:#fff;border-color:var(--red)}
+.pill.active.gray{background:var(--tx);color:#000;border-color:var(--tx)}
+.group-hdr{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin:18px 0 8px}
+.owner-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--s2);border-radius:4px;margin-bottom:4px;cursor:pointer;border:1px solid var(--br);transition:border-color .15s}
+.owner-row:hover{border-color:var(--gd)}
+.owner-name{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--tx)}
+.owner-name .av{width:20px;height:20px;border-radius:50%;background:var(--gd);color:#040804;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.owner-stats{font-size:12px;color:var(--td);display:flex;gap:12px}
+.owner-stats b{color:var(--tx)}
+.owner-stats .red{color:var(--red);font-weight:700}
+.mic-btn{background:var(--s2);border:1px solid var(--br);border-radius:3px;color:var(--td);cursor:pointer;font-size:13px;padding:6px 9px;flex-shrink:0}
+.mic-btn:hover{border-color:var(--gd);color:var(--g)}
+.mic-btn.recording{background:var(--rbg);border-color:var(--rbr);color:var(--red);animation:pulse 1s infinite}
+.trow{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-left:3px solid var(--red);background:var(--s2);border-radius:0 4px 4px 0;margin-bottom:2px}
+.trow.ok{border-left-color:var(--gd)}
+.trow.done{opacity:.4}
+.trow.done .trow-title{text-decoration:line-through}
+.trow input[type=checkbox]{margin-top:2px;width:16px;height:16px}
+.trow-body{flex:1}
+.trow-title{font-size:14px;color:var(--tx);margin-bottom:6px}
+.chip-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px;letter-spacing:.5px}
+.chip.owner{display:flex;align-items:center;gap:5px;background:var(--s3);color:var(--td)}
+.chip.owner .av{width:16px;height:16px;border-radius:50%;background:var(--gd);color:#040804;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.chip.overdue{background:var(--rbg);color:var(--red)}
+.chip.prio-high{background:var(--rbg);color:var(--red)}
+.chip.prio-medium{background:var(--abg);color:var(--amb)}
+.chip.prio-low{background:var(--s3);color:var(--td)}
+.chip.cat{background:rgba(74,158,255,.15);color:#4A9EFF}
+.trow-del{background:none;border:none;color:var(--tm);cursor:pointer;font-size:15px;padding:2px 4px}
+.trow-del:hover{color:var(--red)}
+
+/* ── L10 MEETING STEPPER ── */
+.meeting-shell{display:grid;grid-template-columns:230px 1fr;gap:0;border:1px solid var(--br);border-radius:6px;overflow:hidden;min-height:560px}
+.meeting-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+.meeting-date{display:flex;align-items:center;gap:10px}
+.meeting-date input{background:var(--s2);border:1px solid var(--br);border-radius:3px;color:var(--g);font-family:'DM Mono',monospace;font-size:13px;padding:6px 10px}
+.timer-block{display:flex;align-items:center;gap:14px}
+.timer-item{text-align:center}
+.timer-lbl{font-size:9px;color:var(--tm);letter-spacing:1px;text-transform:uppercase}
+.timer-val{font-family:'DM Mono',monospace;font-size:20px;color:var(--g);font-weight:700}
+.timer-val.seg{color:var(--tx)}
+.agenda-sidebar{background:var(--s2);border-right:1px solid var(--br);padding:16px 0;display:flex;flex-direction:column}
+.agenda-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-left:3px solid transparent;color:var(--tm)}
+.agenda-item:hover{color:var(--td)}
+.agenda-item.active{border-left-color:var(--g);background:rgba(57,255,20,.05);color:var(--tx)}
+.agenda-item .anum{width:20px;height:20px;border-radius:50%;background:var(--s3);color:var(--tm);font-family:'Bebas Neue',sans-serif;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.agenda-item.active .anum{background:var(--g);color:#040804}
+.agenda-item .atext{line-height:1.3}
+.agenda-item .atitle{font-size:12px;font-weight:600}
+.agenda-item .atime{font-size:9px;color:var(--tm)}
+.agenda-stats{margin-top:auto;padding:14px 16px;border-top:1px solid var(--br);font-size:11px}
+.astat-row{display:flex;justify-content:space-between;padding:4px 0;color:var(--td)}
+.astat-row b{color:var(--tx);font-family:'DM Mono',monospace}
+.astat-row.warn b{color:var(--red)}
+.save-meeting-btn{margin:14px 16px 0;padding:10px;border:none;border-radius:3px;background:var(--g);color:#040804;font-weight:800;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;cursor:pointer;text-transform:uppercase;font-size:12px}
+.meeting-main{padding:26px 30px;overflow-y:auto}
+.step-title{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--g);letter-spacing:1px}
+.step-sub{font-size:12px;color:var(--td);margin:6px 0 20px}
+.segue-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.segue-card{background:var(--s2);border:1px solid var(--br);border-radius:4px;padding:14px}
+.segue-card h4{font-size:13px;color:var(--tx);margin-bottom:8px;display:flex;justify-content:space-between}
+.segue-card h4 button{background:none;border:none;color:var(--tm);cursor:pointer;font-size:12px}
+.segue-card textarea{width:100%;min-height:70px;background:var(--s);border:1px solid var(--br);border-radius:3px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:12px;padding:8px;resize:vertical}
+.segue-card textarea:focus{outline:none;border-color:var(--g)}
+.add-participant{display:flex;gap:8px;margin-top:14px}
+.note-area{width:100%;min-height:90px;background:var(--s2);border:1px solid var(--br);border-radius:4px;color:var(--tx);font-family:'Barlow',sans-serif;font-size:13px;padding:10px;resize:vertical}
+.note-area:focus{outline:none;border-color:var(--g)}
+.rate-inp{width:60px;background:var(--s2);border:1px solid var(--br);border-radius:3px;color:var(--g);font-family:'Bebas Neue',sans-serif;font-size:20px;text-align:center;padding:4px}
+
+.kpi-section{margin-bottom:18px}
+.kpi-sec-hdr{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border:1px solid var(--br);border-radius:4px 4px 0 0;border-bottom:2px solid var(--g)}
+.kpi-sec-name{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--g)}
+.kpi-table{width:100%;border-collapse:collapse}
+.kpi-table th{background:var(--s);color:var(--td);font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:7px 9px;text-align:left;border-bottom:1px solid var(--br);white-space:nowrap}
+.kpi-table td{padding:7px 9px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.kpi-table tr:hover td{background:rgba(255,255,255,.02)}
+.kpi-name{font-size:12px;color:var(--tx);font-weight:500}
+.kpi-floor{font-size:11px;color:var(--red);font-family:'DM Mono',monospace}
+.kpi-target{font-size:11px;color:var(--g);font-weight:600;font-family:'DM Mono',monospace}
+.actual-inp{width:74px;background:var(--s2);border:1px solid var(--br);border-radius:3px;color:var(--tx);font-family:'DM Mono',monospace;font-size:12px;padding:4px 6px}
+.actual-inp:focus{outline:none;border-color:var(--g)}
+.actual-inp.g{color:var(--g);border-color:rgba(92,184,0,.4)}
+.actual-inp.a{color:var(--amb);border-color:rgba(255,184,0,.4)}
+.actual-inp.r{color:var(--red);border-color:rgba(255,68,68,.4)}
+.status-chip{display:inline-flex;align-items:center;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;white-space:nowrap;font-family:'Barlow Condensed',sans-serif}
+.st-g{background:rgba(92,184,0,.12);color:#5CB800}.st-a{background:var(--abg);color:var(--amb)}.st-r{background:var(--rbg);color:var(--red)}.st-n{background:var(--s3);color:var(--tm)}
+.mini-chart{width:100px;height:32px}
+
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.chart-card{background:var(--s2);border:1px solid var(--br);border-radius:4px;padding:14px}
+.chart-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--td);margin-bottom:10px}
+.chart-wrap{position:relative;height:190px}
+
+.rock-row{display:grid;grid-template-columns:1fr 110px 90px auto 32px;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05);background:var(--s2)}
+.issue-row{display:grid;grid-template-columns:1fr 110px 130px 32px;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05);background:var(--s2)}
+.track-chip{padding:3px 9px;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer;border:none;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;white-space:nowrap}
+.track-chip.on{background:rgba(92,184,0,.15);color:#5CB800}
+.track-chip.off{background:var(--rbg);color:var(--red)}
+.status-btn{padding:3px 9px;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer;border:none;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;white-space:nowrap}
+.status-btn.identified{background:var(--s3);color:var(--tm)}
+.status-btn.discussing{background:var(--abg);color:var(--amb)}
+.status-btn.solved{background:rgba(92,184,0,.15);color:#5CB800}
+.add-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.add-row input{flex:1;min-width:160px}
+
+@media print {
+  .sync-bar,.links-bar,.tbtn,.actual-inp,.tabs,.add-row,.trow-del,.task-add-bar,.filter-row{display:none!important}
+  body{background:#fff;color:#000}
+  .kpi-table td,.kpi-table th{color:#000;border-color:#ccc}
+  .chart-card{border-color:#ccc;background:#fff}
+  .content{padding:10px 20px}
+  .chart-grid{page-break-inside:avoid}
+  .panel{display:block!important}
+}
+body.print-scorecard-only .panel{display:none!important}
+body.print-scorecard-only #panel-l10{display:block!important}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="h-top">
+    <div>
+      <div class="h-title">DRIVEN SOLUTIONS</div>
+      <div class="h-sub">Operations Hub</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+      <span class="badge">Live</span>
+      <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
+        <button class="tbtn green" onclick="shiftWeeks()">➜ Shift Weeks</button>
+        <button class="tbtn" onclick="window.print()">🖨️ Print</button>
+        <span style="font-size:10px;color:var(--td);align-self:center;font-family:'DM Mono',monospace">Last sync: <span id="last-sync">—</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sync-bar">
+  <div class="sync-txt"><div class="sdot off" id="sync-dot"></div><span id="sync-lbl">Connecting…</span></div>
+  <div style="margin-left:auto;font-size:10px;color:var(--td);font-family:'DM Mono',monospace">Same live data as the Command Center — edits here show there too</div>
+</div>
+
+<div class="links-bar">
+  <a class="link-chip" href="https://qbo.intuit.com/app/homepage?locale=en-us&iux_intuit_tid=1-6ab16d79-2fb7c1c56c393d3146974fb0" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#2CA01C"/><path d="M7 12a5 5 0 0 1 5-5h1v3h-1a2 2 0 1 0 0 4h1v3h-1a5 5 0 0 1-5-5z" fill="#fff"/><path d="M17 12a5 5 0 0 1-5 5h-1v-3h1a2 2 0 1 0 0-4h-1V7h1a5 5 0 0 1 5 5z" fill="#fff"/></svg>
+    QuickBooks ↗</a>
+  <a class="link-chip" href="https://my.apexmediamktg.com/v2/location/kG3Lh4SIr50KtThxamRq/dashboard" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#1E90FF"/><path d="M12 5l6 14h-3.2l-1.2-3H10.4l-1.2 3H6l6-14zm0 4.8L10.6 13h2.8L12 9.8z" fill="#fff"/></svg>
+    Apex ↗</a>
+  <a class="link-chip" href="https://docs.google.com/spreadsheets/d/1BgbxdBNr8V1NKrboOVCk9_TTMtCwj9H94gnE5yGrwHE/edit?authuser=rich@drivensol.com&gid=1863677356#gid=1863677356" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" fill="#0F9D58"/><path d="M15 2v5h5z" fill="#87CEAB"/><g fill="#fff"><rect x="7.5" y="11" width="9" height="1.4"/><rect x="7.5" y="14" width="9" height="1.4"/><rect x="7.5" y="17" width="9" height="1.4"/></g></svg>
+    Order Log ↗</a>
+  <a class="link-chip" href="https://drive.google.com" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><path d="M8.5 2h7l6.5 11-3.5 6h-13l-3.5-6z" fill="#1FA463"/><path d="M8.5 2l-6.5 11h7l6.5-11z" fill="#FFC107"/><path d="M9 13l-3.5 6h13l3.5-6z" fill="#1A73E8"/></svg>
+    Google Drive ↗</a>
+  <a class="link-chip" href="https://calendar.google.com" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2" fill="#fff" stroke="#4285F4" stroke-width="1.5"/><rect x="3" y="4" width="18" height="5" fill="#4285F4"/><text x="12" y="17" text-anchor="middle" font-size="9" font-weight="700" fill="#1A73E8">31</text></svg>
+    Google Calendar ↗</a>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showPanel('tasks',this)"><span class="tab-icon">🗒️</span>Task Tracker<span class="tab-badge" id="task-badge">0</span></div>
+  <div class="tab" onclick="showPanel('meeting',this)"><span class="tab-icon">⚡</span>L10 Meeting</div>
+  <div class="tab" onclick="showPanel('marketing',this)"><span class="tab-icon">📣</span>Marketing</div>
+  <div class="tab" onclick="showPanel('sales',this)"><span class="tab-icon">💵</span>Sales</div>
+  <div class="tab" onclick="showPanel('ops',this)"><span class="tab-icon">⚙️</span>Ops</div>
+  <div class="tab" onclick="showPanel('l10',this)"><span class="tab-icon">📊</span>Scorecard</div>
+</div>
+
+<div class="content">
+
+  <!-- ═══ TASK TRACKER ═══ -->
+  <div class="panel active" id="panel-tasks">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num" id="st-open">0</div><div class="stat-lbl">Open</div></div>
+      <div class="stat-card"><div class="stat-num red" id="st-overdue">0</div><div class="stat-lbl">Overdue</div></div>
+      <div class="stat-card"><div class="stat-num amb" id="st-duetoday">0</div><div class="stat-lbl">Due Today</div></div>
+      <div class="stat-card"><div class="stat-num red" id="st-highpri">0</div><div class="stat-lbl">High Priority</div></div>
+    </div>
+    <div id="overdue-banner-wrap"></div>
+
+    <div class="group-hdr">Owner Summary — click a person to filter</div>
+    <div id="owner-summary" style="margin-bottom:20px"></div>
+
+    <div class="task-add-bar">
+      <input type="text" class="tinp" id="new-task-text" placeholder="Add a task and press Enter..." onkeydown="if(event.key==='Enter')addTask()">
+      <button class="mic-btn" onclick="startVoiceInto('new-task-text', this)">🎤</button>
+      <select class="tsel" id="new-task-owner"></select>
+      <select class="tsel" id="new-task-category">
+        <option>General</option><option>Finance</option><option>Sales</option><option>Ops</option><option>Marketing</option><option>Admin</option>
+      </select>
+      <select class="tsel" id="new-task-priority">
+        <option>Low</option><option selected>Medium</option><option>High</option>
+      </select>
+      <input type="date" class="tinp" id="new-task-due">
+      <button class="tbtn green" onclick="addTask()">+ Add</button>
+    </div>
+
+    <div class="filter-row" id="task-filter-pills"></div>
+    <div id="task-group-list"></div>
+  </div>
+
+  <!-- ═══ L10 MEETING — STEPPER ═══ -->
+  <div class="panel" id="panel-meeting">
+    <div class="meeting-top">
+      <div>
+        <div class="step-title" style="font-size:1.9rem">LEVEL 10 MEETING</div>
+        <div class="meeting-date">
+          <input type="date" id="meeting-date">
+          <span style="font-size:11px;color:var(--td)" id="meeting-date-readable"></span>
+        </div>
+      </div>
+      <div class="timer-block">
+        <div class="timer-item"><div class="timer-lbl">Total</div><div class="timer-val" id="timer-total">0:00</div></div>
+        <div class="timer-item"><div class="timer-lbl">Segment</div><div class="timer-val seg" id="timer-segment">5:00</div></div>
+        <button class="tbtn green" id="timer-startbtn" onclick="toggleTimer()">▶ Start</button>
+        <button class="tbtn" onclick="resetTimer()">Reset</button>
+        <button class="tbtn" onclick="nextStep()">Next →</button>
+      </div>
+    </div>
+
+    <div class="meeting-shell">
+      <div class="agenda-sidebar" id="agenda-sidebar"></div>
+      <div class="meeting-main" id="meeting-main"></div>
+    </div>
+  </div>
+
+  <!-- ═══ MARKETING ═══ -->
+  <div class="panel" id="panel-marketing">
+    <div class="sec-title">📣 Marketing</div>
+    <div class="sec-sub">Marketing tracking for Driven — tell me what metrics/content you want tracked here and I'll build it out.</div>
+    <div style="color:var(--td);font-size:12px;padding:20px;border:1px dashed var(--br);border-radius:4px;text-align:center">No marketing KPIs set up yet.</div>
+  </div>
+
+  <!-- ═══ SALES ═══ -->
+  <div class="panel" id="panel-sales">
+    <div class="sec-title">💵 Sales</div>
+    <div class="sec-sub">4-week trend, same numbers as the Command Center. Edit values on the Scorecard tab.</div>
+    <div class="chart-grid" id="sales-chart-grid"></div>
+  </div>
+
+  <!-- ═══ OPS ═══ -->
+  <div class="panel" id="panel-ops">
+    <div class="sec-title">⚙️ Ops</div>
+    <div class="sec-sub">4-week trend, same numbers as the Command Center. Edit values on the Scorecard tab.</div>
+    <div class="chart-grid" id="ops-chart-grid"></div>
+  </div>
+
+  <!-- ═══ SCORECARD ═══ -->
+  <div class="panel" id="panel-l10">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div class="sec-title" style="margin:0">📋 Sales</div>
+      <button class="tbtn green" onclick="printScorecardOnly()">🖨️ Print Scorecard Only</button>
+    </div>
+    <div id="kpi-Sales"></div>
+    <div class="sec-title">⚙️ Ops</div>
+    <div id="kpi-Ops"></div>
+    <div class="sec-title">📈 Scorecard — Sales + Ops (4-Week Trend)</div>
+    <div class="sec-sub">Everything above and below prints on this same page — hit Print for the full packet.</div>
+    <div class="chart-grid" id="chart-grid"></div>
+  </div>
+
+</div>
+
+<script>
+const {createClient} = supabase;
+const db = createClient(
+  'https://igaylyhkssahczubiztb.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnYXlseWhrc3NhaGN6dWJpenRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyOTk3MzQsImV4cCI6MjA5Mjg3NTczNH0.iiRC320be1-kLa8tQoTupqWTu_8yTaEaJGVpdI4dnAo'
+);
+const DB_ROW = 'driven_cmd';
+
+const KPIS = {
+  Sales: [
+    { key: 'revenue_weekly', label: 'Revenue ($)', target: 115000, floor: 50000 },
+    { key: 'sales_by_week', label: 'Sales by Week ($)', target: 115000, floor: 50000 },
+    { key: 'rigid_sales', label: 'Rigid Sales ($)', target: 50000, floor: 20000 },
+    { key: 'flexible_sales', label: 'Flexible Sales ($)', target: 500000, floor: 200000 },
+    { key: 'pallets_sales', label: 'Pallets Sales ($)', target: 800000, floor: 300000 },
+    { key: 'commission_freight', label: 'Commission/Freight ($)', target: 50000, floor: 20000 },
+    { key: 'pipeline', label: 'Pipeline ($)', target: 1000000, floor: 300000 },
+    { key: 'quote_close_rate', label: 'Close Rate %', target: 30, floor: 15 },
+    { key: 'open_quotes', label: 'Open Quotes >48hrs', target: 5, floor: 0, reverse: true },
+    { key: 'new_opportunities', label: 'New Opportunities', target: 5, floor: 2 },
+    { key: 'wins', label: 'Wins', target: 3, floor: 1 },
+    { key: 'losses', label: 'Losses', target: 1, floor: 0, reverse: true },
+    { key: 'quote_time', label: 'Avg Quote Time (hrs)', target: 4, floor: 24, reverse: true }
+  ],
+  Ops: [
+    { key: 'quote_time', label: 'Quote Time (hrs)', target: 4, floor: 24, reverse: true },
+    { key: 'fulfillment_time', label: 'Order Fulfillment (days)', target: 2, floor: 5, reverse: true },
+    { key: 'vendor_performance', label: 'Vendor Performance %', target: 95, floor: 75 },
+    { key: 'on_time_delivery', label: 'On Time Delivery %', target: 95, floor: 85 }
+  ]
+};
+
+const AGENDA = [
+  {key:'segue', label:'Segue', min:5},
+  {key:'scorecard', label:'Scorecard', min:10},
+  {key:'rocks', label:'Rocks', min:5},
+  {key:'headlines', label:'Headlines', min:5},
+  {key:'todos', label:'To-Dos', min:5},
+  {key:'ids', label:'IDS', min:55},
+  {key:'conclude', label:'Conclude', min:5},
+];
+const DEFAULT_PARTICIPANTS = ['President','Ops Manager','Sales Lead','Customer Service','Admin','Warehouse Lead 1','Warehouse Lead 2'];
+const SEED_TASKS = [
+  { id: 1, text: 'Level 10 notes and Rocks updated', owner: 'Admin', category: 'General', priority: 'High', due: '2026-05-05', done: false },
+  { id: 2, text: 'What to do with wood pile at land? Brady/Rich/Jessica', owner: 'Ops Manager', category: 'General', priority: 'High', due: '2026-05-07', done: false },
+  { id: 3, text: 'Pay and review process reviewed by Dan and Amber', owner: 'Admin', category: 'Finance', priority: 'High', due: '2026-06-02', done: false },
+];
+
+let data = {};
+let tasks = [];
+let rocks = [];
+let issues = [];
+let notes = { segueByPerson:{}, headlines:'', cascade:'', rating:'' };
+let participants = DEFAULT_PARTICIPANTS.slice();
+let meetingHistory = [];
+let chartInstances = {};
+
+let stepIdx = 0;
+let timerRunning = false;
+let totalSec = 0, segSec = AGENDA[0].min*60, timerInterval = null;
+
+function showPanel(id, el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if (id === 'meeting'){
+    try { renderAgendaSidebar(); renderStepMain(); } catch(e){ console.error(e); }
+  }
+}
+
+function getW(key, w){ return parseFloat(data[`${key}_${w}`]) || 0; }
+function setW(key, w, val){ data[`${key}_${w}`] = parseFloat(val) || 0; }
+function getStatus(value, kpi){
+  const v = parseFloat(value) || 0;
+  if (kpi.reverse){ if (v<=kpi.floor) return 'g'; if (v<=kpi.target) return 'a'; return 'r'; }
+  return v>=kpi.target ? 'g' : v>=kpi.floor ? 'a' : 'r';
+}
+
+async function loadData(){
+  try {
+    const {data:row,error} = await db.from('dashboard_data').select('*').eq('id',DB_ROW).single();
+    if (error) throw error;
+    data = (row && row.week_data) || {};
+    tasks = (row && row.tasks) || [];
+    rocks = (row && row.rocks) || [];
+    issues = (row && row.issues) || [];
+    notes = (row && row.meeting_notes) || { segueByPerson:{}, headlines:'', cascade:'', rating:'' };
+    if (!notes.segueByPerson) notes.segueByPerson = {};
+    participants = (row && row.participants) || DEFAULT_PARTICIPANTS.slice();
+    if (!participants.includes('Customer Service')){ participants.push('Customer Service'); }
+    if (!participants.includes('President')){ participants.unshift('President'); }
+    meetingHistory = (row && row.meeting_history) || [];
+    setSync('live');
+    if (row && row.updated_at){
+      const ago = Math.round((Date.now()-new Date(row.updated_at))/60000);
+      document.getElementById('last-sync').textContent = ago<2?'just now':ago<60?ago+'m ago':Math.round(ago/60)+'h ago';
+    }
+  } catch(e){ data = {}; setSync('error'); }
+  if (!tasks.length){ tasks = SEED_TASKS.slice(); }
+  saveAllData();
+  document.getElementById('note-headlines') && (document.getElementById('note-headlines').value = notes.headlines||'');
+  document.getElementById('meeting-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('meeting-date-readable').textContent = new Date().toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric',year:'numeric'}) + ' · 90 minutes';
+  renderAll();
+}
+
+let saveTimer;
+function debouncedSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveAllData,600); }
+async function saveAllData(){
+  try {
+    await db.from('dashboard_data').upsert({
+      id: DB_ROW, week_data: data, tasks: tasks, rocks: rocks, issues: issues,
+      meeting_notes: notes, participants: participants, meeting_history: meetingHistory,
+      updated_at: new Date().toISOString()
+    }, {onConflict:'id'});
+    document.getElementById('last-sync').textContent = 'just now';
+  } catch(e){}
+}
+
+db.channel('driven-l10-rt').on('postgres_changes',{event:'UPDATE',schema:'public',table:'dashboard_data',filter:'id=eq.'+DB_ROW}, payload=>{
+  data = payload.new.week_data || {};
+  tasks = payload.new.tasks || [];
+  rocks = payload.new.rocks || [];
+  issues = payload.new.issues || [];
+  notes = payload.new.meeting_notes || notes;
+  participants = payload.new.participants || participants;
+  meetingHistory = payload.new.meeting_history || [];
+  renderAll();
+  document.getElementById('last-sync').textContent = 'just now';
+}).subscribe();
+
+function setSync(status){
+  const dot = document.getElementById('sync-dot'); const lbl = document.getElementById('sync-lbl');
+  if (status==='live'){ dot.className='sdot live'; lbl.textContent='Live — synced with the Command Center in real time'; }
+  else { dot.className='sdot off'; lbl.textContent='Offline — changes will retry'; }
+}
+
+function printScorecardOnly(){
+  document.body.classList.add('print-scorecard-only');
+  window.print();
+  setTimeout(()=>document.body.classList.remove('print-scorecard-only'), 500);
+}
+
+// ══════════════════════════════════════════════════════════
+// TASK TRACKER
+// ══════════════════════════════════════════════════════════
+let taskFilter = 'All';
+let ownerFilter = 'All';
+let categoryFilter = 'All';
+
+function renderOwnerSummary(){
+  const el = document.getElementById('owner-summary');
+  if (!el) return;
+  const owners = [...new Set(tasks.map(t=>t.owner).filter(Boolean))];
+  if (!owners.length){ el.innerHTML = '<div style="color:var(--td);font-size:12px">No tasks assigned yet.</div>'; return; }
+  const rows = owners.map(o=>{
+    const mine = tasks.filter(t=>t.owner===o);
+    const open = mine.filter(t=>!t.done).length;
+    const overdue = mine.filter(t=>t.due && !t.done && t.due < todayStr()).length;
+    return {o,open,overdue};
+  }).sort((a,b)=> b.overdue-a.overdue || b.open-a.open);
+  el.innerHTML = rows.map(r=>`
+    <div class="owner-row" onclick="filterByOwner('${r.o}')">
+      <div class="owner-name"><span class="av">${ownerInitials(r.o)}</span>${r.o}</div>
+      <div class="owner-stats"><span><b>${r.open}</b> open</span><span class="${r.overdue?'red':''}">${r.overdue} overdue</span></div>
+    </div>`).join('');
+}
+function filterByOwner(o){
+  ownerFilter = o; taskFilter = 'Open';
+  renderTasks();
+  toast(`Showing ${o}'s tasks`);
+}
+
+// ── VOICE INPUT (Web Speech API) ──
+function startVoiceInto(targetId, btnEl){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ toast('Voice input needs Chrome or Edge'); return; }
+  const target = document.getElementById(targetId);
+  const rec = new SR();
+  rec.lang = 'en-US';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  btnEl.classList.add('recording'); btnEl.textContent = '⏹';
+  rec.onresult = (e)=>{
+    const text = e.results[0][0].transcript;
+    if (target.tagName === 'TEXTAREA' && target.value.trim()){
+      target.value = target.value.trim() + ' ' + text;
+    } else {
+      target.value = text;
+    }
+    target.dispatchEvent(new Event('change'));
+  };
+  rec.onerror = ()=>{ toast('Voice input error — try again'); };
+  rec.onend = ()=>{ btnEl.classList.remove('recording'); btnEl.textContent = '🎤'; };
+  rec.start();
+}
+
+function startVoiceIntoSegue(targetId, person, btnEl){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ toast('Voice input needs Chrome or Edge'); return; }
+  const target = document.getElementById(targetId);
+  const rec = new SR();
+  rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
+  btnEl.classList.add('recording'); btnEl.textContent = '⏹';
+  rec.onresult = (e)=>{
+    const text = e.results[0][0].transcript;
+    target.value = (target.value.trim() ? target.value.trim() + ' ' : '') + text;
+    saveSegue(person, target.value);
+  };
+  rec.onerror = ()=>{ toast('Voice input error — try again'); };
+  rec.onend = ()=>{ btnEl.classList.remove('recording'); btnEl.textContent = '🎤'; };
+  rec.start();
+}
+
+function ownerInitials(name){ return (name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+
+function populateOwnerSelect(){
+  const sel = document.getElementById('new-task-owner');
+  sel.innerHTML = participants.map(p=>`<option>${p}</option>`).join('') + '<option>Other</option>';
+}
+
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function daysOverdue(due){
+  const d1 = new Date(due), d2 = new Date(todayStr());
+  return Math.round((d2-d1)/86400000);
+}
+
+function addTask(){
+  const text = document.getElementById('new-task-text').value.trim();
+  if (!text) return;
+  const owner = document.getElementById('new-task-owner').value;
+  const category = document.getElementById('new-task-category').value;
+  const priority = document.getElementById('new-task-priority').value;
+  const due = document.getElementById('new-task-due').value;
+  tasks.push({ id: Date.now(), text, owner, category, priority, due, done:false });
+  document.getElementById('new-task-text').value = '';
+  document.getElementById('new-task-due').value = '';
+  saveAllData();
+  renderTasks();
+}
+function toggleTask(id){ const t = tasks.find(x=>x.id===id); if (t){ t.done = !t.done; saveAllData(); renderTasks(); } }
+function deleteTask(id){ tasks = tasks.filter(x=>x.id!==id); saveAllData(); renderTasks(); }
+
+function setTaskFilter(f){ taskFilter = f; renderTasks(); }
+function setOwnerFilter(v){ ownerFilter = v; renderTasks(); }
+function setCategoryFilter(v){ categoryFilter = v; renderTasks(); }
+
+function renderTaskFilters(){
+  const pills = ['All','Overdue','Due Today','This Week','Open','Done'];
+  document.getElementById('task-filter-pills').innerHTML =
+    pills.map(p=>`<button class="pill ${taskFilter===p?'active'+(p==='Open'||p==='Done'?' gray':''):''}" onclick="setTaskFilter('${p}')">${p}</button>`).join('') +
+    `<select class="tsel" onchange="setOwnerFilter(this.value)" id="owner-filter-sel"></select>` +
+    `<select class="tsel" onchange="setCategoryFilter(this.value)" id="category-filter-sel"></select>`;
+  const owners = ['All owners', ...new Set(tasks.map(t=>t.owner).filter(Boolean))];
+  document.getElementById('owner-filter-sel').innerHTML = owners.map(o=>`<option value="${o==='All owners'?'All':o}">${o}</option>`).join('');
+  const cats = ['All categories', ...new Set(tasks.map(t=>t.category).filter(Boolean))];
+  document.getElementById('category-filter-sel').innerHTML = cats.map(c=>`<option value="${c==='All categories'?'All':c}">${c}</option>`).join('');
+}
+
+function matchesFilter(t){
+  const due = t.due;
+  const overdue = due && !t.done && due < todayStr();
+  const dueToday = due && !t.done && due === todayStr();
+  const wk = new Date(); wk.setDate(wk.getDate()+7);
+  const thisWeek = due && !t.done && due >= todayStr() && due <= wk.toISOString().split('T')[0];
+  if (taskFilter==='Overdue' && !overdue) return false;
+  if (taskFilter==='Due Today' && !dueToday) return false;
+  if (taskFilter==='This Week' && !thisWeek) return false;
+  if (taskFilter==='Open' && t.done) return false;
+  if (taskFilter==='Done' && !t.done) return false;
+  if (ownerFilter!=='All' && t.owner!==ownerFilter) return false;
+  if (categoryFilter!=='All' && t.category!==categoryFilter) return false;
+  return true;
+}
+
+function taskRowHtml(t){
+  const overdue = t.due && !t.done && t.due < todayStr();
+  const od = overdue ? daysOverdue(t.due) : 0;
+  return `<div class="trow ${overdue?'':'ok'} ${t.done?'done':''}">
+    <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})">
+    <div class="trow-body">
+      <div class="trow-title">${t.text}</div>
+      <div class="chip-row">
+        <span class="chip owner"><span class="av">${ownerInitials(t.owner)}</span>${t.owner||'Unassigned'}</span>
+        ${overdue?`<span class="chip overdue">${od}d overdue</span>`:''}
+        ${t.priority?`<span class="chip prio-${(t.priority||'').toLowerCase()}">${t.priority}</span>`:''}
+        ${t.category?`<span class="chip cat">${t.category}</span>`:''}
+      </div>
+    </div>
+    <button class="trow-del" onclick="deleteTask(${t.id})">✕</button>
+  </div>`;
+}
+
+function renderTasks(){
+  populateOwnerSelect();
+  renderTaskFilters();
+  renderOwnerSummary();
+
+  const open = tasks.filter(t=>!t.done).length;
+  const overdue = tasks.filter(t=>t.due && !t.done && t.due < todayStr()).length;
+  const dueToday = tasks.filter(t=>t.due && !t.done && t.due === todayStr()).length;
+  const highPri = tasks.filter(t=>!t.done && t.priority==='High').length;
+  document.getElementById('st-open').textContent = open;
+  document.getElementById('st-overdue').textContent = overdue;
+  document.getElementById('st-duetoday').textContent = dueToday;
+  document.getElementById('st-highpri').textContent = highPri;
+
+  const banner = document.getElementById('overdue-banner-wrap');
+  if (overdue > 0){
+    const owners = [...new Set(tasks.filter(t=>t.due && !t.done && t.due<todayStr()).map(t=>t.owner).filter(Boolean))];
+    banner.innerHTML = `<div class="overdue-banner">⚠️ ${overdue} overdue task${overdue>1?'s':''} — owners: ${owners.join(', ')||'Unassigned'} — fix these first</div>`;
+  } else banner.innerHTML = '';
+
+  const filtered = tasks.filter(matchesFilter);
+  const groupLabel = taskFilter==='All' ? 'Open' : taskFilter;
+  document.getElementById('task-group-list').innerHTML =
+    `<div class="group-hdr">${groupLabel.toUpperCase()} — ${filtered.length}</div>` +
+    (filtered.length ? filtered.map(taskRowHtml).join('') : '<div style="color:var(--td);font-size:12px;padding:12px 0">Nothing here.</div>');
+
+  const badge = document.getElementById('task-badge');
+  badge.textContent = open;
+  badge.style.display = open ? 'inline-block' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════
+// ROCKS
+// ══════════════════════════════════════════════════════════
+function addRock(){
+  const text = document.getElementById('new-rock-text').value.trim();
+  if (!text) return;
+  const owner = document.getElementById('new-rock-owner').value.trim();
+  const due = document.getElementById('new-rock-due').value;
+  rocks.push({ id: Date.now(), text, owner, due, onTrack:true });
+  document.getElementById('new-rock-text').value = '';
+  document.getElementById('new-rock-owner').value = '';
+  document.getElementById('new-rock-due').value = '';
+  saveAllData();
+  renderRocks();
+}
+function toggleRockTrack(id){ const r = rocks.find(x=>x.id===id); if (r){ r.onTrack = !r.onTrack; saveAllData(); renderRocks(); } }
+function deleteRock(id){ rocks = rocks.filter(x=>x.id!==id); saveAllData(); renderRocks(); }
+function rockRowHtml(r){
+  return `<div class="rock-row">
+    <div class="trow-title">${r.text}</div>
+    <div style="font-size:11px;color:var(--td)">${r.owner||'—'}</div>
+    <div style="font-size:11px;color:var(--td);font-family:'DM Mono',monospace">${r.due||'—'}</div>
+    <button class="track-chip ${r.onTrack?'on':'off'}" onclick="toggleRockTrack(${r.id})">${r.onTrack?'On Track':'Off Track'}</button>
+    <button class="trow-del" onclick="deleteRock(${r.id})">✕</button>
+  </div>`;
+}
+function renderRocks(){
+  const html = rocks.length ? rocks.map(rockRowHtml).join('') : '<div style="color:var(--td);font-size:12px;padding:8px 0">No rocks set for this quarter yet.</div>';
+  const el = document.getElementById('step-rocks-list'); if (el) el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════
+// ISSUES (IDS)
+// ══════════════════════════════════════════════════════════
+const ISSUE_STATES = ['identified','discussing','solved'];
+function addIssue(){
+  const text = document.getElementById('new-issue-text').value.trim();
+  if (!text) return;
+  const owner = document.getElementById('new-issue-owner').value.trim();
+  issues.push({ id: Date.now(), text, owner, status:'identified' });
+  document.getElementById('new-issue-text').value = '';
+  document.getElementById('new-issue-owner').value = '';
+  saveAllData();
+  renderIssues();
+}
+function cycleIssue(id){
+  const i = issues.find(x=>x.id===id);
+  if (i){ const idx = ISSUE_STATES.indexOf(i.status); i.status = ISSUE_STATES[(idx+1)%ISSUE_STATES.length]; saveAllData(); renderIssues(); }
+}
+function deleteIssue(id){ issues = issues.filter(x=>x.id!==id); saveAllData(); renderIssues(); }
+function issueRowHtml(i){
+  const label = i.status.charAt(0).toUpperCase()+i.status.slice(1);
+  return `<div class="issue-row">
+    <div class="trow-title">${i.text}</div>
+    <div style="font-size:11px;color:var(--td)">${i.owner||'—'}</div>
+    <button class="status-btn ${i.status}" onclick="cycleIssue(${i.id})">${label}</button>
+    <button class="trow-del" onclick="deleteIssue(${i.id})">✕</button>
+  </div>`;
+}
+function renderIssues(){
+  const html = issues.length ? issues.map(issueRowHtml).join('') : '<div style="color:var(--td);font-size:12px;padding:8px 0">No open issues. Nice.</div>';
+  const el = document.getElementById('step-issues-list'); if (el) el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════
+// KPI TABLES / CHARTS
+// ══════════════════════════════════════════════════════════
+function sparkline(key, kpi){
+  const trend = ['w1','w2','w3','w4'].map(w=>getW(key,w));
+  const status = getStatus(trend[3], kpi);
+  const color = status==='g' ? '#5CB800' : status==='a' ? '#FFB800' : trend[3] ? '#FF4444' : '#4A5E58';
+  const max = Math.max(kpi.target, ...trend.filter(v=>v>0)) * 1.15 || 1;
+  const w=100,h=32,pts=trend.map((v,i)=> v>0 ? `${(i/3)*w},${h-(v/max)*h}` : null).filter(Boolean).join(' ');
+  return `<svg class="mini-chart" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+function renderKPITable(tab){
+  const kpis = KPIS[tab];
+  let rows = kpis.map(k=>{
+    const w1=getW(k.key,'w1'), w2=getW(k.key,'w2'), w3=getW(k.key,'w3'), w4=getW(k.key,'w4');
+    const status = w4 ? getStatus(w4,k) : 'n';
+    const chip = status==='g'?'<span class="status-chip st-g">On Target</span>':status==='a'?'<span class="status-chip st-a">Watch</span>':status==='r'?'<span class="status-chip st-r">Below Floor</span>':'<span class="status-chip st-n">No Data</span>';
+    return `<tr>
+      <td class="kpi-name">${k.label}</td>
+      <td class="kpi-floor">${k.floor.toLocaleString()}</td>
+      <td class="kpi-target">${k.target.toLocaleString()}</td>
+      <td><input type="number" class="actual-inp ${w1?getStatus(w1,k):''}" value="${w1||''}" onchange="setW('${k.key}','w1',this.value);debouncedSave();renderAll()"></td>
+      <td><input type="number" class="actual-inp ${w2?getStatus(w2,k):''}" value="${w2||''}" onchange="setW('${k.key}','w2',this.value);debouncedSave();renderAll()"></td>
+      <td><input type="number" class="actual-inp ${w3?getStatus(w3,k):''}" value="${w3||''}" onchange="setW('${k.key}','w3',this.value);debouncedSave();renderAll()"></td>
+      <td><input type="number" class="actual-inp ${w4?getStatus(w4,k):''}" value="${w4||''}" onchange="setW('${k.key}','w4',this.value);debouncedSave();renderAll()"></td>
+      <td>${sparkline(k.key,k)}</td>
+      <td>${chip}</td>
+    </tr>`;
+  }).join('');
+  const html = `<div class="kpi-section"><div class="kpi-sec-hdr"><div class="kpi-sec-name">${tab}</div></div>
+    <table class="kpi-table"><thead><tr><th>Metric</th><th>Floor</th><th>Target</th><th>W1</th><th>W2</th><th>W3</th><th>W4 (Current)</th><th>Trend</th><th>Status</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+  const targets = [document.getElementById('kpi-'+tab), document.getElementById('kpi-'+tab+'-standalone')].filter(Boolean);
+  targets.forEach(el=>el.innerHTML = html);
+}
+function renderChartsInto(containerId, tabs){
+  const grid = document.getElementById(containerId);
+  if (!grid) return;
+  let html = '';
+  tabs.forEach(tab=>{
+    KPIS[tab].forEach((kpi,idx)=>{
+      const id = `chart-${containerId}-${tab}-${idx}-${kpi.key}`;
+      html += `<div class="chart-card"><div class="chart-title">${kpi.label}</div><div class="chart-wrap"><canvas id="${id}"></canvas></div></div>`;
+    });
+  });
+  grid.innerHTML = html;
+  tabs.forEach(tab=>{
+    KPIS[tab].forEach((kpi,idx)=>{
+      const id = `chart-${containerId}-${tab}-${idx}-${kpi.key}`;
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      const trend = ['w1','w2','w3','w4'].map(w=>getW(kpi.key,w));
+      chartInstances[id] = new Chart(ctx, {
+        type:'line',
+        data:{ labels:['W1','W2','W3','W4'], datasets:[
+          { label:kpi.label, data:trend, borderColor:'#39FF14', backgroundColor:'#39FF1422', tension:.3, fill:true },
+          { label:'Target', data:[kpi.target,kpi.target,kpi.target,kpi.target], borderColor:'#7c3aed', borderDash:[4,3], pointRadius:0 },
+        ]},
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{labels:{color:'#8FA8A0',font:{size:10}}} },
+          scales:{ x:{ticks:{color:'#8FA8A0'},grid:{color:'rgba(255,255,255,.05)'}}, y:{ticks:{color:'#8FA8A0'},grid:{color:'rgba(255,255,255,.05)'}} }
+        }
+      });
+    });
+  });
+}
+function renderCharts(){
+  Object.values(chartInstances).forEach(c=>c.destroy());
+  chartInstances = {};
+  renderChartsInto('chart-grid', ['Sales','Ops']);
+  renderChartsInto('sales-chart-grid', ['Sales']);
+  renderChartsInto('ops-chart-grid', ['Ops']);
+}
+async function shiftWeeks(){
+  const allKeys = new Set();
+  ['Sales','Ops'].forEach(tab => KPIS[tab].forEach(k=>allKeys.add(k.key)));
+  allKeys.forEach(key=>{
+    data[`${key}_w1`] = getW(key,'w2');
+    data[`${key}_w2`] = getW(key,'w3');
+    data[`${key}_w3`] = getW(key,'w4');
+    data[`${key}_w4`] = 0;
+  });
+  await saveAllData();
+  renderAll();
+}
+
+// ══════════════════════════════════════════════════════════
+// L10 MEETING STEPPER
+// ══════════════════════════════════════════════════════════
+function fmtClock(sec){ sec = Math.max(0,Math.round(sec)); const m=Math.floor(sec/60), s=sec%60; return `${m}:${s.toString().padStart(2,'0')}`; }
+
+function renderAgendaSidebar(){
+  const kpiTotal = KPIS.Sales.length + KPIS.Ops.length;
+  const kpiGreen = [...KPIS.Sales,...KPIS.Ops].filter(k=>{ const v=getW(k.key,'w4'); return v && getStatus(v,k)==='g'; }).length;
+  const rocksOn = rocks.filter(r=>r.onTrack).length;
+  const openIssues = issues.filter(i=>i.status!=='solved').length;
+  const openTodos = tasks.filter(t=>!t.done).length;
+
+  let html = AGENDA.map((step,i)=>`
+    <div class="agenda-item ${i===stepIdx?'active':''}" onclick="goToStep(${i})">
+      <div class="anum">${i+1}</div>
+      <div class="atext"><div class="atitle">${step.label}</div><div class="atime">${step.min} min</div></div>
+    </div>`).join('');
+
+  html += `<div class="agenda-stats">
+    <div class="astat-row"><span>Rocks OT</span><b>${rocksOn}/${rocks.length}</b></div>
+    <div class="astat-row ${openIssues?'warn':''}"><span>Open issues</span><b>${openIssues}</b></div>
+    <div class="astat-row"><span>Open to-dos</span><b>${openTodos}</b></div>
+    <div class="astat-row"><span>KPIs green</span><b>${kpiGreen}/${kpiTotal}</b></div>
+  </div>
+  <button class="save-meeting-btn" onclick="saveMeeting()">✓ Save Meeting</button>
+  <button class="save-meeting-btn" style="background:var(--s3);color:var(--tx);margin-top:8px" onclick="exportAgenda()">📄 Export Agenda</button>`;
+
+  document.getElementById('agenda-sidebar').innerHTML = html;
+}
+
+function goToStep(i){
+  stepIdx = i;
+  segSec = AGENDA[i].min*60;
+  renderAgendaSidebar();
+  renderStepMain();
+}
+function nextStep(){ if (stepIdx < AGENDA.length-1) goToStep(stepIdx+1); }
+
+function toggleTimer(){
+  timerRunning = !timerRunning;
+  document.getElementById('timer-startbtn').textContent = timerRunning ? '⏸ Pause' : '▶ Start';
+  if (timerRunning){
+    timerInterval = setInterval(()=>{
+      totalSec++; segSec = Math.max(0, segSec-1);
+      document.getElementById('timer-total').textContent = fmtClock(totalSec);
+      document.getElementById('timer-segment').textContent = fmtClock(segSec);
+    }, 1000);
+  } else clearInterval(timerInterval);
+}
+function resetTimer(){
+  timerRunning = false; clearInterval(timerInterval);
+  document.getElementById('timer-startbtn').textContent = '▶ Start';
+  totalSec = 0; segSec = AGENDA[stepIdx].min*60;
+  document.getElementById('timer-total').textContent = fmtClock(totalSec);
+  document.getElementById('timer-segment').textContent = fmtClock(segSec);
+}
+
+function saveSegue(person, val){ notes.segueByPerson[person] = val; debouncedSave(); }
+function addParticipant(){
+  const el = document.getElementById('new-participant');
+  const name = el.value.trim();
+  if (!name) return;
+  participants.push(name);
+  el.value = '';
+  saveAllData();
+  renderStepMain();
+}
+function removeParticipant(name){
+  participants = participants.filter(p=>p!==name);
+  delete notes.segueByPerson[name];
+  saveAllData();
+  renderStepMain();
+}
+function saveHeadlines(){ notes.headlines = document.getElementById('note-headlines').value; debouncedSave(); }
+function saveCascade(){ notes.cascade = document.getElementById('note-cascade').value; debouncedSave(); }
+function saveRating(){ notes.rating = document.getElementById('note-rating').value; debouncedSave(); }
+
+function renderStepMain(){
+  const step = AGENDA[stepIdx];
+  const main = document.getElementById('meeting-main');
+
+  if (step.key === 'segue'){
+    main.innerHTML = `
+      <div class="step-title">SEGUE — 5 min</div>
+      <div class="step-sub">One good thing — personal or professional. 30 sec each.</div>
+      <div class="segue-grid" id="segue-grid"></div>
+      <div class="add-participant">
+        <input class="tinp" id="new-participant" placeholder="Add participant..." style="flex:1">
+        <button class="tbtn green" onclick="addParticipant()">+ Add</button>
+      </div>`;
+    document.getElementById('segue-grid').innerHTML = participants.map((p,i)=>`
+      <div class="segue-card">
+        <h4>${p}<button onclick="removeParticipant('${p}')">✕</button></h4>
+        <div style="display:flex;gap:6px;align-items:flex-start">
+          <textarea id="segue-ta-${i}" placeholder="One good thing..." onchange="saveSegue('${p}', this.value)">${notes.segueByPerson[p]||''}</textarea>
+          <button class="mic-btn" onclick="startVoiceIntoSegue('segue-ta-${i}', '${p}', this)">🎤</button>
+        </div>
+      </div>`).join('');
+  }
+
+  else if (step.key === 'scorecard'){
+    const allKpis = [...KPIS.Sales, ...KPIS.Ops];
+    const reds = allKpis.filter(k => getW(k.key,'w4') && getStatus(getW(k.key,'w4'),k)==='r');
+    const ambers = allKpis.filter(k => getW(k.key,'w4') && getStatus(getW(k.key,'w4'),k)==='a');
+    main.innerHTML = `
+      <div class="step-title">SCORECARD — 10 min</div>
+      <div class="step-sub">Full detail lives on the Scorecard tab. Quick status here:</div>
+      <div style="display:flex;gap:16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;margin-bottom:16px">
+        <span style="color:#5CB800">${allKpis.length-reds.length-ambers.length} On Target</span>
+        <span style="color:var(--amb)">${ambers.length} Watch</span>
+        <span style="color:var(--red)">${reds.length} Below Floor</span>
+      </div>
+      ${reds.length ? `<div class="group-hdr">Below Floor</div>` + reds.map(k=>`<div class="trow"><div class="trow-body"><div class="trow-title">${k.label}</div><div class="chip-row"><span class="chip prio-high">${getW(k.key,'w4').toLocaleString()} vs floor ${k.floor.toLocaleString()}</span></div></div></div>`).join('') : ''}
+      ${ambers.length ? `<div class="group-hdr">Watch</div>` + ambers.map(k=>`<div class="trow ok"><div class="trow-body"><div class="trow-title">${k.label}</div><div class="chip-row"><span class="chip prio-medium">${getW(k.key,'w4').toLocaleString()} / target ${k.target.toLocaleString()}</span></div></div></div>`).join('') : ''}
+      ${!reds.length && !ambers.length ? '<div style="color:var(--g);font-size:13px">✅ All tracked KPIs are on target or above floor.</div>' : ''}`;
+  }
+
+  else if (step.key === 'rocks'){
+    main.innerHTML = `
+      <div class="step-title">ROCK REVIEW — 5 min</div>
+      <div class="step-sub">The 3–7 priorities for this quarter. On track or off track — no in-between.</div>
+      <div class="add-row">
+        <input class="tinp" id="new-rock-text" placeholder="Rock / goal...">
+        <button class="mic-btn" onclick="startVoiceInto('new-rock-text', this)">🎤</button>
+        <input class="tinp" id="new-rock-owner" placeholder="Owner" style="max-width:130px">
+        <input class="tinp" id="new-rock-due" type="date" style="max-width:150px">
+        <button class="tbtn green" onclick="addRock()">+ Add Rock</button>
+      </div>
+      <div id="step-rocks-list"></div>`;
+    renderRocks();
+  }
+
+  else if (step.key === 'headlines'){
+    main.innerHTML = `
+      <div class="step-title">CUSTOMER / EMPLOYEE HEADLINES — 5 min</div>
+      <div class="step-sub">Wins, losses, employee news.</div>
+      <textarea class="note-area" id="note-headlines" onchange="saveHeadlines()">${notes.headlines||''}</textarea>
+      <button class="mic-btn" style="margin-top:8px" onclick="startVoiceInto('note-headlines', this)">🎤 Dictate</button>`;
+  }
+
+  else if (step.key === 'todos'){
+    const open = tasks.filter(t=>!t.done);
+    main.innerHTML = `
+      <div class="step-title">TO-DO LIST REVIEW — 5 min</div>
+      <div class="step-sub">${open.length} open item${open.length!==1?'s':''}. Full management on the Task Tracker tab.</div>
+      <div id="step-todos-list">${open.length ? open.map(taskRowHtml).join('') : '<div style="color:var(--td);font-size:12px">Nothing open. Nice.</div>'}</div>`;
+  }
+
+  else if (step.key === 'ids'){
+    main.innerHTML = `
+      <div class="step-title">IDS — IDENTIFY, DISCUSS, SOLVE — 55 min</div>
+      <div class="step-sub">Click a status chip to cycle it: Identified → Discussing → Solved.</div>
+      <div class="add-row">
+        <input class="tinp" id="new-issue-text" placeholder="Issue...">
+        <button class="mic-btn" onclick="startVoiceInto('new-issue-text', this)">🎤</button>
+        <input class="tinp" id="new-issue-owner" placeholder="Owner" style="max-width:130px">
+        <button class="tbtn green" onclick="addIssue()">+ Add Issue</button>
+      </div>
+      <div id="step-issues-list"></div>`;
+    renderIssues();
+  }
+
+  else if (step.key === 'conclude'){
+    main.innerHTML = `
+      <div class="step-title">CONCLUDE — 5 min</div>
+      <div class="step-sub">Recap new to-dos, cascading message, rate the meeting.</div>
+      <textarea class="note-area" id="note-cascade" placeholder="Cascading message for the team..." onchange="saveCascade()">${notes.cascade||''}</textarea>
+      <button class="mic-btn" style="margin-top:8px" onclick="startVoiceInto('note-cascade', this)">🎤 Dictate</button>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;color:var(--td);text-transform:uppercase;letter-spacing:1px">Meeting Rating (1-10):</span>
+        <input class="rate-inp" id="note-rating" type="number" min="1" max="10" value="${notes.rating||''}" onchange="saveRating()">
+      </div>
+      <div class="sec-title" style="margin-top:28px">📚 Past Meetings</div>
+      <div id="meeting-history"></div>`;
+    renderMeetingHistory();
+  }
+}
+
+// ── SAVE / EXPORT MEETING ──
+function buildAgendaText(snapshot){
+  const s = snapshot || { date: new Date().toISOString().split('T')[0], notes, rocks, issues, tasks };
+  let out = '';
+  out += `DRIVEN SOLUTIONS — L10 MEETING\n${s.date}\n${'='.repeat(40)}\n\n`;
+  out += `1. SEGUE — GOOD NEWS\n`;
+  const sb = s.notes.segueByPerson || {};
+  out += Object.keys(sb).length ? Object.entries(sb).map(([p,v])=>`  ${p}: ${v||'—'}`).join('\n')+'\n\n' : '  (none)\n\n';
+  const allKpis = [...KPIS.Sales, ...KPIS.Ops];
+  const reds = allKpis.filter(k => getW(k.key,'w4') && getStatus(getW(k.key,'w4'),k)==='r').length;
+  const ambers = allKpis.filter(k => getW(k.key,'w4') && getStatus(getW(k.key,'w4'),k)==='a').length;
+  out += `2. SCORECARD REVIEW\n${allKpis.length-reds-ambers} On Target, ${ambers} Watch, ${reds} Below Floor\n\n`;
+  out += `3. ROCK REVIEW\n` + (s.rocks.length ? s.rocks.map(r=>`  [${r.onTrack?'ON TRACK':'OFF TRACK'}] ${r.text} (${r.owner||'—'}${r.due?', due '+r.due:''})`).join('\n')+'\n\n' : '  (none)\n\n');
+  out += `4. CUSTOMER / EMPLOYEE HEADLINES\n${(s.notes.headlines||'—')}\n\n`;
+  out += `5. TO-DO LIST REVIEW\n` + (s.tasks.length ? s.tasks.map(t=>`  [${t.done?'x':' '}] ${t.text} (${t.owner||'—'}${t.due?', due '+t.due:''})`).join('\n')+'\n\n' : '  (none)\n\n');
+  out += `6. IDS — ISSUES\n` + (s.issues.length ? s.issues.map(i=>`  [${i.status.toUpperCase()}] ${i.text} (${i.owner||'—'})`).join('\n')+'\n\n' : '  (none)\n\n');
+  out += `7. CONCLUDE\nCascading message: ${(s.notes.cascade||'—')}\nMeeting rating: ${(s.notes.rating||'—')}/10\n`;
+  return out;
+}
+function downloadText(filename, text){
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+}
+function exportAgenda(){ downloadText(`driven-l10-agenda-${new Date().toISOString().split('T')[0]}.txt`, buildAgendaText()); }
+function saveMeeting(){
+  const date = new Date().toISOString().split('T')[0];
+  const snapshot = {
+    date,
+    notes: { segueByPerson: JSON.parse(JSON.stringify(notes.segueByPerson||{})), headlines: notes.headlines, cascade: notes.cascade, rating: notes.rating },
+    rocks: JSON.parse(JSON.stringify(rocks)), issues: JSON.parse(JSON.stringify(issues)), tasks: JSON.parse(JSON.stringify(tasks)),
+  };
+  meetingHistory.push(snapshot);
+  saveAllData();
+  renderMeetingHistory();
+  toast('Meeting saved');
+}
+function exportPastMeeting(idx){ const s = meetingHistory[idx]; downloadText(`driven-l10-agenda-${s.date}.txt`, buildAgendaText(s)); }
+function renderMeetingHistory(){
+  const el = document.getElementById('meeting-history'); if (!el) return;
+  if (!meetingHistory.length){ el.innerHTML = '<div style="color:var(--td);font-size:12px;padding:8px 0">No meetings saved yet.</div>'; return; }
+  el.innerHTML = meetingHistory.slice().reverse().map((s,revIdx)=>{
+    const idx = meetingHistory.length - 1 - revIdx;
+    return `<div class="rock-row" style="grid-template-columns:1fr 100px auto">
+      <div class="trow-title">${s.date}</div>
+      <div style="font-size:11px;color:var(--td)">Rating: ${s.notes.rating||'—'}/10</div>
+      <button class="tbtn" onclick="exportPastMeeting(${idx})">📄 Export</button>
+    </div>`;
+  }).join('');
+}
+function toast(msg){
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--gbg);border:1px solid var(--gd);color:var(--g);padding:10px 16px;border-radius:4px;font-size:12px;z-index:999';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2500);
+}
+
+function renderAll(){
+  try { renderKPITable('Sales'); } catch(e){ console.error('renderKPITable Sales', e); }
+  try { renderKPITable('Ops'); } catch(e){ console.error('renderKPITable Ops', e); }
+  try { renderCharts(); } catch(e){ console.error('renderCharts', e); }
+  try { renderTasks(); } catch(e){ console.error('renderTasks', e); }
+  try { renderAgendaSidebar(); } catch(e){ console.error('renderAgendaSidebar', e); document.getElementById('agenda-sidebar').innerHTML = `<div style="color:var(--red);font-size:11px;padding:16px">Sidebar error: ${e.message}</div>`; }
+  try { renderStepMain(); } catch(e){ console.error('renderStepMain', e); document.getElementById('meeting-main').innerHTML = `<div style="color:var(--red);font-size:12px">Meeting step error: ${e.message}<br>Open the browser console (F12) and send me what it says.</div>`; }
+}
+
+document.getElementById('timer-segment').textContent = fmtClock(segSec);
+loadData();
+</script>
+</body>
+</html>
