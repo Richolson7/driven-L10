@@ -1,6 +1,12 @@
--- Team rows and the Before User Created allow list. NOT applied.
+-- Team rows and the Before User Created allow list.
 -- Run after 20261026160000_crm_missing_rules_and_user_prefs.sql (private schema)
 -- and before 20261026160100_crm_login_rls.sql.
+--
+-- Applied live as version 20261026184005 (the filename is not the live version).
+-- That applied copy declares a PL/pgSQL variable named email, which clashes with
+-- crm_team.email and raises 42702 at the IF. The function below is corrected for
+-- a fresh install. The live database is corrected by
+-- 20261026184500_fix_crm_team_hook.sql. Do not re-apply this file.
 --
 -- Checked read-only on 2026-10-26: all five rows already exist and are active.
 -- This insert does nothing while those emails are present. It does not change
@@ -51,14 +57,14 @@ security definer
 set search_path = ''
 as $$
 declare
-  email text;
+  v_email text;
 begin
-  email := lower(coalesce(event -> 'user' ->> 'email', ''));
-  if email <> '' and exists (
+  v_email := lower(coalesce(event -> 'user' ->> 'email', ''));
+  if v_email <> '' and exists (
     select 1
     from public.crm_team t
     where t.active is true
-      and lower(t.email) = email
+      and lower(t.email) = v_email
   ) then
     return '{}'::jsonb;
   end if;
