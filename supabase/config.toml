@@ -1,0 +1,12 @@
+# Function switches only. These functions are not deployed.
+# Secrets (Intuit tokens, webhook secret, service role) stay in Supabase secrets, not in git.
+project_id = "igaylyhkssahczubiztb"
+
+[functions.qbo-sync-order]
+verify_jwt = true
+
+[functions.qbo-import-items]
+verify_jwt = true
+
+[functions.message-status]
+verify_jwt = false
