@@ -1,6 +1,10 @@
 -- Proposed login gate for Driven CRM. NOT applied.
--- Run only after 20261026160000_crm_missing_rules_and_user_prefs.sql,
--- and only when the team can sign in with the emails on crm_team.
+-- Run after 20261026160000 (private.is_crm_team) and 20261026160050
+-- (team rows and private.hook_crm_team_only), and after the later table
+-- migrations so this loop locks crm_deal_lines, crm_products, and crm_messages too.
+-- Apply this in the same sitting as merging the CRM page. It is the step
+-- that closes the public allow-all window. The page sign-in screen is not
+-- the security boundary: the anon key is already in the hub.
 --
 -- Today most crm_* tables have a policy named "allow all" for role public
 -- (qual true) plus full grants to anon, including TRUNCATE. Anyone with the

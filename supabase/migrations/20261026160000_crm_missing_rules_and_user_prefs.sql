@@ -7,8 +7,9 @@
 -- freight, quote sent date, ship-to, rep, customer PO) already have columns
 -- on crm_deals and are saved there either way.
 --
--- Do not run 20261026160100_crm_login_rls.sql until the team can sign in.
--- This file leaves the existing allow-all policies on the current crm_* tables alone.
+-- Do not run 20261026160100_crm_login_rls.sql until 20261026160050_crm_team_signin.sql
+-- is applied and the Auth hook is selected. This file leaves the existing
+-- allow-all policies on the current crm_* tables alone.
 
 -- The live check only allows stage_enter, date_reached, stale_stage, no_contact.
 -- The test CRM also had new-customer, setup-stale, new-vendor, and vendor-ready rules.

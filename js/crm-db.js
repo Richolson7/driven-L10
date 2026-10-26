@@ -11,8 +11,11 @@
 
   if (!window.supabase || !window.supabase.createClient) {
     document.addEventListener("DOMContentLoaded", function () {
+      var text = "The Supabase library did not load. Check the network and reload.";
       var view = document.getElementById("view");
-      if (view) view.innerHTML = "<p class='banner'>The Supabase library did not load. Check the network and reload.</p>";
+      var gate = document.getElementById("gateMsg");
+      if (view) view.innerHTML = "<p class='banner'>" + text + "</p>";
+      if (gate) gate.textContent = text;
     });
     return;
   }

@@ -78,7 +78,10 @@
   var DATE_KEYS = { quote_sent_date: 1, est_ship_date: 1, est_delivery_date: 1, invoice_sent_date: 1, paid_date: 1 };
   var NUM_KEYS = { price_per_unit: 1, quantity: 1, vendor_price_per_unit: 1, vendor_quantity: 1, freight: 1, ship_to_id: 1, vendor_id: 1, company_id: 1 };
 
-  var S = { theme: "dark", view: "pipeline", meId: null, authEmail: "", authLocked: false, stages: [], team: [], rules: [], fields: [], companies: [], contacts: [], shipTos: [], deals: [], tasks: [], activity: [], stepRows: [], targets: [], outreach: [], products: [], messages: [], sequenceNote: "", targetsNote: "", quotesNote: "", linesNote: "", productsNote: "", messagesNote: "", feedback: "" };
+  var S = { theme: "dark", view: "pipeline", meId: null, authEmail: "", authLocked: false, entered: false, stages: [], team: [], rules: [], fields: [], companies: [], contacts: [], shipTos: [], deals: [], tasks: [], activity: [], stepRows: [], targets: [], outreach: [], products: [], messages: [], sequenceNote: "", targetsNote: "", quotesNote: "", linesNote: "", productsNote: "", messagesNote: "", feedback: "" };
+  var sessionGen = 0;
+  var admitEmail = "";
+  var gateHold = false;
   var F = emptyFilter();
   var board = { zones: {}, stages: {} };
   var presets = [];
@@ -328,17 +331,28 @@
     });
     return src;
   }
+  function localHasPrefs(local) {
+    if (!local) return false;
+    if (local.defaultFilter) return true;
+    if (local.presets && local.presets.length) return true;
+    var b = local.board || {};
+    var zones = b.zones || {};
+    var stages = b.stages || {};
+    return Object.keys(zones).some(function (k) { return zones[k]; }) || Object.keys(stages).some(function (k) { return stages[k]; });
+  }
   async function loadPrefs() {
     var local = readLocal();
     applyPrefs(local);
-    if (!S.meId || prefsMode === "local") { updatePrefsNote(); return; }
+    if (!S.meId || !S.authLocked) { prefsMode = "local"; updatePrefsNote(); return; }
     var res = await CRMDB.db.from("crm_user_prefs").select("*").eq("team_member_id", S.meId).eq("view", "pipeline");
     if (res.error) {
       prefsMode = "local";
       updatePrefsNote();
       return;
     }
-    if (res.data && res.data.length) { prefsMode = "remote"; applyPrefs(fromRows(res.data)); }
+    prefsMode = "remote";
+    if (res.data && res.data.length) applyPrefs(fromRows(res.data));
+    else if (localHasPrefs(local)) { await persistPrefs(); return; }
     updatePrefsNote();
   }
   function updatePrefsNote() {
@@ -1387,9 +1401,7 @@
     if (act === "seq-send") { seqAction(id, "send"); return; }
     if (act === "seq-skip") { seqAction(id, "skip"); return; }
     if (act === "seq-stop") { seqAction(id, "stop"); return; }
-    if (act === "signin") { openModal("<h2>Sign in</h2><p>Use your Driven email. This sends a one-time sign-in link to you. It does not email customers.</p><div class='f'><label>Email</label><input id='authEmail' type='email' value='" + esc(S.authEmail || "") + "'></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='auth-send'>Email me a link</button>" + (S.authEmail ? "<button class='ghost' data-act='signout'>Sign out</button>" : "") + "</div>"); return; }
-    if (act === "auth-send") { sendLink(); return; }
-    if (act === "signout") { CRMDB.db.auth.signOut().then(function () { S.authEmail = ""; S.authLocked = false; closeModal(); paintWho(); toast("Signed out."); }); return; }
+    if (act === "signout") { signOut(); return; }
     if (act === "feedback") { openModal("<h2>Feedback for Rich</h2><div class='f'><textarea id='fbText' style='min-height:180px'>" + esc(S.feedback) + "</textarea></div><div class='mactions'><button class='ghost' data-act='fb-save'>Save notes</button><button class='ghost' data-act='fb-copy'>Copy</button></div>"); return; }
     if (act === "fb-save") { S.feedback = $("#fbText").value; localStorage.setItem("driven-crm-feedback", S.feedback); closeModal(); toast("Notes saved in this browser."); return; }
     if (act === "fb-copy") { S.feedback = $("#fbText").value; localStorage.setItem("driven-crm-feedback", S.feedback); navigator.clipboard && navigator.clipboard.writeText(S.feedback).then(function () { toast("Copied."); }, function () { toast("Select the text and copy it."); }); return; }
@@ -1694,13 +1706,129 @@
     if (!ok) return;
     render();
   }
+  function setGateMsg(text, kind) {
+    var el = $("#gateMsg");
+    if (!el) return;
+    el.textContent = text || "";
+    el.className = "gate-msg" + (kind === "bad" ? " bad" : "");
+  }
+  function showGate(message) {
+    sessionGen += 1;
+    admitEmail = "";
+    S.entered = false;
+    S.meId = null;
+    S.authEmail = "";
+    S.authLocked = false;
+    ["stages", "team", "rules", "fields", "companies", "contacts", "shipTos", "deals", "tasks", "activity", "stepRows", "targets", "outreach", "products", "messages"].forEach(function (k) { S[k] = []; });
+    var view = $("#view");
+    if (view) view.innerHTML = "";
+    var shell = $("#shell");
+    var gate = $("#authGate");
+    if (shell) shell.hidden = true;
+    if (gate) gate.hidden = false;
+    document.documentElement.dataset.crmGate = "signed-out";
+    if ($("#drawer")) closeDrawer();
+    if ($("#modal")) closeModal();
+    if (message != null) setGateMsg(message);
+    setSaveState("", "");
+  }
+  async function rejectSession(message) {
+    gateHold = true;
+    admitEmail = "";
+    try { await CRMDB.db.auth.signOut(); } catch (e) { /* still hide the CRM */ }
+    showGate(message);
+    gateHold = false;
+  }
+  async function signOut() {
+    gateHold = true;
+    admitEmail = "";
+    try { await CRMDB.db.auth.signOut(); } catch (e) { /* still hide the CRM */ }
+    showGate("Signed out.");
+    gateHold = false;
+  }
+  function authRedirect() { return location.origin + location.pathname; }
   async function sendLink() {
-    var email = $("#authEmail").value.trim();
-    if (!email) { toast("Enter an email."); return; }
-    var res = await CRMDB.db.auth.signInWithOtp({ email: email, options: { emailRedirectTo: location.href.split("#")[0] } });
-    if (res.error) { toast("Could not start sign-in: " + res.error.message, "bad"); setSaveState("Sign-in failed: " + res.error.message, "bad"); return; }
-    closeModal();
-    toast("Check " + email + " for the sign-in link. No customer email was sent.");
+    var email = ($("#gateEmail") && $("#gateEmail").value || "").trim();
+    if (!email || email.indexOf("@") < 1 || /[%_]/.test(email)) { setGateMsg("Enter the Driven email on your team row.", "bad"); return; }
+    var btn = $("#gateSend");
+    if (btn) btn.disabled = true;
+    setGateMsg("Sending a sign-in email to " + email + "…");
+    var res = await CRMDB.db.auth.signInWithOtp({
+      email: email,
+      options: { shouldCreateUser: true, emailRedirectTo: authRedirect() }
+    });
+    if (btn) btn.disabled = false;
+    if (res.error) { setGateMsg("Could not start sign-in: " + res.error.message, "bad"); return; }
+    setGateMsg("Check " + email + " for a link or a one-time code. Paste the code here if you stay on this page. Nothing was sent to a customer.");
+  }
+  async function verifyCode() {
+    var email = ($("#gateEmail") && $("#gateEmail").value || "").trim();
+    var token = ($("#gateCode") && $("#gateCode").value || "").replace(/\s/g, "");
+    if (!email || !token) { setGateMsg("Enter the email and the code from the message.", "bad"); return; }
+    setGateMsg("Checking the code…");
+    var res = await CRMDB.db.auth.verifyOtp({ email: email, token: token, type: "email" });
+    if (res.error) res = await CRMDB.db.auth.verifyOtp({ email: email, token: token, type: "magiclink" });
+    if (res.error) { setGateMsg(res.error.message, "bad"); return; }
+  }
+  async function enterCrm(session) {
+    var email = String((session && session.user && session.user.email) || "").trim();
+    if (!email) { await rejectSession("That sign-in had no email. Try again."); return; }
+    var key = email.toLowerCase();
+    if (S.entered && S.authEmail.toLowerCase() === key) return;
+    if (admitEmail === key) return;
+    admitEmail = key;
+    var gen = ++sessionGen;
+    setGateMsg("Checking " + email + "…");
+    async function lookupTeam() {
+      return CRMDB.db.from("crm_team").select("id,name,email,team,alert_via,active").ilike("email", email).eq("active", true).limit(2);
+    }
+    var res = await lookupTeam();
+    if (res.error || !(res.data || []).length) res = await lookupTeam();
+    if (gen !== sessionGen) return;
+    var mine = !res.error && (res.data || []).find(function (t) { return String(t.email || "").toLowerCase() === key && t.active !== false; });
+    if (res.error || !mine) {
+      var why = res.error
+        ? ("Could not confirm " + email + " on the team. " + CRMDB.explain(res.error))
+        : (email + " is not an active Driven team address. No CRM data was loaded.");
+      await rejectSession(why);
+      return;
+    }
+    S.authEmail = email;
+    S.authLocked = true;
+    S.meId = mine.id;
+    setSaveState("Loading…", "");
+    var ok = await loadAll();
+    if (gen !== sessionGen) return;
+    if (ok) {
+      var person = S.team.find(function (t) { return String(t.email || "").toLowerCase() === key && t.active !== false; });
+      if (!person) {
+        await rejectSession(email + " is not an active Driven team address. No CRM data was loaded.");
+        return;
+      }
+      S.meId = person.id;
+    } else {
+      ["rules", "fields", "companies", "contacts", "shipTos", "deals", "tasks", "activity", "stepRows", "targets", "outreach", "products", "messages"].forEach(function (k) { S[k] = []; });
+      S.team = [{ id: mine.id, name: mine.name, email: email, team: mine.team, via: mine.alert_via || "both", active: true }];
+      S.meId = mine.id;
+    }
+    S.entered = true;
+    S.authLocked = true;
+    var gate = $("#authGate");
+    var shell = $("#shell");
+    if (gate) gate.hidden = true;
+    if (shell) shell.hidden = false;
+    document.documentElement.dataset.crmGate = "signed-in";
+    paintWho();
+    if (!ok) return;
+    await loadPrefs();
+    if (gen !== sessionGen) return;
+    await runAutomations();
+    if (gen !== sessionGen) return;
+    var asked = new URLSearchParams(location.search).get("view");
+    if (asked && ["pipeline", "companies", "docs", "tasks", "calendar", "orders", "automations", "sequences", "setup"].indexOf(asked) >= 0) S.view = asked;
+    render();
+    var signedIn = S.team.find(function (t) { return t.id === +S.meId; });
+    setSaveState("Signed in as " + (signedIn ? signedIn.name : email) + " · " + email, "ok");
   }
   function openTargetPicker() {
     if (!S.targets.length) { toast(S.targetsNote || "No target accounts are visible."); return; }
@@ -1896,34 +2024,23 @@
 
   function paintWho() {
     var sel = $("#who");
-    if (!sel) return;
-    sel.innerHTML = S.team.map(function (p) { return "<option value='" + p.id + "'" + (p.id === +S.meId ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("");
-    sel.disabled = !!S.authLocked;
-    var btn = $("#authBtn");
-    if (btn) btn.textContent = S.authEmail ? S.authEmail : "Sign in";
-  }
-  async function refreshAuth() {
-    var res = await CRMDB.db.auth.getSession();
-    var session = res.data && res.data.session;
-    S.authEmail = session && session.user ? (session.user.email || "") : "";
-    if (S.authEmail) {
-      var p = S.team.find(function (t) { return (t.email || "").toLowerCase() === S.authEmail.toLowerCase(); });
-      if (p) { S.meId = p.id; S.authLocked = true; }
+    var label = $("#whoLabel");
+    var person = S.team.find(function (t) { return t.id === +S.meId; });
+    var name = person ? person.name : "teammate";
+    if (label) label.textContent = "Signed in as " + name;
+    if (sel) {
+      sel.innerHTML = "<option value='" + (person ? person.id : "") + "' selected>" + esc(name + (S.authEmail ? " · " + S.authEmail : "")) + "</option>";
+      sel.disabled = true;
     }
+    var btn = $("#authBtn");
+    if (btn) { btn.textContent = "Sign out"; btn.dataset.act = "signout"; }
   }
 
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") { if ($("#modal").classList.contains("open")) closeModal(); else closeDrawer(); }
   });
   $("#modal").addEventListener("click", function (e) { if (e.target.id === "modal") closeModal(); });
-  $("#who").addEventListener("change", async function (e) {
-    if (S.authLocked) return;
-    S.meId = +e.target.value;
-    localStorage.setItem("driven-crm-me", S.meId);
-    prefsWarned = false;
-    await loadPrefs();
-    render();
-  });
+  $("#who").addEventListener("change", function () { paintWho(); });
 
   async function saveOrderCell(spec, value) {
     var parts = spec.split(":");
@@ -2011,25 +2128,28 @@
     toast("Imported " + rows.length + " products. QuickBooks was not changed.");
   }
 
-  async function boot() {
-    setSaveState("Loading…", "");
+  function boot() {
     S.theme = localStorage.getItem("driven-crm-theme") || "dark";
+    document.documentElement.dataset.theme = S.theme;
+    document.documentElement.dataset.crmGate = "signed-out";
     S.feedback = localStorage.getItem("driven-crm-feedback") || "";
-    var ok = await loadAll();
-    if (!ok) return;
-    await refreshAuth();
-    if (!S.meId) {
-      var stored = +localStorage.getItem("driven-crm-me") || 0;
-      var pick = S.team.find(function (t) { return t.id === stored; }) || S.team.find(function (t) { return t.team === "sales" && t.active !== false; }) || S.team[0];
-      S.meId = pick ? pick.id : null;
-    }
-    paintWho();
-    await loadPrefs();
-    await runAutomations();
-    var asked = new URLSearchParams(location.search).get("view");
-    if (asked && ["pipeline", "companies", "docs", "tasks", "calendar", "orders", "automations", "sequences", "setup"].indexOf(asked) >= 0) S.view = asked;
-    render();
-    setSaveState(S.stages.length + " stages loaded", "ok");
+    var emailForm = $("#gateEmailForm");
+    if (emailForm) emailForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (document.activeElement && document.activeElement.id === "gateCode") verifyCode();
+      else sendLink();
+    });
+    var codeBtn = $("#gateVerify");
+    if (codeBtn) codeBtn.addEventListener("click", function () { verifyCode(); });
+    CRMDB.db.auth.onAuthStateChange(function (event, session) {
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return;
+      if (gateHold) return;
+      if (!session) {
+        if (S.entered) showGate("Signed out.");
+        return;
+      }
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN") enterCrm(session);
+    });
   }
   boot();
 })();

@@ -291,9 +291,34 @@ details.seq[open] summary{background:var(--raise)}
   .bar input[type=search]{min-width:0;flex:1}
 }
 @media (prefers-reduced-motion:reduce){.drawer{transition:none}}
+#authGate{min-height:100vh;display:grid;place-items:center;padding:24px}
+#authGate[hidden],#shell[hidden]{display:none}
+.gate-card{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px 24px;box-shadow:var(--shadow)}
+.gate-card h1{font-size:34px;margin-bottom:8px}
+.gate-card p{color:var(--muted);margin:0 0 16px}
+.gate-card label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
+.gate-card input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:12px}
+.gate-card .primary,.gate-card .ghost{width:100%;margin-bottom:8px}
+.gate-msg{min-height:1.3em;margin:8px 0 0;color:var(--text)}
+.gate-msg.bad{color:var(--bad)}
 </style>
 </head>
 <body>
+<div id="authGate">
+  <form class="gate-card" id="gateEmailForm">
+    <h1>Driven CRM</h1>
+    <p>Sign in with the Driven email on your team row. We email you a link or a one-time code. There is no password, and customers are not emailed.</p>
+    <label for="gateEmail">Email</label>
+    <input id="gateEmail" name="email" type="email" autocomplete="username" required placeholder="you@drivensol.com">
+    <button class="primary" type="submit" id="gateSend">Email me a link</button>
+    <label for="gateCode">One-time code</label>
+    <input id="gateCode" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="Code from the email">
+    <button class="ghost" type="button" id="gateVerify">Sign in with code</button>
+    <p id="gateMsg" class="gate-msg" role="status"></p>
+    <a href="index.html">L10 hub</a>
+  </form>
+</div>
+<div id="shell" hidden>
 <header class="top">
   <div class="brand">
     <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4v10l-9 4-9-4z" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 4 9-4M12 11v10" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/></svg></div>
@@ -312,9 +337,9 @@ details.seq[open] summary{background:var(--raise)}
     <button class="tab" data-view="setup">Setup</button>
   </nav>
   <div class="spacer"></div>
-  <label class="log" for="who">Viewing as</label>
-  <select id="who" class="who" aria-label="Whose saved pipeline filters and collapsed columns to use"></select>
-  <button class="ghost" id="authBtn" data-act="signin">Sign in</button>
+  <label class="log" id="whoLabel" for="who">Signed in as</label>
+  <select id="who" class="who" aria-label="Signed-in teammate" disabled></select>
+  <button class="ghost" id="authBtn" data-act="signout">Sign out</button>
   <span id="saveState" class="save-state" role="status">Loading…</span>
   <a class="ghost" href="https://claude.ai/artifact/5bWT2aSPJt5P2oMy1WJZZG" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Route planner</a>
   <button class="ghost" data-act="tour">Take the tour</button>
@@ -329,8 +354,9 @@ details.seq[open] summary{background:var(--raise)}
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 <div class="modal" id="modal" role="dialog" aria-modal="true"><div class="mbox" id="mbox"></div></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
-<div id="printArea"></div>
 <div id="tour" hidden role="dialog" aria-label="Training tour"></div>
+</div>
+<div id="printArea"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
