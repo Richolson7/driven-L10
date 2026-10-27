@@ -330,6 +330,7 @@ details.seq[open] summary{background:var(--raise)}
     <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4v10l-9 4-9-4z" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/><path d="M3 7l9 4 9-4M12 11v10" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/></svg></div>
     <h1>Driven CRM</h1>
     <a class="ghost" href="index.html" style="text-decoration:none">L10 hub</a>
+    <a class="ghost" href="huddle.html" style="text-decoration:none">Morning huddle</a>
   </div>
   <nav class="tabs" aria-label="Sections">
     <button class="tab" data-view="pipeline">Pipeline</button>
@@ -343,6 +344,9 @@ details.seq[open] summary{background:var(--raise)}
     <button class="tab" data-view="setup">Setup</button>
   </nav>
   <div class="spacer"></div>
+  <button class="ghost" data-act="quick-log" data-kind="call">Log call</button>
+  <button class="ghost" data-act="quick-log" data-kind="email">Log email</button>
+  <button class="ghost" data-act="quick-log" data-kind="touch">Log touch</button>
   <label class="log" id="whoLabel" for="who">Signed in as</label>
   <select id="who" class="who" aria-label="Signed-in teammate" disabled></select>
   <button class="ghost" id="authBtn" data-act="signout">Sign out</button>
@@ -367,6 +371,7 @@ details.seq[open] summary{background:var(--raise)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="js/crm-db.js"></script>
+<script src="js/crm-auth.js"></script>
 <script src="js/crm-quote.js"></script>
 <script src="js/crm-orders.js"></script>
 <script src="js/crm-app.js"></script>
