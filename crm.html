@@ -299,21 +299,27 @@ details.seq[open] summary{background:var(--raise)}
 .gate-card label{display:block;font-size:13px;font-weight:600;margin:0 0 4px}
 .gate-card input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:12px}
 .gate-card .primary,.gate-card .ghost{width:100%;margin-bottom:8px}
+.gate-card .linkbtn{display:block;width:100%;text-align:center;margin:2px 0 8px}
 .gate-msg{min-height:1.3em;margin:8px 0 0;color:var(--text)}
 .gate-msg.bad{color:var(--bad)}
 </style>
 </head>
 <body>
 <div id="authGate">
-  <form class="gate-card" id="gateEmailForm">
+  <form class="gate-card" id="gateForm">
     <h1>Driven CRM</h1>
-    <p>Sign in with the Driven email on your team row. We email you a link or a one-time code. There is no password, and customers are not emailed.</p>
+    <p id="gateLead">Sign in with your work email and password. Day-to-day sign-in does not send email.</p>
     <label for="gateEmail">Email</label>
     <input id="gateEmail" name="email" type="email" autocomplete="username" required placeholder="you@drivensol.com">
-    <button class="primary" type="submit" id="gateSend">Email me a link</button>
-    <label for="gateCode">One-time code</label>
-    <input id="gateCode" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="Code from the email">
-    <button class="ghost" type="button" id="gateVerify">Sign in with code</button>
+    <label for="gatePassword" id="gatePasswordLabel">Password</label>
+    <input id="gatePassword" name="password" type="password" autocomplete="current-password" required>
+    <div id="gatePassword2Wrap" hidden>
+      <label for="gatePassword2">Password again</label>
+      <input id="gatePassword2" name="password2" type="password" autocomplete="new-password">
+    </div>
+    <button class="primary" type="submit" id="gateSubmit">Sign in</button>
+    <button class="ghost" type="button" id="gateMode">First time? Create your password</button>
+    <button class="linkbtn" type="button" id="gateForgot">Forgot password</button>
     <p id="gateMsg" class="gate-msg" role="status"></p>
     <a href="index.html">L10 hub</a>
   </form>
