@@ -898,8 +898,8 @@
     }).join("") + "</ul>";
   }
   function notesHtml(cid, did) {
-    var ns = S.activity.filter(function (a) { return a.company_id === cid && (a.kind === "note" || a.kind === "call") && (did ? a.deal_id === did : true); });
-    return "<fieldset><legend>Notes and calls</legend>" + (ns.length ? "<ul class='mini'>" + ns.map(function (n) { return "<li><b>" + esc(n.by || "") + "</b> · " + shortDate(n.at) + "<br>" + esc(n.note) + "</li>"; }).join("") + "</ul>" : "<p class='log'>Nothing yet.</p>") +
+    var ns = S.activity.filter(function (a) { return a.company_id === cid && (a.kind === "note" || a.kind === "call" || a.kind === "email" || a.kind === "touch") && (did ? a.deal_id === did : true); });
+    return "<fieldset><legend>Notes and activity</legend>" + (ns.length ? "<ul class='mini'>" + ns.map(function (n) { return "<li><b>" + esc(n.by || "") + "</b> · " + shortDate(n.at) + " · " + esc(n.kind) + "<br>" + esc(n.note) + "</li>"; }).join("") + "</ul>" : "<p class='log'>Nothing yet.</p>") +
       "<div class='f'><textarea id='noteText' data-note-co='" + cid + "' data-note-deal='" + (did || "") + "' placeholder='Quick note'></textarea></div><button class='primary' data-act='post-note'>Post note</button></fieldset>";
   }
 
@@ -960,7 +960,7 @@
     if (touches.length) h += "<fieldset><legend>Outreach log</legend><p class='log'>Read only. This page does not send outreach.</p><ul class='mini'>" + touches.map(function (o) { return "<li>" + esc(o.contact || "") + " · " + esc(o.status || "") + "<br><span class='log'>" + esc(o.notes || "") + "</span></li>"; }).join("") + "</ul></fieldset>";
     h += "<fieldset><legend>Email and text status</legend>" + messageList(null, c.id) + "</fieldset>";
     h += notesHtml(c.id, null);
-    h += "</div><div class='dfoot'>" + (c.kind !== "vendor" ? "<button class='primary' data-act='log-contact' data-id='" + c.id + "'>Log contact today</button><button class='ghost' data-act='new-quote' data-company='" + c.id + "'>New quote</button><button class='ghost' data-act='new-deal' data-company='" + c.id + "'>New deal</button>" : "") + "</div>";
+    h += "</div><div class='dfoot'>" + (c.kind !== "vendor" ? "<button class='primary' data-act='quick-log' data-kind='call' data-id='" + c.id + "'>Log call</button><button class='ghost' data-act='quick-log' data-kind='email' data-id='" + c.id + "'>Log email</button><button class='ghost' data-act='quick-log' data-kind='touch' data-id='" + c.id + "'>Log touch</button><button class='ghost' data-act='new-quote' data-company='" + c.id + "'>New quote</button><button class='ghost' data-act='new-deal' data-company='" + c.id + "'>New deal</button>" : "") + "</div>";
     openDrawer(h);
     $("#drawer").dataset.company = c.id;
   }
@@ -1388,7 +1388,8 @@
     if (act === "del-ship") { delShip(+id); return; }
     if (act === "add-contact") { addContact(+id); return; }
     if (act === "del-contact") { delContact(+id); return; }
-    if (act === "log-contact") { logContact(+id); return; }
+    if (act === "log-contact") { quickLog("touch", +id); return; }
+    if (act === "quick-log") { quickLog(a.dataset.kind || "touch", id ? +id : null); return; }
     if (act === "start-setup") { startSetup(+id); return; }
     if (act === "qb-mark") { markQb(+id); return; }
     if (act === "cof") { coFilter = a.dataset.v; vCompanies(); return; }
@@ -1582,15 +1583,23 @@
     S.contacts = S.contacts.filter(function (y) { return y.id !== id; });
     if (x) openCompany(x.company_id);
   }
-  async function logContact(id) {
-    var c = co(id);
-    c.last = TODAY;
-    var ok = await saveCompany(c, ["last"]);
-    if (!ok) return;
-    render();
-    openCompany(id);
-    toast("Contact logged for " + c.name + ".");
+  async function quickLog(kind, companyId) {
+    var labels = { call: "Call", email: "Email", touch: "Touch" };
+    var label = labels[kind] || "Touch";
+    var used = labels[kind] ? kind : "touch";
+    if (companyId) {
+      var c = co(companyId);
+      if (!c) return;
+      c.last = TODAY;
+      var ok = await saveCompany(c, ["last"]);
+      if (!ok) return;
+    }
+    var act = await addActivity({ company_id: companyId || null, kind: used, note: label + " logged for the morning huddle.", by: meName() });
+    if (!act) return;
+    toast(label + " logged for " + meName() + ". Nothing was emailed or texted.");
+    if (companyId) { render(); openCompany(companyId); }
   }
+  async function logContact(id) { return quickLog("touch", id); }
   async function startSetup(id) {
     var c = co(id);
     c.setup = c.setup || {};

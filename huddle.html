@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Huddle — Driven Solutions</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--dk:#060808;--s:#0C1010;--s2:#121818;--br:rgba(255,255,255,.08);--tx:#E8EDE8;--td:#8FA8A0;--g:#39FF14;--red:#FF6B6B;--hit:#143018;--miss:#2A1010}
+*{box-sizing:border-box}
+body{margin:0;background:var(--dk);color:var(--tx);font:15px/1.45 Barlow,sans-serif}
+header{border-bottom:3px solid var(--g);padding:18px 24px 14px;background:linear-gradient(135deg,#040804,#0A140A)}
+h1{margin:0;font-family:"Bebas Neue",sans-serif;font-size:2.4rem;letter-spacing:2px;color:var(--g);font-weight:400}
+.sub{font-family:"Barlow Condensed",sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--td);font-size:12px}
+a{color:var(--g)}
+.nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.nav a,.btn,button{font:inherit;color:var(--tx);background:transparent;border:1px solid var(--br);border-radius:4px;padding:6px 12px;text-decoration:none;cursor:pointer}
+button.primary,.btn{background:var(--g);color:#041004;border:0;font-weight:700}
+main{padding:18px 24px 40px}
+ol{margin:8px 0 18px;padding-left:1.2rem}
+ol li{margin:2px 0}
+.lead{color:var(--td);max-width:42rem}
+.range{font-weight:700}
+.scroll{overflow-x:auto;border:1px solid var(--br);border-radius:8px;background:var(--s)}
+table{border-collapse:collapse;width:100%;min-width:880px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--br);text-align:right;white-space:nowrap}
+th:first-child,td:first-child,tbody th{text-align:left}
+thead th{color:var(--td);font-size:12px;font-weight:600}
+thead th small{display:block;font-weight:500}
+tbody th{font-size:15px}
+tr:last-child th,tr:last-child td{border-top:2px solid var(--g);font-weight:700}
+.pair b{font-variant-numeric:tabular-nums}
+.pair span{color:var(--td);font-size:12px}
+.hit{background:var(--hit);color:var(--g)}
+.miss{background:var(--miss);color:var(--red)}
+.logbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}
+.fine{color:var(--td);font-size:13px;max-width:50rem}
+details{margin-top:12px}
+label{display:flex;justify-content:space-between;gap:12px;max-width:28rem;margin:6px 0}
+input{background:var(--s2);color:var(--tx);border:1px solid var(--br);border-radius:4px;padding:6px 8px;width:8rem}
+#status{min-height:1.2em;margin-top:8px}
+#status.bad{color:var(--red)}
+</style>
+</head>
+<body>
+<header>
+  <div class="sub">Driven Solutions · Sales</div>
+  <h1>Morning Huddle</h1>
+  <div class="sub">Weekdays 7:20 AM CT · 10 minutes</div>
+  <div class="nav">
+    <a href="index.html">L10 hub</a>
+    <a href="crm.html">CRM</a>
+    <button type="button" id="reload">Refresh</button>
+  </div>
+</header>
+<main>
+  <ol aria-label="Agenda">
+    <li>One win</li>
+    <li>Scoreboard</li>
+    <li>Top 3</li>
+    <li>Stuck</li>
+    <li>Close</li>
+  </ol>
+  <div id="board"></div>
+  <p id="status" role="status"></p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/crm-db.js"></script>
+<script src="js/huddle-score.js"></script>
+<script src="js/huddle.js"></script>
+</body>
+</html>
