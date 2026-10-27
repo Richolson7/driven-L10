@@ -36,10 +36,21 @@ tr:last-child th,tr:last-child td{border-top:2px solid var(--g);font-weight:700}
 .logbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}
 .fine{color:var(--td);font-size:13px;max-width:50rem}
 details{margin-top:12px}
-label{display:flex;justify-content:space-between;gap:12px;max-width:28rem;margin:6px 0}
-input{background:var(--s2);color:var(--tx);border:1px solid var(--br);border-radius:4px;padding:6px 8px;width:8rem}
+#goalForm label{display:flex;justify-content:space-between;gap:12px;max-width:28rem;margin:6px 0}
+#goalForm input{background:var(--s2);color:var(--tx);border:1px solid var(--br);border-radius:4px;padding:6px 8px;width:8rem}
 #status{min-height:1.2em;margin-top:8px}
 #status.bad{color:var(--red)}
+#authGate{max-width:440px;margin:8px 0 24px}
+#authGate[hidden],#shell[hidden]{display:none}
+.gate-card{background:var(--s);border:1px solid var(--br);border-radius:12px;padding:22px 20px}
+.gate-card h2{margin:0 0 8px;font-size:1.4rem}
+.gate-card p{color:var(--td);margin:0 0 14px}
+.gate-card label{display:block;font-weight:600;margin:0 0 4px}
+.gate-card input{width:100%;background:var(--s2);color:var(--tx);border:1px solid var(--br);border-radius:6px;padding:10px 12px;margin-bottom:12px}
+.gate-card .primary,.gate-card .ghost{width:100%;margin-bottom:8px}
+.gate-card .linkbtn{display:block;width:100%;background:none;border:0;color:var(--g);text-align:center;margin:2px 0 8px;cursor:pointer}
+.gate-msg{min-height:1.3em;margin:8px 0 0}
+.gate-msg.bad{color:var(--red)}
 </style>
 </head>
 <body>
@@ -51,6 +62,7 @@ input{background:var(--s2);color:var(--tx);border:1px solid var(--br);border-rad
     <a href="index.html">L10 hub</a>
     <a href="crm.html">CRM</a>
     <button type="button" id="reload">Refresh</button>
+    <button type="button" id="signOut" hidden>Sign out</button>
   </div>
 </header>
 <main>
@@ -61,11 +73,32 @@ input{background:var(--s2);color:var(--tx);border:1px solid var(--br);border-rad
     <li>Stuck</li>
     <li>Close</li>
   </ol>
-  <div id="board"></div>
-  <p id="status" role="status"></p>
+  <div id="authGate">
+    <form class="gate-card" id="gateForm">
+      <h2>Sign in</h2>
+      <p id="gateLead">Sign in with your work email and password. Day-to-day sign-in does not send email.</p>
+      <label for="gateEmail">Email</label>
+      <input id="gateEmail" name="email" type="email" autocomplete="username" required placeholder="you@drivensol.com">
+      <label for="gatePassword" id="gatePasswordLabel">Password</label>
+      <input id="gatePassword" name="password" type="password" autocomplete="current-password" required>
+      <div id="gatePassword2Wrap" hidden>
+        <label for="gatePassword2">Password again</label>
+        <input id="gatePassword2" name="password2" type="password" autocomplete="new-password">
+      </div>
+      <button class="primary" type="submit" id="gateSubmit">Sign in</button>
+      <button class="ghost" type="button" id="gateMode">First time? Create your password</button>
+      <button class="linkbtn" type="button" id="gateForgot">Forgot password</button>
+      <p id="gateMsg" class="gate-msg" role="status"></p>
+    </form>
+  </div>
+  <div id="shell" hidden>
+    <div id="board"></div>
+    <p id="status" role="status"></p>
+  </div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/crm-db.js"></script>
+<script src="js/crm-auth.js"></script>
 <script src="js/huddle-score.js"></script>
 <script src="js/huddle.js"></script>
 </body>

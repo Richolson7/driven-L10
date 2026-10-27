@@ -52,9 +52,23 @@
     return "<tr><th>" + esc(row.name) + "</th>" + cells + "</tr>";
   }
 
-  function renderSignedOut() {
-    board.innerHTML = "<p class='lead'>Sign in on the CRM to see yesterday’s numbers. This page does not load customer, deal, or activity data until you are signed in.</p><p><a class='btn' href='crm.html'>Sign in on the CRM</a></p>";
+  var shell = document.getElementById("shell");
+  var gate = document.getElementById("authGate");
+  var signOutBtn = document.getElementById("signOut");
+  var held = false;
+
+  function showGate() {
+    me = null;
+    if (shell) shell.hidden = true;
+    if (gate) gate.hidden = false;
+    if (signOutBtn) signOutBtn.hidden = true;
+    if (board) board.innerHTML = "";
     setStatus("");
+  }
+  function showShell() {
+    if (gate) gate.hidden = true;
+    if (shell) shell.hidden = false;
+    if (signOutBtn) signOutBtn.hidden = false;
   }
 
   function renderBoard(result, goals, notes) {
@@ -116,22 +130,32 @@
   }
 
   async function load() {
+    if (window.CRMAuth && CRMAuth.isRecovery()) { showGate(); return; }
     setStatus("Checking sign-in…");
     var sessionRes = await CRMDB.db.auth.getSession();
     var session = sessionRes.data && sessionRes.data.session;
     var email = session && session.user && session.user.email;
-    if (!email) { me = null; renderSignedOut(); return; }
-    var teamRes = await CRMDB.db.from("crm_team").select("id,name,email,team,active").ilike("email", email).eq("active", true).limit(2);
+    if (!email) { showGate(); return; }
+    var pattern = email.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+    var teamRes = await CRMDB.db.from("crm_team").select("id,name,email,team,active").ilike("email", pattern).eq("active", true).limit(2);
     var person = !teamRes.error && (teamRes.data || []).find(function (row) {
       return String(row.email || "").toLowerCase() === email.toLowerCase() && row.active !== false;
     });
     if (teamRes.error || !person) {
-      me = null;
-      board.innerHTML = "<p class='lead'>" + esc(email) + " is not an active Driven team address. No CRM data was loaded.</p>";
-      setStatus("");
+      var why = teamRes.error
+        ? ("Could not confirm " + email + " on the team. " + CRMDB.explain(teamRes.error))
+        : (email + " is not an active Driven team address. No CRM data was loaded.");
+      held = true;
+      if (window.CRMAuth) CRMAuth.hold(true);
+      try { await CRMDB.db.auth.signOut(); } catch (e) { /* still hide the numbers */ }
+      showGate();
+      if (window.CRMAuth) CRMAuth.setMessage(why, "bad");
+      held = false;
+      if (window.CRMAuth) CRMAuth.hold(false);
       return;
     }
     me = person;
+    showShell();
     setStatus("Loading yesterday…");
     var goalsRes = await CRMDB.db.from("huddle_goals").select("id,company,scope,rep,metric,period,target,active").eq("company", "driven").eq("active", true);
     if (goalsRes.error) {
@@ -183,5 +207,25 @@
   }
 
   document.getElementById("reload").addEventListener("click", function () { load(); });
-  load();
+  if (signOutBtn) signOutBtn.addEventListener("click", async function () {
+    held = true;
+    if (window.CRMAuth) CRMAuth.hold(true);
+    try { await CRMDB.db.auth.signOut(); } catch (e) { /* still show the gate */ }
+    showGate();
+    if (window.CRMAuth) CRMAuth.setMessage("Signed out.");
+    held = false;
+    if (window.CRMAuth) CRMAuth.hold(false);
+  });
+  if (!window.CRMAuth) {
+    showGate();
+    board.innerHTML = "<p class='lead'>The sign-in script did not load. Reload the page.</p>";
+    return;
+  }
+  CRMAuth.bind({
+    place: "huddle",
+    isHeld: function () { return held; },
+    onSession: function () { load(); },
+    onSignedOut: function () { if (!held) showGate(); },
+    onRecovery: function () { showGate(); }
+  });
 })();
