@@ -9,6 +9,31 @@
   var URL = "https://igaylyhkssahczubiztb.supabase.co";
   var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnYXlseWhrc3NhaGN6dWJpenRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyOTk3MzQsImV4cCI6MjA5Mjg3NTczNH0.iiRC320be1-kLa8tQoTupqWTu_8yTaEaJGVpdI4dnAo";
 
+  // Read OAuth errors before the client starts. A rejected Google sign-in
+  // comes back as error and error_description in the query or hash, and the
+  // client may clear that URL while it looks for a session.
+  (function stashAuthCallback() {
+    var found = {};
+    function take(text) {
+      if (!text) return;
+      text.split("&").forEach(function (pair) {
+        if (!pair) return;
+        var cut = pair.indexOf("=");
+        var rawKey = cut < 0 ? pair : pair.slice(0, cut);
+        var rawVal = cut < 0 ? "" : pair.slice(cut + 1);
+        var key;
+        try { key = decodeURIComponent(rawKey.replace(/\+/g, " ")); } catch (e) { return; }
+        if (key !== "error" && key !== "error_description" && key !== "error_code") return;
+        try { found[key] = decodeURIComponent(rawVal.replace(/\+/g, " ")); } catch (e2) { found[key] = rawVal; }
+      });
+    }
+    var search = location.search.charAt(0) === "?" ? location.search.slice(1) : location.search;
+    var hash = location.hash.charAt(0) === "#" ? location.hash.slice(1) : location.hash;
+    take(search);
+    take(hash);
+    if (found.error || found.error_description) window.CRMAuthCallback = found;
+  })();
+
   if (!window.supabase || !window.supabase.createClient) {
     document.addEventListener("DOMContentLoaded", function () {
       var text = "The Supabase library did not load. Check the network and reload.";
@@ -20,7 +45,9 @@
     return;
   }
 
-  var db = window.supabase.createClient(URL, ANON);
+  var db = window.supabase.createClient(URL, ANON, {
+    auth: { detectSessionInUrl: true }
+  });
   var hooks = { error: [], ok: [] };
 
   function explain(error) {
