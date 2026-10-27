@@ -68,6 +68,8 @@
     var email = $("gateEmail");
     if (toggle) toggle.hidden = mode === "recovery";
     if (forgot) forgot.hidden = mode === "recovery";
+    var google = $("gateGoogle");
+    if (google) google.hidden = mode === "recovery";
     if (wrap2) wrap2.hidden = mode === "signin";
     if (pass) pass.setAttribute("autocomplete", mode === "signin" ? "current-password" : "new-password");
     if (email) email.disabled = mode === "recovery";
@@ -85,6 +87,47 @@
   }
   function blocked() { return held || hooks.isHeld(); }
 
+  function callbackProblem(callback) {
+    var description = (callback && callback.error_description) || "";
+    var code = (callback && (callback.error_code || callback.error)) || "";
+    var low = (description + " " + code).toLowerCase();
+    if (low.indexOf("not an active driven team") >= 0 || low.indexOf("hook_rejected") >= 0 || low.indexOf("isn't on the driven team") >= 0) {
+      return "This Google account isn't on the Driven team list.";
+    }
+    if (String(code).toLowerCase() === "access_denied") return "Sign-in was cancelled.";
+    if (description) return "Sign-in did not finish. " + description;
+    if (code) return "Sign-in did not finish.";
+    return "";
+  }
+  function showCallbackError() {
+    var callback = window.CRMAuthCallback;
+    var text = callbackProblem(callback);
+    if (!text) return;
+    setMessage(text, "bad");
+    if (!window.history || !history.replaceState) return;
+    var url = new URL(location.href);
+    ["error", "error_description", "error_code"].forEach(function (key) { url.searchParams.delete(key); });
+    if (url.hash) {
+      var hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+      if (hash.has("error") || hash.has("error_description") || hash.has("error_code")) {
+        ["error", "error_description", "error_code"].forEach(function (key) { hash.delete(key); });
+        var next = hash.toString();
+        url.hash = next ? "#" + next : "";
+      }
+    }
+    history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }
+  async function signInWithGoogle() {
+    var btn = $("gateGoogle");
+    if (btn) btn.disabled = true;
+    setMessage("Opening Google…");
+    var res = await CRMDB.db.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: authRedirect() }
+    });
+    if (btn) btn.disabled = false;
+    if (res && res.error) setMessage(callbackProblem({ error_description: res.error.message, error: res.error.code || "error" }) || plainAuthError(res.error), "bad");
+  }
   async function signIn() {
     var email = readGateEmail();
     var password = $("gatePassword") ? $("gatePassword").value : "";
@@ -180,6 +223,9 @@
     });
     var forgot = $("gateForgot");
     if (forgot) forgot.addEventListener("click", function () { forgotPassword(); });
+    var google = $("gateGoogle");
+    if (google) google.addEventListener("click", function () { signInWithGoogle(); });
+    showCallbackError();
     CRMDB.db.auth.onAuthStateChange(function (event, session) {
       if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return;
       if (event === "PASSWORD_RECOVERY") {
