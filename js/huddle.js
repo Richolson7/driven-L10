@@ -3,9 +3,10 @@
 (function () {
   "use strict";
   var Score = window.HuddleScore;
+  var Tasks = window.HuddleTasks;
   var board = document.getElementById("board");
   var statusEl = document.getElementById("status");
-  if (!Score || !window.CRMDB || !board) {
+  if (!Score || !Tasks || !window.CRMDB || !board) {
     if (board) board.textContent = "The huddle scripts did not load. Reload the page.";
     return;
   }
@@ -71,7 +72,7 @@
     if (signOutBtn) signOutBtn.hidden = false;
   }
 
-  function renderBoard(result, goals, notes) {
+  function renderBoard(result, goals, notes, taskSummary, taskNote) {
     var head = Score.METRICS.map(function (metric) {
       return "<th>" + esc(METRIC_LABEL[metric]) + "<small>Yesterday</small></th><th>" + esc(METRIC_LABEL[metric]) + "<small>Week</small></th>";
     }).join("");
@@ -92,6 +93,7 @@
       html += "<label>" + esc(who + " · " + (METRIC_LABEL[g.metric] || g.metric) + " / " + g.period) + "<input data-goal-id='" + g.id + "' type='number' min='0' step='1' value='" + esc(g.target) + "'></label>";
     });
     html += "<button type='submit'>Save goals</button></form></details>";
+    html += Tasks.sectionHtml(taskSummary, taskNote);
     board.innerHTML = html;
     board.querySelectorAll(".logbar button").forEach(function (btn) {
       btn.addEventListener("click", function () { logKind(btn.getAttribute("data-kind")); });
@@ -165,12 +167,14 @@
     }
     var since = new Date();
     since.setDate(since.getDate() - 21);
+    var today = Score.chicagoToday(new Date());
     var results = await Promise.all([
       CRMDB.db.from("crm_activity").select("kind,by_user,at").gte("at", since.toISOString()).limit(2000),
       CRMDB.db.from("crm_quotes").select("id,deal_id,rep,sent_date").not("sent_date", "is", null).limit(2000),
       CRMDB.db.from("crm_deals").select("id,sales_rep,stage,stage_changed_at,price_per_unit,quantity,quote_sent_date,custom").limit(2000),
       CRMDB.db.from("crm_stages").select("key,position,active").eq("active", true).order("position"),
-      CRMDB.db.from("driven_outreach_tally").select("day,owner,dials,emails").gte("day", since.toISOString().slice(0, 10)).limit(500)
+      CRMDB.db.from("driven_outreach_tally").select("day,owner,dials,emails").gte("day", since.toISOString().slice(0, 10)).limit(500),
+      CRMDB.db.from("driven_tasks").select("id,text,owner,due,done").limit(2000)
     ]);
     var activity = results[0].error ? [] : (results[0].data || []);
     var quotes = results[1].error ? [] : (results[1].data || []);
@@ -190,8 +194,16 @@
       return cut && s.position >= cut.position;
     }).map(function (s) { return s.key; });
     if (!wonKeys.length) wonKeys = ["customer_po", "driven_po", "shipped", "delivered", "invoice_sent", "paid"];
+    var taskRows = [];
+    var taskNote = "";
+    if (results[5].error) taskNote = "Tasks did not load. " + CRMDB.explain(results[5].error);
+    else {
+      taskRows = results[5].data || [];
+      if (taskRows.length >= 2000) taskNote = "The task list hit 2,000 rows, so some tasks may be missing from these counts.";
+    }
+    var taskSummary = results[5].error ? null : Tasks.summarize(taskRows, today);
     var result = Score.score({
-      today: Score.chicagoToday(new Date()),
+      today: today,
       goals: goalsRes.data || [],
       activity: activity,
       quotes: quotes,
@@ -202,7 +214,7 @@
     if (result.unmatched) notes.push(result.unmatched + " touch" + (result.unmatched === 1 ? "" : "es") + " had a name that is not Rich or Landon, so they are not in the rep rows.");
     notes.push("Green is at or above the goal. Red is below. A dash means that column has no goal.");
     notes.push("Company week targets already in kpi_defs stay there: Revenue $115,000, Wins 3, New opportunities 5, Close rate 30%.");
-    renderBoard(result, goalsRes.data || [], notes);
+    renderBoard(result, goalsRes.data || [], notes, taskSummary, taskNote);
     setStatus("Signed in as " + me.name + " · " + email);
   }
 
