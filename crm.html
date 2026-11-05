@@ -11,17 +11,17 @@
 :root{
   --bg:#F1F1EF;--panel:#FFFFFF;--raise:#E8E8E5;--line:#D5D5D1;--text:#29292B;--muted:#67676B;
   --accent:#2F8A12;--fill:#87FC60;--fill-ink:#16210F;--warn:#B86E00;--bad:#C93A2C;
-  --sales:#2F8A12;--ops:#1F77B4;--acct:#7A4FC4;--shadow:0 12px 40px rgba(20,20,22,.18);
+  --sales:#2F8A12;--ops:#1F77B4;--acct:#7A4FC4;--cs:#A86B12;--train:#C43858;--admin:#0F766E;--shadow:0 12px 40px rgba(20,20,22,.18);
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#232325;--panel:#2C2C2E;--raise:#3A3A3C;--line:#49494C;--text:#EDEDEA;--muted:#A9A9AC;
+  --bg:#070708;--panel:#141416;--raise:#1E1E22;--line:#3A3A40;--text:#F4F4F2;--muted:#C6C6CA;
   --accent:#87FC60;--fill:#87FC60;--fill-ink:#16210F;--warn:#FFB547;--bad:#FF7466;
-  --sales:#87FC60;--ops:#6CC4FF;--acct:#C9A6FF;--shadow:0 16px 48px rgba(0,0,0,.5);color-scheme:dark;}}
+  --sales:#87FC60;--ops:#6CC4FF;--acct:#C9A6FF;--cs:#FFB347;--train:#FF7A90;--admin:#5EEAD4;--shadow:0 16px 48px rgba(0,0,0,.55);color-scheme:dark;}}
 :root[data-theme="dark"]{
-  --bg:#232325;--panel:#2C2C2E;--raise:#3A3A3C;--line:#49494C;--text:#EDEDEA;--muted:#A9A9AC;
+  --bg:#070708;--panel:#141416;--raise:#1E1E22;--line:#3A3A40;--text:#F4F4F2;--muted:#C6C6CA;
   --accent:#87FC60;--fill:#87FC60;--fill-ink:#16210F;--warn:#FFB547;--bad:#FF7466;
-  --sales:#87FC60;--ops:#6CC4FF;--acct:#C9A6FF;--shadow:0 16px 48px rgba(0,0,0,.5);color-scheme:dark;}
+  --sales:#87FC60;--ops:#6CC4FF;--acct:#C9A6FF;--cs:#FFB347;--train:#FF7A90;--admin:#5EEAD4;--shadow:0 16px 48px rgba(0,0,0,.55);color-scheme:dark;}
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
@@ -41,12 +41,47 @@ a{color:var(--accent)}
 .brand h1{font-size:22px}
 .testflag{font-size:13px;color:var(--warn);border:1px solid var(--warn);border-radius:20px;padding:1px 10px}
 .tabs{display:flex;gap:2px;margin-left:8px;overflow-x:auto}
-.tab{background:none;border:0;padding:8px 12px;border-radius:6px;color:var(--muted);font-weight:600;white-space:nowrap}
+.tab{background:none;border:0;border-left:4px solid transparent;padding:8px 12px 8px 10px;border-radius:0 6px 6px 0;color:var(--muted);font-weight:600;white-space:nowrap}
+.tab[data-cat="sales"]{border-left-color:var(--sales)}
+.tab[data-cat="ops"]{border-left-color:var(--ops)}
+.tab[data-cat="acct"]{border-left-color:var(--acct)}
+.tab[data-cat="cs"]{border-left-color:var(--cs)}
+.tab[data-cat="train"]{border-left-color:var(--train)}
+.tab[data-cat="admin"]{border-left-color:var(--admin)}
 .tab[aria-current="page"]{color:var(--text);background:var(--raise)}
+.tab[data-cat="sales"][aria-current="page"]{color:var(--sales);background:color-mix(in srgb,var(--sales) 16%,var(--panel))}
+.tab[data-cat="ops"][aria-current="page"]{color:var(--ops);background:color-mix(in srgb,var(--ops) 16%,var(--panel))}
+.tab[data-cat="acct"][aria-current="page"]{color:var(--acct);background:color-mix(in srgb,var(--acct) 18%,var(--panel))}
+.tab[data-cat="cs"][aria-current="page"]{color:var(--cs);background:color-mix(in srgb,var(--cs) 18%,var(--panel))}
+.tab[data-cat="train"][aria-current="page"]{color:var(--train);background:color-mix(in srgb,var(--train) 16%,var(--panel))}
+.tab[data-cat="admin"][aria-current="page"]{color:var(--admin);background:color-mix(in srgb,var(--admin) 16%,var(--panel))}
 .tab .n{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:10px;background:var(--bad);color:#fff;font-size:12px;text-align:center}
+.tab .n[hidden]{display:none}
 .spacer{flex:1}
 .ghost{background:none;border:1px solid var(--line);border-radius:6px;padding:6px 12px}
 .ghost:hover{border-color:var(--muted)}
+.tool-pair{display:inline-flex;align-items:center;gap:8px;flex:none}
+.cat-ctl{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;padding:7px 12px;font-weight:700;text-decoration:none;white-space:nowrap;line-height:1.15;border:1px solid var(--line);background:transparent;color:var(--text)}
+.cat-ctl.ops{color:var(--ops);border-color:var(--ops);background:color-mix(in srgb,var(--ops) 14%,var(--panel));box-shadow:inset 3px 0 0 var(--ops)}
+.cat-ctl.ops:hover{background:color-mix(in srgb,var(--ops) 24%,var(--panel))}
+.cat-ctl.train{color:var(--train);border-color:var(--train);background:color-mix(in srgb,var(--train) 12%,var(--panel));box-shadow:inset 3px 0 0 var(--train)}
+.cat-ctl.train:hover{background:color-mix(in srgb,var(--train) 22%,var(--panel))}
+.cat-ctl.cs{flex-direction:column;align-items:flex-start;gap:1px;padding:6px 14px 7px;background:var(--cs);color:#1A1208;border-color:var(--cs);box-shadow:0 0 0 1px color-mix(in srgb,var(--cs) 55%,transparent),0 0 18px color-mix(in srgb,var(--cs) 35%,transparent)}
+.cat-ctl.cs:hover{filter:brightness(1.06)}
+.cat-ctl.cs[aria-current="page"]{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--cs)}
+.cat-kicker{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;line-height:1.1;opacity:.8}
+main[data-cat="sales"]{box-shadow:inset 0 3px 0 var(--sales)}
+main[data-cat="ops"]{box-shadow:inset 0 3px 0 var(--ops)}
+main[data-cat="acct"]{box-shadow:inset 0 3px 0 var(--acct)}
+main[data-cat="cs"]{box-shadow:inset 0 3px 0 var(--cs)}
+main[data-cat="train"]{box-shadow:inset 0 3px 0 var(--train)}
+main[data-cat="admin"]{box-shadow:inset 0 3px 0 var(--admin)}
+main[data-cat="sales"] .sect h2,main[data-cat="sales"] .tgroup h2{color:var(--sales)}
+main[data-cat="ops"] .sect h2,main[data-cat="ops"] .bar h2{color:var(--ops)}
+main[data-cat="admin"] .sect h2{color:var(--admin)}
+.calc-banner{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 10px;color:var(--cs);font-family:"Barlow Condensed","Arial Narrow",Barlow,sans-serif;font-size:26px;font-weight:600}
+.calc-banner-sub{color:var(--muted);font-family:Barlow,sans-serif;font-size:14px;font-weight:500}
+.calc-frame{display:block;width:100%;height:calc(100dvh - 188px);min-height:680px;border:1px solid var(--line);border-top:4px solid var(--cs);border-radius:10px;background:#070708}
 .primary{background:var(--fill);color:var(--fill-ink);border:0;border-radius:6px;padding:7px 14px;font-weight:700}
 .danger{background:none;border:1px solid var(--bad);color:var(--bad);border-radius:6px;padding:6px 12px}
 
@@ -67,9 +102,9 @@ main{padding:18px}
 .zones{display:grid;grid-template-columns:repeat(8,minmax(230px,1fr));gap:10px;min-width:0}
 .zone{grid-row:1;font-family:"Barlow Condensed",sans-serif;font-size:15px;font-weight:600;padding:4px 2px 6px;border-bottom:3px solid;display:flex;justify-content:space-between;align-items:end}
 .zone small{font-family:Barlow,sans-serif;font-weight:500;color:var(--muted);font-size:12px}
-.zone.sales{grid-column:1/4;border-color:var(--sales)}
-.zone.operations{grid-column:4/7;border-color:var(--ops)}
-.zone.accounting{grid-column:7/9;border-color:var(--acct)}
+.zone.sales{grid-column:1/4;border-color:var(--sales);color:var(--sales);background:color-mix(in srgb,var(--sales) 14%,transparent);border-radius:4px 4px 0 0;padding-left:8px}
+.zone.operations{grid-column:4/7;border-color:var(--ops);color:var(--ops);background:color-mix(in srgb,var(--ops) 14%,transparent);border-radius:4px 4px 0 0;padding-left:8px}
+.zone.accounting{grid-column:7/9;border-color:var(--acct);color:var(--acct);background:color-mix(in srgb,var(--acct) 16%,transparent);border-radius:4px 4px 0 0;padding-left:8px}
 .col{grid-row:2;background:var(--panel);border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;min-height:420px}
 .col.over{border-color:var(--accent);background:color-mix(in srgb,var(--panel) 85%,var(--accent))}
 .colhead{padding:10px 12px;border-bottom:1px solid var(--line)}
@@ -221,10 +256,10 @@ button.zone{background:none;color:inherit;text-align:left;cursor:pointer;border-
 .mention{color:var(--accent)}
 li.agentnote{border-left:3px solid var(--fill);padding-left:10px}
 .mchip{cursor:pointer;background:none}
-#tour{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:45;width:min(370px,calc(100vw - 32px));background:var(--panel);border:2px solid var(--fill);border-radius:10px;box-shadow:var(--shadow);padding:14px 16px}
-#tour h3{font-size:21px;margin:2px 0 4px}
+#tour{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:45;width:min(370px,calc(100vw - 32px));background:var(--panel);border:2px solid var(--train);border-radius:10px;box-shadow:var(--shadow);padding:14px 16px}
+#tour h3{font-size:21px;margin:2px 0 4px;color:var(--train)}
 #tour p{margin:0 0 12px;font-size:14px}
-.tour-hl{outline:3px solid var(--fill)!important;outline-offset:3px;border-radius:6px}
+.tour-hl{outline:3px solid var(--train)!important;outline-offset:3px;border-radius:6px}
 .vr{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
 .vr input{margin-top:3px;width:18px;height:18px;accent-color:var(--accent);flex:none}
 .vbox{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:8px;font-size:14px}
@@ -289,6 +324,7 @@ details.seq[open] summary{background:var(--raise)}
   .fields{grid-template-columns:1fr}
   .addrow,.cfadd{grid-template-columns:1fr 1fr}
   .bar input[type=search]{min-width:0;flex:1}
+  .calc-frame{height:calc(100dvh - 240px);min-height:70vh}
 }
 @media (prefers-reduced-motion:reduce){.drawer{transition:none}}
 #authGate{min-height:100vh;display:grid;place-items:center;padding:24px}
@@ -334,15 +370,15 @@ details.seq[open] summary{background:var(--raise)}
     <a class="ghost" href="huddle.html" style="text-decoration:none">Morning huddle</a>
   </div>
   <nav class="tabs" aria-label="Sections">
-    <button class="tab" data-view="pipeline">Pipeline</button>
-    <button class="tab" data-view="companies">Companies</button>
-    <button class="tab" data-view="docs">Setup and forms</button>
-    <button class="tab" data-view="tasks">Follow-ups<span class="n" id="taskCount" hidden></span></button>
-    <button class="tab" data-view="calendar">Order calendar</button>
-    <button class="tab" data-view="orders">Open orders</button>
-    <button class="tab" data-view="automations">Automations</button>
-    <button class="tab" data-view="sequences">Sequences<span class="n" id="seqCount" hidden></span></button>
-    <button class="tab" data-view="setup">Setup</button>
+    <button class="tab" data-view="pipeline" data-cat="sales">Pipeline</button>
+    <button class="tab" data-view="companies" data-cat="sales">Companies</button>
+    <button class="tab" data-view="docs" data-cat="admin">Setup and forms</button>
+    <button class="tab" data-view="tasks" data-cat="sales">Follow-ups<span class="n" id="taskCount" hidden></span></button>
+    <button class="tab" data-view="calendar" data-cat="ops">Order calendar</button>
+    <button class="tab" data-view="orders" data-cat="ops">Open orders</button>
+    <button class="tab" data-view="automations" data-cat="admin">Automations</button>
+    <button class="tab" data-view="sequences" data-cat="sales">Sequences<span class="n" id="seqCount" hidden></span></button>
+    <button class="tab" data-view="setup" data-cat="admin">Setup</button>
   </nav>
   <div class="spacer"></div>
   <button class="ghost" data-act="quick-log" data-kind="call">Log call</button>
@@ -352,8 +388,14 @@ details.seq[open] summary{background:var(--raise)}
   <select id="who" class="who" aria-label="Signed-in teammate" disabled></select>
   <button class="ghost" id="authBtn" data-act="signout">Sign out</button>
   <span id="saveState" class="save-state" role="status">Loading…</span>
-  <a class="ghost" href="https://claude.ai/artifact/5bWT2aSPJt5P2oMy1WJZZG" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Route planner</a>
-  <button class="ghost" data-act="tour">Take the tour</button>
+  <span class="tool-pair">
+    <a class="cat-ctl ops" id="routeBtn" href="https://claude.ai/artifact/5bWT2aSPJt5P2oMy1WJZZG" target="_blank" rel="noopener">Route planner</a>
+    <button class="cat-ctl cs" type="button" id="calcBtn" data-act="open-calc">
+      <span class="cat-kicker">Customer Service</span>
+      Packaging calculator
+    </button>
+  </span>
+  <button class="cat-ctl train" type="button" data-act="tour">Take the tour</button>
   <button class="ghost" data-act="voice">Talk it in</button>
   <button class="ghost" data-act="theme" id="themeBtn">Light mode</button>
   <button class="primary" data-act="feedback">Send feedback</button>
