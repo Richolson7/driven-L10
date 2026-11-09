@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driven Solutions — Call Playbook</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --dk:#060808;--s:#0C1010;--s2:#121818;--s3:#1A2020;
+  --br:rgba(255,255,255,0.07);--tx:#E8EDE8;--td:#8FA8A0;--tm:#4A5E58;
+  --red:#FF4444;--rbg:#2A0808;--rbr:#993333;
+  --amb:#FFB800;--abg:#1A1200;--abr:#886600;
+  --g:#39FF14;--gd:#2ECC0E;--gbg:#0A1A08;
+  --nav-h:52px;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:64px}
+body{margin:0;background:var(--dk);color:var(--tx);font-family:'Barlow',sans-serif;font-size:15px;line-height:1.5;min-height:100vh}
+::selection{background:var(--g);color:#040804}
+:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+a{color:var(--g)}
+.skip{position:absolute;left:-999px;top:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.skip:focus{left:12px;top:12px;z-index:80;background:var(--g);color:#040804;padding:8px 12px;text-decoration:none;font-weight:700}
+
+.header{border-bottom:3px solid var(--g);padding:18px 36px 14px;background:linear-gradient(135deg,#040804 0%,#0A140A 60%,#060C06 100%)}
+.kicker{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--td);margin:0}
+h1{margin:2px 0 0;font-family:'Bebas Neue',sans-serif;font-size:2.6rem;font-weight:400;letter-spacing:2px;color:var(--g);line-height:1}
+
+.nav-chrome{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:8px;min-height:var(--nav-h);background:#030505;border-top:1px solid var(--gd);border-bottom:1px solid var(--gd)}
+.nav-actions{display:flex;align-items:center;gap:6px;padding:8px 16px 8px 36px}
+.tbtn{height:32px;padding:0 12px;border-radius:3px;border:1px solid var(--br);background:var(--s2);color:var(--td);font-size:12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.tbtn:hover{color:var(--tx);border-color:rgba(255,255,255,.2)}
+.tbtn.green{border-color:var(--gd);color:var(--g);background:var(--gbg)}
+.tbtn.danger{border-color:var(--rbr);color:var(--red);background:var(--rbg)}
+.nav-here{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--g);font-size:14px}
+
+.content{max-width:920px;margin:0 auto;padding:22px 36px 72px}
+.meta{color:var(--td);font-size:13px;line-height:1.6;margin:0 0 14px;overflow-wrap:anywhere}
+code{overflow-wrap:anywhere}
+.callout{background:var(--gbg);border:1px solid var(--gd);border-radius:4px;padding:12px 14px;margin:0 0 14px}
+.callout p{margin:4px 0}
+
+.rich-notes{margin:0 0 16px;background:var(--abg);border:1px solid var(--abr);border-radius:4px;padding:8px 12px}
+.rich-notes summary{cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--amb);font-size:13px}
+.rich-notes summary span{display:block;font-family:'Barlow',sans-serif;font-weight:500;letter-spacing:0;text-transform:none;color:var(--td);font-size:12px;margin-top:2px}
+.rich-notes ol{margin:10px 0 6px 1.2rem;padding:0}
+.rich-notes li{margin:8px 0}
+.rich-notes code{font-family:'DM Mono',monospace;font-size:12px;color:var(--amb)}
+
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.toc a{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;text-decoration:none;color:var(--td);border:1px solid var(--br);border-radius:99px;padding:4px 10px}
+.toc a:hover{color:var(--g);border-color:var(--g)}
+
+section{scroll-margin-top:68px}
+h2{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;font-weight:400;letter-spacing:1px;color:var(--g);margin:32px 0 8px}
+h3{font-size:15px;margin:16px 0 6px}
+.script{margin:8px 0 0;padding:14px 16px;background:var(--s2);border-left:3px solid var(--g);border-radius:0 4px 4px 0;font-size:18px;line-height:1.45}
+ol.ask,ul.plain{margin:8px 0 0;padding-left:1.25rem}
+ol.ask li,ul.plain li{margin:6px 0}
+
+.table-wrap{overflow-x:auto;border:1px solid var(--br);border-radius:4px;margin-top:8px}
+table{width:100%;border-collapse:collapse;min-width:640px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--br);font-size:13px}
+th{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--td);background:var(--s);font-weight:700}
+td.say{font-size:14px;color:var(--tx)}
+.qualify{list-style:none;margin:8px 0 0;padding:0;border:1px solid var(--br);border-radius:4px}
+.qualify li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid var(--br)}
+.qualify li:last-child{border-bottom:0}
+.box{width:15px;height:15px;border:1.5px solid var(--td);border-radius:2px;flex:none;margin-top:3px}
+
+.glossary{margin:8px 0 0}
+.glossary dt{font-weight:700;margin-top:12px}
+.glossary dd{margin:2px 0 0;color:var(--td)}
+
+.sheet-rules{margin:8px 0;padding-left:1.2rem}
+.sheet-rules li{margin:6px 0}
+.session-fields{display:grid;grid-template-columns:1.4fr 1fr 170px;gap:10px;margin-top:14px}
+.session-fields label,.notes-label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--td)}
+.session-fields .hint{font-weight:600;letter-spacing:0;text-transform:none;color:var(--tm)}
+.session-fields input,.notes-label textarea{
+  display:block;width:100%;margin-top:4px;text-transform:none;letter-spacing:0;font-weight:400;
+  background:var(--s);color:var(--tx);border:1px solid var(--br);border-radius:4px;padding:8px 10px;
+  font:15px/1.4 'Barlow',sans-serif;color-scheme:dark;
+}
+.session-fields input:focus,.notes-label textarea:focus{outline:none;border-color:var(--g)}
+.notes-label textarea{min-height:64px;resize:vertical}
+
+.result{
+  position:sticky;top:var(--nav-h);z-index:30;
+  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center;
+  background:#071207;border:1px solid var(--gd);border-radius:6px;padding:12px 14px;margin:14px 0;
+}
+.result-num{font-family:'Bebas Neue',sans-serif;font-size:3.2rem;line-height:.85;color:var(--g);font-weight:400}
+.result-kicker{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--td)}
+.result-note,.pass-source{color:var(--td);font-size:12px;margin-top:2px}
+.badge-result{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:1.6rem;line-height:1;color:var(--tx)}
+.result.is-pass{border-color:var(--gd)}
+.result.is-pass .badge-result{color:var(--g)}
+.result.is-fail{border-color:var(--rbr);background:var(--rbg)}
+.result.is-fail .result-num,.result.is-fail .badge-result{color:var(--red)}
+.result.is-partial{border-color:var(--abr);background:var(--abg)}
+.result.is-partial .result-num,.result.is-partial .badge-result{color:var(--amb)}
+.unanchored{color:var(--td);font-size:13px;margin:0 0 8px}
+
+.criterion{background:var(--s2);border:1px solid var(--br);border-radius:6px;padding:14px;margin:10px 0}
+.criterion h3{margin:0;font-size:16px}
+.n{font-family:'DM Mono',monospace;color:var(--g);margin-right:8px}
+.desc{color:var(--td);font-size:13px;margin:4px 0}
+.inferred,.weight{color:var(--tm);font-size:12px}
+.anchors{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;list-style:none;margin:10px 0;padding:0}
+.anchors li{background:var(--s);border:1px solid var(--br);border-radius:4px;padding:8px;font-size:12px;color:var(--td)}
+.anchors b{display:block;font-family:'DM Mono',monospace;color:var(--g);font-size:13px}
+.anchors li.on{border-color:var(--g);color:var(--tx)}
+.scale{display:flex;gap:6px;flex-wrap:wrap}
+.score-choice{position:relative}
+.score-choice input{position:absolute;opacity:0;width:1px;height:1px}
+.score-choice span{display:grid;place-items:center;min-width:44px;height:44px;border:1px solid var(--br);background:var(--s);border-radius:4px;font-family:'Bebas Neue',sans-serif;font-size:22px;cursor:pointer;color:var(--tx)}
+.score-choice input:focus-visible + span{outline:2px solid var(--g);outline-offset:2px}
+.score-choice input:checked + span{background:var(--g);color:#040804;border-color:var(--g)}
+.score-choice:hover span{border-color:var(--gd)}
+.picked{font-family:'DM Mono',monospace;font-size:13px;color:var(--g);margin:8px 0}
+.notes-label{margin-top:8px}
+.sheet-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.sheet-actions .tbtn{height:40px;padding:0 16px;font-size:13px}
+.save-status{min-height:1.2em;color:var(--td);font-size:12px;font-family:'DM Mono',monospace}
+.toast{position:fixed;bottom:16px;right:16px;background:var(--gbg);border:1px solid var(--gd);color:var(--g);padding:10px 14px;border-radius:4px;z-index:80;font-size:13px}
+
+@media (max-width:700px){
+  .header,.content{padding-left:16px;padding-right:16px}
+  .nav-actions{padding-left:16px}
+  h1{font-size:2.1rem}
+  .script{font-size:16px}
+  .session-fields,.anchors{grid-template-columns:1fr}
+  .result-num{font-size:2.6rem}
+}
+@media print{
+  body{background:#fff;color:#111}
+  .skip,.nav-chrome,.toc,.sheet-actions,.toast,.save-status{display:none !important}
+  .header{background:#fff;border-color:#111}
+  h1,h2,a,.n,.anchors b,.picked{color:#111}
+  .content{max-width:none;padding:0}
+  .callout,.script,.criterion,.rich-notes,th,td,.anchors li{background:#fff;color:#111;border-color:#bbb}
+  .result{position:static;background:#fff;color:#111;border-color:#111}
+  .result-num,.badge-result,.result.is-fail .result-num,.result.is-fail .badge-result,.result.is-partial .result-num{color:#111}
+  .score-choice{display:none}
+  .score-choice:has(input:checked){display:inline-flex}
+  .meta,.desc,.result-note,.pass-source,.unanchored,.glossary dd{color:#222}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#pitch">Skip to playbook</a>
+<header class="header">
+  <p class="kicker">Driven Solutions</p>
+  <h1>Call Playbook</h1>
+</header>
+<div class="nav-chrome">
+  <div class="nav-actions">
+    <a class="tbtn green" id="nav-home" href="index.html">Home</a>
+    <a class="tbtn" id="nav-back" href="index.html">← Back</a>
+  </div>
+  <div class="nav-here">Call Playbook</div>
+</div>
+<main class="content">
+  <p class="meta"><strong>Module:</strong> Call Playbook and Role-Play Scoring (Driven L10 hub)<br>
+  <strong>Source:</strong> Google Doc "<a href="https://docs.google.com/document/d/1j1lalkT5IaV0N6U9X7uBT0LoueGjlu2TX86VQz1emRg/edit">Driven Solutions Setter Training Program</a>" (https://docs.google.com/document/d/1j1lalkT5IaV0N6U9X7uBT0LoueGjlu2TX86VQz1emRg/edit), read in full on Nov 9, 2026. Scripts are quoted word for word from that doc.<br>
+  <strong>Scope:</strong> Only the call playbook and the role-play scoring sheet. Pay and bonus items in the source are left out on purpose.</p>
+
+  <div class="callout">
+    <p><strong>Rule (from source):</strong> "Never call Driven a broker or freight broker. We sell packaging and deliver it on our own truck."</p>
+    <p><strong>Roles (from source):</strong> "Rich closes. You set."</p>
+  </div>
+
+  <details class="rich-notes" id="rich-notes">
+    <summary>Notes for Rich <span>What was inferred. Anything not stated in the source is listed here.</span></summary>
+    <p>Anything not stated in the source is listed here and marked <em>(inferred)</em> where it appears below.</p>
+    <ol>
+      <li><strong>Weights.</strong> The source scoring sheet has <strong>no weights</strong>. Its pass rule is a plain average of the seven skills, so every criterion is treated as <strong>equal weight (1 of 7)</strong>. In <code>scoring.json</code> each weight is <code>1</code>, with <code>"weight_source": "inferred_equal"</code>.</li>
+      <li><strong>Pass mark.</strong> The source leaves it blank: "Passing average: ______ (Rich to confirm; suggested start 4.0)". This module uses <strong>4.0 as a provisional threshold</strong> and flags it <code>"confirmed": false</code>. Rich still has to confirm it.</li>
+      <li><strong>Scores 2 and 4.</strong> The source describes only scores 1, 3, and 5. Scores 2 and 4 are allowed, since the scale is "1–5", but they have no written description. <em>(inferred: 2 = between the 1 and 3 descriptions, 4 = between the 3 and 5 descriptions)</em></li>
+      <li><strong>Who plays the buyer.</strong> The source says "Morning role-play with Rich (or assigned trainer)" and "Weekly with Rich: Rubric role-play + recording review". It never says who plays the buyer. Because the setter is the one being scored, this module assumes <strong>Rich or the assigned trainer plays the buyer</strong> <em>(inferred)</em>.</li>
+      <li><strong>Section order.</strong> The order follows the source's Week 2 layout: pitch base, opener, buyer line, discovery, objections, qualifying checklist, close/hand-off. The daily practice blocks come from the source's Week 2 and "all weeks" tables.</li>
+      <li><strong>Criterion descriptions</strong> in <code>scoring.json</code>: the source gives only a skill name and the 1/3/5 wording, so each one-line <code>description</code> is written from those <em>(inferred)</em>. The anchors are word for word.</li>
+      <li><strong>Booking the meeting</strong> is the source's "Close / hand-off" script. <strong>Logging</strong> comes from the source's "CRM logging rules", which is also how the "CRM / notes" criterion gets scored.</li>
+    </ol>
+  </details>
+
+  <nav class="toc" aria-label="On this page">
+    <a href="#pitch">Pitch</a>
+    <a href="#opener">Opener</a>
+    <a href="#buyer">Buyer</a>
+    <a href="#discovery">Discovery</a>
+    <a href="#objections">Objections</a>
+    <a href="#qualifying">Qualifying</a>
+    <a href="#close">Close</a>
+    <a href="#logging">Log it</a>
+    <a href="#words">Words</a>
+    <a href="#practice">Practice</a>
+    <a href="#scoring">Scoring</a>
+    <a href="#session">Session</a>
+    <a href="#gaps">Gaps</a>
+  </nav>
+
+  <section id="pitch">
+    <h2>1. Pitch base (memorize)</h2>
+    <blockquote class="script">We engineer the cases, film and skids, keep safety stock on hand, and deliver on our own truck — so customers have one number to call.</blockquote>
+  </section>
+
+  <section id="opener">
+    <h2>2. Opener (memorize)</h2>
+    <blockquote class="script">"Hi, this is [name] with Driven Solutions in River Falls. I'll be quick. We supply the cases, stretch wrap, skids and film plants ship on. We keep backup stock for you and deliver on our own truck. Who handles packaging buying there?"</blockquote>
+  </section>
+
+  <section id="buyer">
+    <h2>3. When you reach the buyer</h2>
+    <blockquote class="script">"I'm not calling to sell you anything today. I just want to see if it's worth 15 minutes with Rich, our owner."</blockquote>
+  </section>
+
+  <section id="discovery">
+    <h2>4. Four discovery questions (memorize, ask in order)</h2>
+    <ol class="ask">
+      <li>"What do you ship your product in? Cases, pallets, stretch wrap?"</li>
+      <li>"Who supplies that now, and how's it going?"</li>
+      <li>"Have you ever run short or had a late delivery hold up a line?"</li>
+      <li>"Anything changing soon, like new lines, more volume or a new building?"</li>
+    </ol>
+  </section>
+
+  <section id="objections">
+    <h2>5. Objection handling (memorize)</h2>
+    <div class="table-wrap">
+      <table>
+        <caption class="sr-only">Objection handling</caption>
+        <thead>
+          <tr><th>#</th><th>Objection</th><th>Response (word for word)</th><th>Follow-up action</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Not interested</td>
+            <td class="say">"Totally fair. Is that because you're set on packaging, or just bad timing?"</td>
+            <td>Then ask discovery question 4.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>We already have a provider</td>
+            <td class="say">"Most people we talk to do. We're usually the backup that turns into the main supplier when somebody runs short. Would it hurt to have a second option?"</td>
+            <td>none stated</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Just send me info</td>
+            <td class="say">"Happy to. So I send the right thing, what do you buy the most of?" Then: "Rich can walk you through it in 15 minutes. Is Tuesday or Thursday better?"</td>
+            <td>Choice close for a 15-minute meeting with Rich.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Call me back later</td>
+            <td class="say">"Sure. What day and time works best?"</td>
+            <td>Calendar it on the call; call back exactly then.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="qualifying">
+    <h2>6. Qualifying checklist: book only if every box is checked</h2>
+    <ul class="qualify">
+      <li><span class="box" aria-hidden="true"></span><span>They ship physical product</span></li>
+      <li><span class="box" aria-hidden="true"></span><span>They buy cases, wrap, skids or film regularly</span></li>
+      <li><span class="box" aria-hidden="true"></span><span>You're talking to the buyer, or someone who will get Rich in front of the buyer</span></li>
+      <li><span class="box" aria-hidden="true"></span><span>They're within reach of our truck (<strong>Rich to confirm</strong> distance rule for setters)</span></li>
+      <li><span class="box" aria-hidden="true"></span><span>They've mentioned at least one problem or upcoming change</span></li>
+    </ul>
+  </section>
+
+  <section id="close">
+    <h2>7. Close / hand-off: booking the meeting (memorize)</h2>
+    <blockquote class="script">"Sounds like it's worth a quick sit-down. Rich, our owner, handles these himself. Does Tuesday at 10 or Thursday at 2 work for 15 minutes?"</blockquote>
+  </section>
+
+  <section id="logging">
+    <h2>8. After the call: log it (from "CRM logging rules")</h2>
+    <ul class="plain">
+      <li><strong>Log every call</strong> and <strong>every booked meeting</strong> the same day</li>
+      <li>Every new lead/prospect is owned by Rich unless assigned</li>
+      <li>Check suppression / dedupe before adding records</li>
+      <li>Visits/calls should include a clear <strong>NEXT_STEP</strong> (e.g. <code>NEXT_STEP: follow_up YYYY-MM-DD</code> or meeting time) plus notes</li>
+      <li>Do not invent contacts, emails, or results</li>
+      <li>Setter-specific CRM fields / screens: <strong>Rich to confirm</strong></li>
+    </ul>
+  </section>
+
+  <section id="words">
+    <h2>9. Words to use and avoid on calls</h2>
+    <p>From the source glossary: "Use plain language on calls. Don't oversell engineering — Rich handles that."</p>
+    <dl class="glossary">
+      <dt>In-house delivery:</dt>
+      <dd>Driven's own truck to the customer, not a brokered carrier move.</dd>
+      <dt>Safety stock:</dt>
+      <dd>backup inventory held so the line doesn't stop.</dd>
+      <dt>VMI:</dt>
+      <dd>"we keep backup stock and manage the program," not brokerage.</dd>
+    </dl>
+    <ul class="plain">
+      <li>Inbound freight (carriers bringing material <em>in</em> to Driven) is <strong>not</strong> a service Driven sells.</li>
+    </ul>
+  </section>
+
+  <section id="practice">
+    <h2>10. Practice routine (from source)</h2>
+    <h3>Week 2 daily practice</h3>
+    <ul class="plain">
+      <li>Morning: write opener + 4 questions from memory (no peeking)</li>
+      <li>Midday: drill each objection once</li>
+      <li>Afternoon: full playbook run-through to the close</li>
+      <li>Record yourself once; listen for filler words and speed</li>
+    </ul>
+    <h3>Daily practice routine (all weeks)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Block</th><th>Activity</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Start of day</td><td>5-minute product + "own truck / no brokerage" recitation</td></tr>
+          <tr><td>Before dialing</td><td>Read opener + discovery questions once</td></tr>
+          <tr><td>After each conversation</td><td>Log CRM same day; note objection heard</td></tr>
+          <tr><td>End of day</td><td>One full playbook run; one glossary term flashcard</td></tr>
+          <tr><td>Weekly with Rich</td><td>Rubric role-play + recording review</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="scoring">
+    <h2>11. Role-play scoring sheet</h2>
+    <ul class="sheet-rules">
+      <li><strong>Scale:</strong> "Score each role-play 1–5." (integer 1–5; the source describes only 1, 3, and 5)</li>
+      <li><strong>Pass threshold:</strong> average of the seven skills. The source has "Passing average: ______ (Rich to confirm; suggested start 4.0)". <strong>Provisional: 4.0, not yet confirmed.</strong></li>
+      <li><strong>Weights:</strong> none in the source. Equal weight, plain average <em>(inferred)</em>. The source has no weights and uses a plain 'Passing average', so every criterion has weight 1.</li>
+      <li><strong>Sheet footer fields:</strong> "Average this session: ______", "Trainer initials: ______"</li>
+    </ul>
+    <p><strong>Session average</strong> = (sum of the 7 scores) ÷ 7. <strong>Pass</strong> when the average is at or above the threshold (provisional 4.0).</p>
+
+    <form id="score-form" action="#" method="post">
+      <div class="session-fields">
+        <label>Setter name
+          <input id="setter-name" name="setter" type="text" autocomplete="name">
+        </label>
+        <label>Scorer <span class="hint">Trainer initials</span>
+          <input id="scorer" name="scorer" type="text" autocomplete="off">
+        </label>
+        <label>Date
+          <input id="session-date" name="date" type="date">
+        </label>
+      </div>
+      <div class="result is-empty" id="result" aria-live="polite">
+        <div>
+          <div class="result-kicker" id="average-label">Average this session</div>
+          <div class="result-num" id="average-value">—</div>
+          <div class="result-note" id="average-note">Equal weight, plain average.</div>
+        </div>
+        <div>
+          <div class="result-kicker">Result</div>
+          <div class="badge-result" id="pass-result">Enter all 7 scores</div>
+          <div class="result-note" id="pass-note">Provisional pass mark: 4.0, pending Rich's confirmation</div>
+          <div class="pass-source" id="pass-source">Passing average: ______ (Rich to confirm; suggested start 4.0)</div>
+        </div>
+      </div>
+      <p class="unanchored" id="unanchored-note">Source describes only 1, 3 and 5. 2 and 4 are allowed but have no wording.</p>
+      <div id="criteria">
+        <noscript>JavaScript draws the seven scores on this sheet. The scripts above stay readable without it. Scores are saved in this browser only.</noscript>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="tbtn green" id="print-sheet">Print</button>
+        <button type="button" class="tbtn" id="copy-summary">Copy summary</button>
+        <button type="button" class="tbtn danger" id="reset-sheet">Reset</button>
+      </div>
+      <p class="save-status" id="save-status" role="status"></p>
+    </form>
+  </section>
+
+  <section id="session">
+    <h2>12. How a role-play session runs</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Item</th><th>Source says</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Who runs it</td>
+            <td>"Morning role-play with Rich (or assigned trainer)"</td>
+            <td>Stated</td>
+          </tr>
+          <tr>
+            <td>Who plays the buyer</td>
+            <td>Not stated</td>
+            <td><em>(inferred)</em> Rich or the assigned trainer plays the buyer; the setter runs the playbook</td>
+          </tr>
+          <tr>
+            <td>How long</td>
+            <td>"______ minutes (Rich to confirm)"</td>
+            <td>Blank: gap</td>
+          </tr>
+          <tr>
+            <td>How often</td>
+            <td>Week 3: daily morning role-play. All weeks: "Weekly with Rich: Rubric role-play + recording review"</td>
+            <td>Stated</td>
+          </tr>
+          <tr>
+            <td>What it covers</td>
+            <td>Full playbook to the close; mock call logged in the CRM ("CRM practice: log mock calls correctly")</td>
+            <td>Stated</td>
+          </tr>
+          <tr>
+            <td>Scoring</td>
+            <td>Score each role-play 1–5 on the 7 skills; record the average and trainer initials</td>
+            <td>Stated</td>
+          </tr>
+          <tr>
+            <td>Recording review alongside it</td>
+            <td>"Review ______ recordings / week with Rich (Rich to confirm)". Note: what worked, one fix for next call, one product term to study</td>
+            <td>Count is blank: gap</td>
+          </tr>
+          <tr>
+            <td>Shadow / listen</td>
+            <td>"live Rich calls or approved recordings — ______ per day (Rich to confirm)"</td>
+            <td>Count is blank: gap</td>
+          </tr>
+          <tr>
+            <td>Self drill</td>
+            <td>"full playbook × 3"</td>
+            <td>Stated</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>Coaching notes format (from source, Call recording review):</strong> what worked · one fix for next call · one product term to study.</p>
+  </section>
+
+  <section id="gaps">
+    <h2>13. Gaps in the source (Rich to fill)</h2>
+    <ol class="ask">
+      <li><strong>No voicemail script.</strong> The source has no voicemail wording.</li>
+      <li><strong>No gatekeeper script</strong> beyond the opener's last line ("Who handles packaging buying there?").</li>
+      <li><strong>No meeting-confirmation step.</strong> After the choice close, nothing covers sending an invite, confirming, or rebooking a no-show.</li>
+      <li><strong>Distance rule</strong> for "within reach of our truck" is "Rich to confirm". Delivery geography is also open.</li>
+      <li><strong>Pass mark</strong> is blank (suggested start 4.0).</li>
+      <li><strong>No weights</strong> on the scoring sheet.</li>
+      <li><strong>No written descriptions for scores 2 and 4.</strong></li>
+      <li><strong>Role-play length</strong> is blank ("______ minutes").</li>
+      <li><strong>Who plays the buyer</strong> is not stated.</li>
+      <li><strong>Recording review count per week</strong> and <strong>shadow/listen count per day</strong> are blank.</li>
+      <li><strong>Nothing on what happens below the pass mark</strong> (re-test timing, extra drills, whether live dialing pauses).</li>
+      <li><strong>No process for adding a new objection</strong> to the playbook. The source lists only four objections. It names a separate "Driven Setter Call Playbook" as the source for scripts, but no doc with that title turned up in a Drive search.</li>
+      <li><strong>No owner or review cadence</strong> for the playbook or the scoring sheet.</li>
+      <li><strong>No place to store scores.</strong> The sheet has paper-style blanks ("Average this session", "Trainer initials") and no defined log or system.</li>
+      <li><strong>Setter-specific CRM fields / screens</strong> are "Rich to confirm".</li>
+      <li><strong>Follow-up after "Call me back later"</strong> is covered ("call back exactly then"), but nothing covers a prospect who isn't reached on the callback.</li>
+    </ol>
+  </section>
+</main>
+
+<script type="application/json" id="rubric-json">
+{
+  "module": "Driven Call Playbook and Role-Play Scoring",
+  "source": {
+    "title": "Driven Solutions Setter Training Program",
+    "fileId": "1j1lalkT5IaV0N6U9X7uBT0LoueGjlu2TX86VQz1emRg",
+    "section": "Week 3 — Role-play scoring rubric",
+    "read_on": "2026-11-09"
+  },
+  "scale": {
+    "min": 1,
+    "max": 5,
+    "step": 1,
+    "source_text": "Score each role-play 1–5.",
+    "anchored_points": [1, 3, 5],
+    "unanchored_points_note": "Source describes only 1, 3 and 5. 2 and 4 are allowed but have no wording."
+  },
+  "aggregation": {
+    "method": "mean",
+    "weights_source": "inferred_equal",
+    "note": "The source has no weights and uses a plain 'Passing average', so every criterion has weight 1."
+  },
+  "pass_threshold": {
+    "value": 4.0,
+    "compare": ">=",
+    "confirmed": false,
+    "source_text": "Passing average: ______ (Rich to confirm; suggested start 4.0)"
+  },
+  "session_fields": [
+    {"id": "average", "label": "Average this session"},
+    {"id": "trainer_initials", "label": "Trainer initials"}
+  ],
+  "criteria": [
+    {
+      "id": "opener",
+      "order": 1,
+      "label": "Opener clarity & pace",
+      "description": "Delivers the memorized opener clearly and at a good pace.",
+      "description_source": "inferred_from_anchors",
+      "scale": {"min": 1, "max": 5},
+      "weight": 1,
+      "weight_source": "inferred_equal",
+      "anchors": {"1": "Unclear / rushed", "3": "OK", "5": "Crisp, confident, on-script"}
+    },
+    {
+      "id": "discovery",
+      "order": 2,
+      "label": "Discovery questions",
+      "description": "Asks the four discovery questions.",
+      "description_source": "inferred_from_anchors",
+      "scale": {"min": 1, "max": 5},
+      "weight": 1,
+      "weight_source": "inferred_equal",
+      "anchors": {"1": "Skips / invents", "3": "Asks most", "5": "All 4 in order, listens"}
+    },
+    {
+      "id": "objections",
+      "order": 3,
+      "label": "Objection handling",
+      "description": "Handles objections with the playbook responses.",
+      "description_source": "inferred_from_anchors",
+      "scale": {"min": 1, "max": 5},
+      "weight": 1,
+      "weight_source": "inferred_equal",
+      "anchors": {"1": "Freezes / argues", "3": "Partial", "5": "Matches playbook, stays calm"}
+    },
+    {
+      "id": "qualifying",
+      "order": 4,
+      "label": "Qualifying checklist",
+      "description": "Uses the qualifying checklist before booking.",
+      "description_source": "inferred_from_anchors",
+      "scale": {"min": 1, "max": 5},
+      "weight": 1,
+      "weight_source": "inferred_equal",
+      "anchors": {"1": "Books unqualified", "3": "Misses 1 box", "5": "Only books when all boxes met"}
+    },
+    {
+      "id": "close",
+      "order": 5,
+      "label": "Close / hand-off",
+      "description": "Asks for the 15-minute meeting with Rich.",
+      "description_source": "inferred_from_anchors",
+      "scale": {"min": 1, "max": 5},
+      "weight": 1,
+      "weight_source": "inferred_equal",
+      "anchors": {"1": "Soft / no ask", "3": "Asks once", "5": "Clear choice close for Rich"}
+    },
+    {
+      "id": "product_accuracy",
+      "order": 6,
+      "label": "Product accuracy",
+      "description": "Describes Driven and its products correctly: own truck, never a broker.",
+      "description_source": "inferred_from_anchors",
+      "scale": {"min": 1, "max": 5},
+      "weight": 1,
+      "weight_source": "inferred_equal",
+      "anchors": {"1": "Broker / wrong terms", "3": "Minor slips", "5": "Own-truck, correct products"}
+    },
+    {
+      "id": "crm_notes",
+      "order": 7,
+      "label": "CRM / notes",
+      "description": "Logs the call in the Driven CRM with notes and a next step.",
+      "description_source": "inferred_from_anchors",
+      "scale": {"min": 1, "max": 5},
+      "weight": 1,
+      "weight_source": "inferred_equal",
+      "anchors": {"1": "Missing", "3": "Partial", "5": "Complete log + next step"}
+    }
+  ]
+}
+</script>
+<script>
+(function () {
+  var STORAGE_KEY = "driven-call-playbook-session";
+  var rubric = JSON.parse(document.getElementById("rubric-json").textContent);
+  var byId = {};
+  rubric.criteria.forEach(function (c) { byId[c.id] = c; });
+
+  /* @score-fn:start */
+  function summarizeSession(entries, threshold) {
+    var scored = 0;
+    var sum = 0;
+    var weightSum = 0;
+    var allWeight = 0;
+    var total = entries.length;
+    for (var i = 0; i < entries.length; i++) {
+      var weight = Number(entries[i].weight);
+      if (!(weight > 0)) weight = 1;
+      allWeight += weight;
+      var score = entries[i].score;
+      if (score == null || score === "") continue;
+      var value = Number(score);
+      if (!isFinite(value) || Math.round(value) !== value || value < 1 || value > 5) continue;
+      scored += 1;
+      sum += value * weight;
+      weightSum += weight;
+    }
+    var runningAverage = scored ? sum / weightSum : null;
+    var complete = total > 0 && scored === total;
+    var sessionAverage = complete ? sum / allWeight : null;
+    var result = null;
+    if (sessionAverage != null && threshold && threshold.compare === ">=") {
+      result = sessionAverage >= Number(threshold.value) ? "pass" : "fail";
+    }
+    return {
+      scored: scored,
+      total: total,
+      runningAverage: runningAverage,
+      sessionAverage: sessionAverage,
+      result: result
+    };
+  }
+  /* @score-fn:end */
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderCriteria() {
+    var list = rubric.criteria.slice().sort(function (a, b) { return a.order - b.order; });
+    var html = "";
+    list.forEach(function (c) {
+      var choices = "";
+      var step = rubric.scale.step || 1;
+      for (var n = c.scale.min; n <= c.scale.max; n += step) {
+        choices += '<label class="score-choice"><input type="radio" name="score-' + esc(c.id) + '" value="' + n + '"><span>' + n + '</span></label>';
+      }
+      var anchors = "";
+      [1, 3, 5].forEach(function (n) {
+        anchors += '<li data-score="' + n + '"><b>' + n + '</b> ' + esc(c.anchors[String(n)]) + "</li>";
+      });
+      html += '<article class="criterion" data-id="' + esc(c.id) + '" data-weight="' + esc(String(c.weight)) + '">' +
+        '<h3><span class="n">' + c.order + "</span>" + esc(c.label) + "</h3>" +
+        '<p class="desc">' + esc(c.description) + ' <span class="inferred">(inferred)</span></p>' +
+        '<p class="weight">Weight (inferred): ' + esc(String(c.weight)) + " (equal)</p>" +
+        '<ul class="anchors">' + anchors + "</ul>" +
+        '<div class="scale" role="radiogroup" aria-label="Score for ' + esc(c.label) + '">' + choices + "</div>" +
+        '<p class="picked">Score: —</p>' +
+        '<label class="notes-label">Notes<textarea id="notes-' + esc(c.id) + '" rows="3"></textarea></label>' +
+        "</article>";
+    });
+    document.getElementById("criteria").innerHTML = html;
+  }
+
+  function todayISO() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+
+  function collectEntries() {
+    var entries = [];
+    document.querySelectorAll(".criterion").forEach(function (card) {
+      var id = card.getAttribute("data-id");
+      var c = byId[id];
+      var checked = card.querySelector("input[type=radio]:checked");
+      var score = null;
+      if (checked) {
+        var value = Number(checked.value);
+        if (isFinite(value) && Math.round(value) === value && value >= 1 && value <= 5) score = value;
+      }
+      var notesEl = document.getElementById("notes-" + id);
+      entries.push({
+        id: id,
+        order: c ? c.order : entries.length + 1,
+        weight: Number(card.getAttribute("data-weight")) || (c ? c.weight : 1),
+        score: score,
+        notes: notesEl ? notesEl.value : ""
+      });
+    });
+    return entries;
+  }
+
+  function readState() {
+    return {
+      setter: document.getElementById("setter-name").value,
+      scorer: document.getElementById("scorer").value,
+      date: document.getElementById("session-date").value,
+      entries: collectEntries()
+    };
+  }
+
+  function setText(id, text) {
+    var el = document.getElementById(id);
+    if (el && el.textContent !== text) el.textContent = text;
+  }
+
+  function setStatus(text) {
+    setText("save-status", text);
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (!data || typeof data !== "object") return null;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveState(state) {
+    var scores = {};
+    var notes = {};
+    state.entries.forEach(function (e) {
+      if (e.score != null) scores[e.id] = e.score;
+      if (e.notes) notes[e.id] = e.notes;
+    });
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        setter: state.setter,
+        scorer: state.scorer,
+        date: state.date,
+        scores: scores,
+        notes: notes
+      }));
+      setStatus("Saved in this browser.");
+    } catch (err) {
+      setStatus("This browser blocked saving the sheet.");
+    }
+  }
+
+  function paint() {
+    var entries = collectEntries();
+    var summary = summarizeSession(entries, rubric.pass_threshold);
+    var box = document.getElementById("result");
+    box.classList.remove("is-pass", "is-fail", "is-partial", "is-empty");
+    var label = "Average this session";
+    var value = "—";
+    var note = "Equal weight, plain average.";
+    var badge = "Enter all " + summary.total + " scores";
+    if (summary.scored === 0) {
+      box.classList.add("is-empty");
+    } else if (summary.sessionAverage != null) {
+      value = summary.sessionAverage.toFixed(2);
+      note = "Equal weight, plain average of all " + summary.total + " skills.";
+      if (summary.result === "pass") {
+        badge = "Pass";
+        box.classList.add("is-pass");
+      } else if (summary.result === "fail") {
+        badge = "Fail";
+        box.classList.add("is-fail");
+      }
+    } else {
+      label = "Average so far";
+      value = summary.runningAverage.toFixed(2);
+      note = "Equal weight across " + summary.scored + " of " + summary.total + " scores.";
+      badge = summary.scored + " of " + summary.total + " scored";
+      box.classList.add("is-partial");
+    }
+    setText("average-label", label);
+    setText("average-value", value);
+    setText("average-note", note);
+    setText("pass-result", badge);
+    entries.forEach(function (e) {
+      var card = document.querySelector('.criterion[data-id="' + e.id + '"]');
+      if (!card) return;
+      var picked = card.querySelector(".picked");
+      if (picked) {
+        var pickedText = e.score == null ? "Score: —" : "Score: " + e.score;
+        if (picked.textContent !== pickedText) picked.textContent = pickedText;
+      }
+      card.querySelectorAll(".anchors li").forEach(function (li) {
+        li.classList.toggle("on", String(e.score) === li.getAttribute("data-score"));
+      });
+    });
+  }
+
+  function buildSummary(state) {
+    var summary = summarizeSession(state.entries, rubric.pass_threshold);
+    var lines = [];
+    lines.push("Driven Call Playbook — role-play score");
+    lines.push("Setter: " + state.setter.trim());
+    lines.push("Scorer: " + state.scorer.trim());
+    lines.push("Date: " + state.date);
+    lines.push("");
+    state.entries.forEach(function (e) {
+      var c = byId[e.id];
+      var anchor = "";
+      if (c && (e.score === 1 || e.score === 3 || e.score === 5)) {
+        anchor = " — " + c.anchors[String(e.score)];
+      }
+      var scoreText = e.score == null ? "—" : String(e.score);
+      lines.push((c ? c.order : e.order) + ". " + (c ? c.label : e.id) + ": " + scoreText + anchor);
+      if (e.notes && e.notes.trim()) lines.push("Notes: " + e.notes.trim());
+    });
+    lines.push("");
+    if (summary.sessionAverage != null) lines.push("Average this session: " + summary.sessionAverage.toFixed(2));
+    else if (summary.runningAverage != null) lines.push("Average so far: " + summary.runningAverage.toFixed(2));
+    else lines.push("Average this session: —");
+    lines.push("Scores entered: " + summary.scored + " of " + summary.total);
+    var mark = Number(rubric.pass_threshold.value).toFixed(1);
+    if (rubric.pass_threshold.confirmed) lines.push("Pass mark: " + mark);
+    else lines.push("Provisional pass mark: " + mark + " (pending Rich's confirmation)");
+    var resultWord = "Incomplete";
+    if (summary.result === "pass") resultWord = "Pass";
+    else if (summary.result === "fail") resultWord = "Fail";
+    else if (summary.scored === 0) resultWord = "Not scored";
+    lines.push("Result: " + resultWord);
+    return lines.join("\n");
+  }
+
+  function toast(msg) {
+    var t = document.createElement("div");
+    t.className = "toast";
+    t.setAttribute("role", "status");
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2200);
+  }
+
+  function copySummary() {
+    var text = buildSummary(readState());
+    function done() { toast("Summary copied"); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      ta.remove();
+      if (ok) done();
+      else toast("Select the score and copy it from the sheet.");
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  function restore() {
+    var data = loadState();
+    var dateEl = document.getElementById("session-date");
+    if (!data) {
+      dateEl.value = todayISO();
+      return;
+    }
+    document.getElementById("setter-name").value = data.setter ? String(data.setter) : "";
+    document.getElementById("scorer").value = data.scorer ? String(data.scorer) : "";
+    dateEl.value = typeof data.date === "string" ? data.date : todayISO();
+    var scores = data.scores && typeof data.scores === "object" ? data.scores : {};
+    Object.keys(scores).forEach(function (id) {
+      if (!/^[a-z0-9_-]+$/i.test(id)) return;
+      var value = Number(scores[id]);
+      if (!isFinite(value) || Math.round(value) !== value || value < 1 || value > 5) return;
+      var input = document.querySelector('input[name="score-' + id + '"][value="' + value + '"]');
+      if (input) input.checked = true;
+    });
+    var notes = data.notes && typeof data.notes === "object" ? data.notes : {};
+    Object.keys(notes).forEach(function (id) {
+      if (!/^[a-z0-9_-]+$/i.test(id)) return;
+      var el = document.getElementById("notes-" + id);
+      if (el) el.value = String(notes[id] == null ? "" : notes[id]);
+    });
+    setStatus("Saved in this browser.");
+  }
+
+  function resetSheet() {
+    var state = readState();
+    var dirty = !!(state.setter || state.scorer || state.entries.some(function (e) {
+      return e.score != null || (e.notes && e.notes.trim());
+    }));
+    if (dirty && !window.confirm("Clear this scoring session on this browser?")) return;
+    document.getElementById("setter-name").value = "";
+    document.getElementById("scorer").value = "";
+    document.getElementById("session-date").value = todayISO();
+    document.querySelectorAll("#score-form input[type=radio]").forEach(function (el) { el.checked = false; });
+    document.querySelectorAll("#score-form textarea").forEach(function (el) { el.value = ""; });
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    setStatus("Cleared on this browser.");
+    paint();
+  }
+
+  function onEdit() {
+    saveState(readState());
+    paint();
+  }
+
+  function goBack(event) {
+    var ref = document.referrer;
+    var same = false;
+    if (ref) {
+      try { same = new URL(ref).origin === window.location.origin; } catch (err) { same = false; }
+    }
+    if (same && window.history.length > 1) {
+      event.preventDefault();
+      window.history.back();
+      return;
+    }
+    if (same && ref) {
+      event.preventDefault();
+      window.location.href = ref;
+    }
+  }
+
+  var mark = Number(rubric.pass_threshold.value);
+  var markText = mark.toFixed(1);
+  var passNote = document.getElementById("pass-note");
+  passNote.textContent = rubric.pass_threshold.confirmed
+    ? ("Pass mark: " + markText)
+    : ("Provisional pass mark: " + markText + ", pending Rich's confirmation");
+  document.getElementById("pass-source").textContent = rubric.pass_threshold.source_text;
+  document.getElementById("unanchored-note").textContent = rubric.scale.unanchored_points_note;
+
+  renderCriteria();
+  restore();
+  paint();
+  document.getElementById("score-form").addEventListener("submit", function (event) { event.preventDefault(); });
+  document.getElementById("score-form").addEventListener("input", onEdit);
+  document.getElementById("score-form").addEventListener("change", onEdit);
+  document.getElementById("print-sheet").addEventListener("click", function () { window.print(); });
+  document.getElementById("copy-summary").addEventListener("click", copySummary);
+  document.getElementById("reset-sheet").addEventListener("click", resetSheet);
+  document.getElementById("nav-back").addEventListener("click", goBack);
+  function syncNav() {
+    var nav = document.querySelector(".nav-chrome");
+    if (nav) document.documentElement.style.setProperty("--nav-h", nav.offsetHeight + "px");
+  }
+  syncNav();
+  window.addEventListener("resize", syncNav);
+})();
+</script>
+</body>
+</html>
