@@ -753,17 +753,34 @@
     });
   }
 
+  var VIEW_CAT = { pipeline: "sales", companies: "sales", docs: "admin", tasks: "sales", calendar: "ops", orders: "ops", automations: "admin", sequences: "sales", setup: "admin", calculator: "cs" };
+
   function render() {
     document.documentElement.dataset.theme = S.theme;
     var themeBtn = $("#themeBtn");
     if (themeBtn) themeBtn.textContent = S.theme === "dark" ? "Light mode" : "Dark mode";
     document.querySelectorAll(".tab").forEach(function (b) { b.setAttribute("aria-current", b.dataset.view === S.view ? "page" : "false"); });
+    var calcBtn = $("#calcBtn");
+    if (calcBtn) calcBtn.setAttribute("aria-current", S.view === "calculator" ? "page" : "false");
     var open = S.tasks.filter(function (t) { return !t.done && t.due <= TODAY; }).length;
     var n = $("#taskCount"); if (n) { n.hidden = !open; n.textContent = open; }
     var pq = pendingQueue().length;
     var sc = $("#seqCount"); if (sc) { sc.hidden = !pq; sc.textContent = pq; }
-    var views = { pipeline: vPipeline, companies: vCompanies, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, automations: vAutomations, sequences: vSequences, setup: vSetup };
+    var view = $("#view");
+    var cat = VIEW_CAT[S.view] || "sales";
+    if (view) view.dataset.cat = cat;
+    var theme = S.theme === "light" ? "light" : "dark";
+    if (S.view === "calculator" && view && view.dataset.calcTheme === theme && view.querySelector("iframe.calc-frame")) return;
+    var views = { pipeline: vPipeline, companies: vCompanies, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, automations: vAutomations, sequences: vSequences, setup: vSetup, calculator: vCalculator };
     (views[S.view] || vPipeline)();
+  }
+
+  function vCalculator() {
+    var theme = S.theme === "light" ? "light" : "dark";
+    var view = $("#view");
+    if (!view) return;
+    view.dataset.calcTheme = theme;
+    view.innerHTML = "<div class='calc-banner'>Customer Service<span class='calc-banner-sub'>Packaging calculator and pallet builder</span></div><iframe class='calc-frame' title='Packaging calculator and pallet builder' src='calculator.html?theme=" + theme + "'></iframe>";
   }
 
   function vPipeline() {
@@ -1334,7 +1351,17 @@
     if (od) { openDeal(+od.dataset.openDeal); return; }
     if (oc) { openCompany(+oc.dataset.openCompany); return; }
     var tab = e.target.closest(".tab");
-    if (tab) { S.view = tab.dataset.view; closeDrawer(); render(); window.scrollTo(0, 0); }
+    if (tab) {
+      S.view = tab.dataset.view;
+      if (window.history && history.replaceState) {
+        var url = new URL(location.href);
+        url.searchParams.delete("view");
+        history.replaceState(null, "", url.pathname + url.search + url.hash);
+      }
+      closeDrawer();
+      render();
+      window.scrollTo(0, 0);
+    }
   });
 
   function handle(a, e) {
@@ -1343,6 +1370,18 @@
     if (act === "close") { closeDrawer(); return; }
     if (act === "mclose") { closeModal(); return; }
     if (act === "theme") { S.theme = S.theme === "dark" ? "light" : "dark"; localStorage.setItem("driven-crm-theme", S.theme); render(); return; }
+    if (act === "open-calc") {
+      S.view = "calculator";
+      if (window.history && history.replaceState) {
+        var calcUrl = new URL(location.href);
+        calcUrl.searchParams.set("view", "calculator");
+        history.replaceState(null, "", calcUrl.pathname + calcUrl.search + calcUrl.hash);
+      }
+      closeDrawer();
+      render();
+      window.scrollTo(0, 0);
+      return;
+    }
     if (act === "toggle-col") { toggleCol(a.dataset.stage); return; }
     if (act === "toggle-zone") { toggleZone(a.dataset.zone); return; }
     if (act === "filter-default") { defaultFilter = clone(F); persistPrefs(); toast("Default filter saved for " + meName() + "."); return; }
@@ -1812,7 +1851,7 @@
     await runAutomations();
     if (gen !== sessionGen) return;
     var asked = new URLSearchParams(location.search).get("view");
-    if (asked && ["pipeline", "companies", "docs", "tasks", "calendar", "orders", "automations", "sequences", "setup"].indexOf(asked) >= 0) S.view = asked;
+    if (asked && VIEW_CAT[asked]) S.view = asked;
     render();
     var signedIn = S.team.find(function (t) { return t.id === +S.meId; });
     setSaveState("Signed in as " + (signedIn ? signedIn.name : email) + " · " + email, "ok");

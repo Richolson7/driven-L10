@@ -1,12 +1,14 @@
 /* Morning huddle screen. Numbers come from HuddleScore.
-   CRM tables are read only after a team sign-in. This file sends nothing. */
+   CRM tables are read only after a team sign-in.
+   The scorecard is one saved snapshot at 10:00 AM CT. This file sends no email or text. */
 (function () {
   "use strict";
   var Score = window.HuddleScore;
+  var Card = window.HuddleScorecard;
   var Tasks = window.HuddleTasks;
   var board = document.getElementById("board");
   var statusEl = document.getElementById("status");
-  if (!Score || !Tasks || !window.CRMDB || !board) {
+  if (!Score || !Card || !Tasks || !window.CRMDB || !board) {
     if (board) board.textContent = "The huddle scripts did not load. Reload the page.";
     return;
   }
@@ -57,9 +59,90 @@
   var gate = document.getElementById("authGate");
   var signOutBtn = document.getElementById("signOut");
   var held = false;
+  var captureTimer = null;
+
+  function clearCapture() {
+    if (captureTimer) { clearTimeout(captureTimer); captureTimer = null; }
+  }
+  function armCapture() {
+    clearCapture();
+    if (!me) return;
+    var wait = Card.plan(new Date()).waitMs;
+    if (wait == null || wait <= 0 || wait > 16 * 60 * 60 * 1000) return;
+    captureTimer = setTimeout(function () {
+      captureTimer = null;
+      if (!me || !Card.plan(new Date()).capture) return;
+      load();
+    }, wait);
+  }
+  function snapshotProblem(error) {
+    var msg = CRMDB.explain(error);
+    var code = error && error.code || "";
+    if (code === "PGRST205" || code === "42P01" || /huddle_snapshots/i.test(msg) || /schema cache/i.test(msg) || /does not exist/i.test(msg)) {
+      return "The snapshot table is not in the database yet. Apply supabase/migrations/20261105160000_huddle_snapshots.sql on the Driven project. Until then this scorecard stays blank. Live numbers were not used.";
+    }
+    return "The saved snapshot did not load. " + msg + " Live numbers were not used.";
+  }
+  function payloadOf(row) {
+    if (!row) return null;
+    var payload = row.payload;
+    if (typeof payload === "string") {
+      try { payload = JSON.parse(payload); } catch (e) { return null; }
+    }
+    if (!payload || typeof payload !== "object") return null;
+    return payload;
+  }
+  async function readSnapshot(day) {
+    var res = await CRMDB.db.from("huddle_snapshots").select("huddle_day,payload,captured_for").eq("huddle_day", day).maybeSingle();
+    return { error: res.error || null, payload: payloadOf(res.data) };
+  }
+  async function resolveScorecard(result, deals, wonKeys) {
+    var decision = Card.plan(new Date());
+    var read = await readSnapshot(decision.displayDay);
+    if (read.error) return { snapshot: null, huddleDay: decision.displayDay, note: snapshotProblem(read.error) };
+    if (read.payload) return { snapshot: read.payload, huddleDay: decision.displayDay, note: "" };
+    if (!decision.capture || result.today !== decision.displayDay) {
+      return { snapshot: null, huddleDay: decision.displayDay, note: "No snapshot was saved at 10:00 AM CT for this huddle. Refresh loads the saved snapshot only. It does not recompute the tiles." };
+    }
+    var dash = await CRMDB.db.from("dashboard_data").select('week_data,"Week Of"').eq("id", "driven_cmd").maybeSingle();
+    if (dash.error || !Card.plan(new Date()).capture) {
+      var why = dash.error ? CRMDB.explain(dash.error) : "Huddle start passed before the snapshot could be saved.";
+      return { snapshot: null, huddleDay: decision.displayDay, note: "No snapshot was saved. " + why + " The tiles were left blank." };
+    }
+    var row = dash.data || {};
+    var payload = Card.build({
+      today: result.today,
+      yesterday: result.yesterday,
+      weekStart: result.weekStart,
+      weekEnd: result.weekEnd,
+      weekDays: result.weekDays,
+      lastWeek: result.lastWeek,
+      deals: deals,
+      wonStageKeys: wonKeys,
+      team: result.team && result.team.cells,
+      weekData: row.week_data || {},
+      weekOf: row["Week Of"] || row.week_of || ""
+    });
+    var saved = await CRMDB.db.from("huddle_snapshots").insert({
+      huddle_day: decision.displayDay,
+      captured_for: Card.huddleStart(decision.displayDay).toISOString(),
+      payload: payload
+    }).select("huddle_day,payload,captured_for").single();
+    if (saved.error) {
+      if (saved.error.code === "23505") {
+        var again = await readSnapshot(decision.displayDay);
+        if (again.payload) return { snapshot: again.payload, huddleDay: decision.displayDay, note: "" };
+      }
+      return { snapshot: null, huddleDay: decision.displayDay, note: "The snapshot could not be saved, so the tiles were left blank. " + CRMDB.explain(saved.error) };
+    }
+    var stored = payloadOf(saved.data);
+    if (!stored) return { snapshot: null, huddleDay: decision.displayDay, note: "The snapshot did not save a row, so the tiles were left blank." };
+    return { snapshot: stored, huddleDay: decision.displayDay, note: "" };
+  }
 
   function showGate() {
     me = null;
+    clearCapture();
     if (shell) shell.hidden = true;
     if (gate) gate.hidden = false;
     if (signOutBtn) signOutBtn.hidden = true;
@@ -72,12 +155,13 @@
     if (signOutBtn) signOutBtn.hidden = false;
   }
 
-  function renderBoard(result, goals, notes, taskSummary, taskNote) {
+  function renderBoard(result, goals, notes, taskSummary, taskNote, scorecard) {
     var head = Score.METRICS.map(function (metric) {
       return "<th>" + esc(METRIC_LABEL[metric]) + "<small>Yesterday</small></th><th>" + esc(METRIC_LABEL[metric]) + "<small>Week</small></th>";
     }).join("");
     var weekLabel = result.lastWeek ? "Last week" : "Week to date";
-    var html = "<p class='range'>Yesterday " + esc(pretty(result.yesterday)) + " · " + esc(weekLabel) + " " + esc(pretty(result.weekStart)) + " – " + esc(pretty(result.weekEnd)) + " (" + result.weekDays + " weekday" + (result.weekDays === 1 ? "" : "s") + ")</p>";
+    var html = Card.sectionHtml(scorecard);
+    html += "<p class='range'>Yesterday " + esc(pretty(result.yesterday)) + " · " + esc(weekLabel) + " " + esc(pretty(result.weekStart)) + " – " + esc(pretty(result.weekEnd)) + " (" + result.weekDays + " weekday" + (result.weekDays === 1 ? "" : "s") + ")</p>";
     html += "<div class='scroll'><table><thead><tr><th>Rep</th>" + head + "</tr></thead><tbody>";
     html += result.reps.map(rowHtml).join("");
     html += rowHtml(result.team);
@@ -163,6 +247,7 @@
     if (goalsRes.error) {
       board.innerHTML = "<p class='lead'>The huddle goals are not in the database yet. Apply 20261027130000_huddle_goals.sql, then reload. Nothing was loaded from deals or activity.</p>";
       setStatus(CRMDB.explain(goalsRes.error), true);
+      armCapture();
       return;
     }
     var since = new Date();
@@ -171,7 +256,7 @@
     var results = await Promise.all([
       CRMDB.db.from("crm_activity").select("kind,by_user,at").gte("at", since.toISOString()).limit(2000),
       CRMDB.db.from("crm_quotes").select("id,deal_id,rep,sent_date").not("sent_date", "is", null).limit(2000),
-      CRMDB.db.from("crm_deals").select("id,sales_rep,stage,stage_changed_at,price_per_unit,quantity,quote_sent_date,custom").limit(2000),
+      CRMDB.db.from("crm_deals").select("id,sales_rep,stage,stage_changed_at,price_per_unit,quantity,quote_sent_date,est_ship_date,est_delivery_date,custom").limit(2000),
       CRMDB.db.from("crm_stages").select("key,position,active").eq("active", true).order("position"),
       CRMDB.db.from("driven_outreach_tally").select("day,owner,dials,emails").gte("day", since.toISOString().slice(0, 10)).limit(500),
       CRMDB.db.from("driven_tasks").select("id,text,owner,due,done").limit(2000)
@@ -214,7 +299,9 @@
     if (result.unmatched) notes.push(result.unmatched + " touch" + (result.unmatched === 1 ? "" : "es") + " had a name that is not Rich or Landon, so they are not in the rep rows.");
     notes.push("Green is at or above the goal. Red is below. A dash means that column has no goal.");
     notes.push("Company week targets already in kpi_defs stay there: Revenue $115,000, Wins 3, New opportunities 5, Close rate 30%.");
-    renderBoard(result, goalsRes.data || [], notes, taskSummary, taskNote);
+    var scorecard = await resolveScorecard(result, deals, wonKeys);
+    renderBoard(result, goalsRes.data || [], notes, taskSummary, taskNote, scorecard);
+    armCapture();
     setStatus("Signed in as " + me.name + " · " + email);
   }
 
