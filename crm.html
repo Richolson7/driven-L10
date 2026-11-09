@@ -137,6 +137,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--raise)}
 .chip.active{border-color:var(--accent);color:var(--accent)}
 .chip.vendor{border-color:var(--ops);color:var(--ops)}
 .chip.lost{border-color:var(--bad);color:var(--bad)}
+.chip.warn{border-color:var(--warn);color:var(--warn)}
 .filters{display:flex;gap:6px}
 .filters button{background:none;border:1px solid var(--line);border-radius:20px;padding:4px 12px;color:var(--muted)}
 .filters button[aria-pressed="true"]{border-color:var(--text);color:var(--text)}
@@ -372,6 +373,8 @@ details.seq[open] summary{background:var(--raise)}
   <nav class="tabs" aria-label="Sections">
     <button class="tab" data-view="pipeline" data-cat="sales">Pipeline</button>
     <button class="tab" data-view="companies" data-cat="sales">Companies</button>
+    <button class="tab" data-view="vendors" data-cat="sales">Vendors</button>
+    <button class="tab" data-view="calculator" data-cat="cs">Calculators</button>
     <button class="tab" data-view="docs" data-cat="admin">Setup and forms</button>
     <button class="tab" data-view="tasks" data-cat="sales">Follow-ups<span class="n" id="taskCount" hidden></span></button>
     <button class="tab" data-view="calendar" data-cat="ops">Order calendar</button>
@@ -379,6 +382,7 @@ details.seq[open] summary{background:var(--raise)}
     <button class="tab" data-view="automations" data-cat="admin">Automations</button>
     <button class="tab" data-view="sequences" data-cat="sales">Sequences<span class="n" id="seqCount" hidden></span></button>
     <button class="tab" data-view="setup" data-cat="admin">Setup</button>
+    <button class="tab" data-view="commissions" data-cat="acct" id="commissionsTab" hidden>Commissions</button>
   </nav>
   <div class="spacer"></div>
   <button class="ghost" data-act="quick-log" data-kind="call">Log call</button>
@@ -417,6 +421,10 @@ details.seq[open] summary{background:var(--raise)}
 <script src="js/crm-auth.js"></script>
 <script src="js/crm-quote.js"></script>
 <script src="js/crm-orders.js"></script>
+<script src="js/crm-commission-math.js"></script>
+<script src="js/crm-supply.js"></script>
+<script src="js/crm-vendors.js"></script>
+<script src="js/crm-commissions.js"></script>
 <script src="js/crm-app.js"></script>
 </body>
 </html>

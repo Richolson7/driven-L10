@@ -67,6 +67,8 @@
     { k: "vendor_quantity", l: "Vendor quantity", t: "number", g: "Vendor" },
     { k: "freight", l: "Freight", t: "number", g: "Vendor" },
     { k: "customer_po_number", l: "Customer PO #", t: "text", g: "Order" },
+    { k: "vendor_po_number", l: "Vendor PO #", t: "text", g: "Order" },
+    { k: "bill_url", l: "Bill link", t: "text", g: "Order" },
     { k: "customer_po_url", l: "Customer PO link", t: "text", g: "Order" },
     { k: "driven_po_url", l: "Driven PO #", t: "text", g: "Order" },
     { k: "est_ship_date", l: "Estimated ship date", t: "date", g: "Order" },
@@ -184,6 +186,7 @@
       quote_sent_date: day(row.quote_sent_date), customer_po_number: row.customer_po_number || "", customer_po_url: row.customer_po_url || "",
       driven_po_url: row.driven_po_url || "", est_ship_date: day(row.est_ship_date), est_delivery_date: day(row.est_delivery_date),
       freight: row.freight, invoice_sent_date: day(row.invoice_sent_date), paid_date: day(row.paid_date), notes: row.notes || "",
+      vendor_po_number: row.vendor_po_number || "", bill_url: row.bill_url || "",
       custom: userCustom(c), status: c._status || "open", won_at: c._won_at || null, lost_reason: c._lost_reason || "",
       order_lines: c._order_lines || [], quote: c._quote || null
     };
@@ -222,8 +225,15 @@
   }
 
   async function loadAll() {
-    var tables = ["crm_stages", "crm_team", "crm_automation_rules", "crm_companies", "crm_contacts", "crm_ship_tos", "crm_deals", "crm_tasks", "crm_activity", "crm_custom_fields", "crm_sequence_steps"];
+    var tables = ["crm_stages", "crm_team", "crm_automation_rules", "crm_companies", "crm_contacts", "crm_ship_tos", "crm_deals_safe", "crm_tasks", "crm_activity", "crm_custom_fields", "crm_sequence_steps"];
     var results = await Promise.all(tables.map(function (t) { return CRMDB.selectAll(t).then(function (r) { return { t: t, data: r.data, error: r.error }; }); }));
+    var dealRes = results.find(function (r) { return r.t === "crm_deals_safe"; });
+    if (dealRes && dealRes.error) {
+      var plain = await CRMDB.selectAll("crm_deals");
+      dealRes.error = plain.error;
+      dealRes.data = plain.data;
+      dealRes.t = "crm_deals_safe";
+    }
     var bad = results.find(function (r) { return r.error && r.t !== "crm_sequence_steps"; });
     if (bad) {
       $("#view").innerHTML = "<p class='banner'>Could not load the CRM. " + esc(CRMDB.explain(bad.error)) + "</p>";
@@ -241,6 +251,7 @@
     S.rules = by.crm_automation_rules.map(function (r) { return { id: r.id, name: r.name, trigger: r.trigger, stage: r.stage, field: r.date_field, days: r.offset_days || [], list: r.company_list, notify: r.notify_team, via: r.via, msg: r.message, active: r.active !== false }; }).sort(function (a, b) { return a.id - b.id; });
     S.fields = by.crm_custom_fields.map(function (f) { return { id: f.id, entity: f.entity, key: f.key, label: f.label, type: f.type, options: f.options || [], position: f.position || 0, active: f.active !== false }; }).sort(function (a, b) { return a.position - b.position; });
     S.companies = by.crm_companies.map(mapCompany);
+    by.crm_deals = by.crm_deals_safe || by.crm_deals || [];
     S.contacts = by.crm_contacts.map(function (x) { return { id: x.id, company_id: x.company_id, role: x.role || "", name: x.name || "", email: x.email || "", phone: x.phone || "" }; });
     S.shipTos = by.crm_ship_tos.map(function (s) { return { id: s.id, company_id: s.company_id, label: s.label || "Ship-to", address: s.address || "", is_default: !!s.is_default }; });
     S.deals = by.crm_deals.map(mapDeal);
@@ -256,7 +267,8 @@
     quotesApi = !probe.error;
     S.quotesNote = probe.error ? "The quote header is stored on the deal until the crm_quotes migration is applied. Price, quantity, vendor, freight, and description still save on the deal itself." : "";
     if (quotesApi) await loadQuoteTables();
-    var lineProbe = await CRMDB.db.from("crm_deal_lines").select("id").limit(1);
+    var lineProbe = await CRMDB.db.from("crm_order_lines").select("id").limit(1);
+    if (lineProbe.error) lineProbe = await CRMDB.db.from("crm_deal_lines").select("id").limit(1);
     linesApi = !lineProbe.error;
     S.linesNote = lineProbe.error ? "Order lines are stored on each deal until the crm_deal_lines migration is applied. Revenue, cost, profit, and margin are calculated and are not stored." : "";
     if (linesApi) await loadDealLines();
@@ -297,7 +309,9 @@
     });
   }
   async function loadDealLines() {
-    var res = await CRMDB.db.from("crm_deal_lines").select("*").order("position");
+    var res = await CRMDB.db.from("crm_order_lines").select("*").order("position");
+    if (res.error) res = await CRMDB.db.from("crm_deal_lines").select("*").order("position");
+    if (res.error) res = await CRMDB.db.from("crm_deal_lines").select("id,deal_id,product_id,position,line_date,description,invoice_number,sales_rep,category,vendor_id,quantity,unit,sell_price,qb_invoice_id,qb_item_id,created_at,updated_at").order("position");
     if (res.error) { linesApi = false; S.linesNote = "Could not read order lines. " + CRMDB.explain(res.error); return; }
     var byDeal = {};
     (res.data || []).forEach(function (l) { (byDeal[l.deal_id] = byDeal[l.deal_id] || []).push(lineFromDb(l)); });
@@ -683,7 +697,7 @@
           sell_price: l.price == null || l.price === "" ? null : l.price,
           updated_at: new Date().toISOString()
         };
-        var ls = l.line_id ? await CRMDB.update("crm_deal_lines", l.line_id, row, "order line") : await CRMDB.insert("crm_deal_lines", row, "order line");
+        var ls = l.line_id ? await CRMDB.update("crm_deal_lines", l.line_id, row, "order line", { cols: "id" }) : await CRMDB.insert("crm_deal_lines", row, "order line", { cols: "id" });
         if (!ls) { linesApi = false; S.linesNote = "Order lines could not be saved to crm_deal_lines. They are stored on the deal instead."; break; }
         l.line_id = ls.id;
         kept.push(ls.id);
@@ -753,7 +767,7 @@
     });
   }
 
-  var VIEW_CAT = { pipeline: "sales", companies: "sales", docs: "admin", tasks: "sales", calendar: "ops", orders: "ops", automations: "admin", sequences: "sales", setup: "admin", calculator: "cs" };
+  var VIEW_CAT = { pipeline: "sales", companies: "sales", vendors: "sales", docs: "admin", tasks: "sales", calendar: "ops", orders: "ops", automations: "admin", sequences: "sales", setup: "admin", calculator: "cs", commissions: "acct" };
 
   function render() {
     document.documentElement.dataset.theme = S.theme;
@@ -770,8 +784,10 @@
     var cat = VIEW_CAT[S.view] || "sales";
     if (view) view.dataset.cat = cat;
     var theme = S.theme === "light" ? "light" : "dark";
-    if (S.view === "calculator" && view && view.dataset.calcTheme === theme && view.querySelector("iframe.calc-frame")) return;
-    var views = { pipeline: vPipeline, companies: vCompanies, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, automations: vAutomations, sequences: vSequences, setup: vSetup, calculator: vCalculator };
+    if (window.CRMCommissions) CRMCommissions.syncNav();
+    var calcCat = S.calcCat || "";
+    if (S.view === "calculator" && view && view.dataset.calcTheme === theme && view.dataset.calcCat === calcCat && view.querySelector("iframe.calc-frame")) return;
+    var views = { pipeline: vPipeline, companies: vCompanies, vendors: function () { if (window.CRMVendors) CRMVendors.render(); }, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, automations: vAutomations, sequences: vSequences, setup: vSetup, calculator: vCalculator, commissions: function () { if (window.CRMCommissions) CRMCommissions.render(); } };
     (views[S.view] || vPipeline)();
   }
 
@@ -780,7 +796,9 @@
     var view = $("#view");
     if (!view) return;
     view.dataset.calcTheme = theme;
-    view.innerHTML = "<div class='calc-banner'>Customer Service<span class='calc-banner-sub'>Packaging calculator and pallet builder</span></div><iframe class='calc-frame' title='Packaging calculator and pallet builder' src='calculator.html?theme=" + theme + "'></iframe>";
+    view.dataset.calcCat = S.calcCat || "";
+    var cat = S.calcCat ? "&cat=" + encodeURIComponent(S.calcCat) : "";
+    view.innerHTML = "<div class='calc-banner'>Customer Service<span class='calc-banner-sub'>Packaging calculator and pallet builder</span></div><iframe class='calc-frame' title='Packaging calculator and pallet builder' src='calculator.html?theme=" + theme + cat + "'></iframe>";
   }
 
   function vPipeline() {
@@ -879,6 +897,7 @@
     var h = "<div class='dhead'><div style='flex:1'><div class='sub'>" + esc(c.name || "No company") + "</div><h2>" + esc(d.description || "Untitled deal") + "</h2><div class='sub'>" + (d.status === "lost" ? "<span class='chip lost'>Lost</span> " : isWon(d) ? "<span class='chip active'>Closed won " + esc(shortDate(d.won_at)) + "</span> " : "") + "In " + esc(stageName(d.stage)) + " for " + between(d.stage_changed_at || TODAY, TODAY) + " days</div></div><button class='ghost' data-act='close'>Close</button></div><div class='dbody'>";
     h += "<div class='path'>" + S.stages.map(function (s, i) { return "<button data-act='move' data-id='" + d.id + "' data-to='" + s.key + "' class='" + (i < si ? "done" : i === si ? "cur" : "") + "'>" + esc(s.name) + "</button>"; }).join("") + "</div>";
     h += "<div class='kv'><div><b>" + (val(d) ? money(val(d)) : "—") + "</b><span>Sale</span></div><div><b>" + (cost(d) ? money(cost(d)) : "—") + "</b><span>Cost with freight</span></div><div><b class='" + mgClass(m) + "'>" + (m == null ? "—" : pct(m)) + "</b><span>Margin</span></div></div>";
+    if (window.CRMSupply) h += CRMSupply.dealBlock(d);
     var dq = qOf(d);
     h += dq
       ? "<div class='qbox'><div><b>Quote " + esc(dq.number) + "</b> · " + esc(dq.status || "") + " · " + dq.lines.length + " line" + (dq.lines.length > 1 ? "s" : "") + " · " + money(qSell(dq)) + "</div><span style='display:flex;gap:8px'><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-act='q-download' data-id='" + d.id + "'>Download PDF</button><button class='ghost' data-act='open-quote' data-id='" + d.id + "'>Open quote</button></span></div>"
@@ -1107,8 +1126,8 @@
     h += "<div class='panel tablewrap'><table class='olog'><thead><tr>";
     h += th("Line Created Date", "lineDate") + th("Customer", "customer") + th("Product Description", "description") + th("Invoice #", "invoice") + th("Sales Rep", "rep") + th("Category", "category") + th("Vendor", "vendor") + th("Qty Ordered", "qty") + th("Unit", "unit") + th("Vendor Price (ea)", "vendorPrice") + th("Freight Cost ($)", "freight") + th("Sell Price (ea)", "sellPrice");
     h += "<th>Order Revenue ($)</th><th>Vendor Cost ($)</th><th>Overall Cost ($)</th><th>Gross Profit ($)</th><th>Margin %</th>";
-    h += th("Stage", "stage") + th("Customer PO", "po") + th("Est. ship", "estShip") + th("Est. delivery", "estDelivery") + th("Invoice sent", "invoiceSent") + th("Paid", "paid") + "<th></th></tr></thead><tbody>";
-    if (!rows.length) h += "<tr><td colspan='24' class='empty'>No lines in this view. An order line shows up when a deal reaches Customer PO, or choose All lines.</td></tr>";
+    h += th("Stage", "stage") + th("Customer PO", "po") + th("Vendor PO", "vendorPo") + th("Est. ship", "estShip") + th("Est. delivery", "estDelivery") + th("Invoice sent", "invoiceSent") + th("Paid", "paid") + "<th>Invoice payment</th><th>Bill</th><th></th></tr></thead><tbody>";
+    if (!rows.length) h += "<tr><td colspan='27' class='empty'>No lines in this view. An order line shows up when a deal reaches Customer PO, or choose All lines.</td></tr>";
     rows.forEach(function (r) {
       var id = "data-ol='" + r.dealId + ":" + r.index;
       h += "<tr>";
@@ -1127,13 +1146,16 @@
       h += "<td class='calc'>" + Orders.money(r.calc.revenue) + "</td><td class='calc'>" + Orders.money(r.calc.vendorCost) + "</td><td class='calc'>" + Orders.money(r.calc.overall) + "</td><td class='calc'>" + Orders.money(r.calc.profit) + "</td><td class='calc'>" + Orders.pct(r.calc.margin) + "</td>";
       h += "<td>" + esc(r.stage) + "</td>";
       h += "<td><input data-od='" + r.dealId + ":customer_po_number' value='" + esc(r.po) + "' aria-label='Customer PO'></td>";
+      h += "<td><input data-od='" + r.dealId + ":vendor_po_number' value='" + esc((dealById(r.dealId) || {}).vendor_po_number || "") + "' aria-label='Vendor PO'></td>";
       h += "<td><input type='date' data-od='" + r.dealId + ":est_ship_date' value='" + esc(r.estShip) + "' aria-label='Est ship'></td>";
       h += "<td><input type='date' data-od='" + r.dealId + ":est_delivery_date' value='" + esc(r.estDelivery) + "' aria-label='Est delivery'></td>";
       h += "<td><input type='date' data-od='" + r.dealId + ":invoice_sent_date' value='" + esc(r.invoiceSent) + "' aria-label='Invoice sent'></td>";
       h += "<td><input type='date' data-od='" + r.dealId + ":paid_date' value='" + esc(r.paid) + "' aria-label='Paid'></td>";
+      h += "<td>" + (window.CRMSupply ? CRMSupply.chip(r.dealId) : "") + "</td>";
+      h += "<td>" + ((dealById(r.dealId) || {}).bill_url ? "<a href='" + esc((dealById(r.dealId) || {}).bill_url) + "' target='_blank' rel='noopener'>Bill</a>" : "<input data-od='" + r.dealId + ":bill_url' placeholder='Bill link' aria-label='Bill link'>") + "</td>";
       h += "<td><button class='linkbtn' data-open-deal='" + r.dealId + "'>Deal</button></td></tr>";
     });
-    h += "</tbody><tfoot><tr><td colspan='12'>Totals</td><td class='calc'>" + Orders.money(tot.revenue) + "</td><td class='calc'>" + Orders.money(tot.vendorCost) + "</td><td class='calc'>" + Orders.money(tot.overall) + "</td><td class='calc'>" + Orders.money(tot.profit) + "</td><td class='calc'>" + Orders.pct(tot.margin) + "</td><td colspan='7'>" + rows.length + " lines</td></tr></tfoot></table></div>";
+    h += "</tbody><tfoot><tr><td colspan='12'>Totals</td><td class='calc'>" + Orders.money(tot.revenue) + "</td><td class='calc'>" + Orders.money(tot.vendorCost) + "</td><td class='calc'>" + Orders.money(tot.overall) + "</td><td class='calc'>" + Orders.money(tot.profit) + "</td><td class='calc'>" + Orders.pct(tot.margin) + "</td><td colspan='10'>" + rows.length + " lines</td></tr></tfoot></table></div>";
     $("#view").innerHTML = h;
     var oq = $("#oq");
     oq.addEventListener("input", function (e) { orderF.q = e.target.value; var p = e.target.selectionStart; vOrders(); var n = $("#oq"); n.focus(); if (p != null) n.setSelectionRange(p, p); });
@@ -1353,6 +1375,7 @@
     var tab = e.target.closest(".tab");
     if (tab) {
       S.view = tab.dataset.view;
+      if (S.view === "calculator") S.calcCat = tab.dataset.calc || "";
       if (window.history && history.replaceState) {
         var url = new URL(location.href);
         url.searchParams.delete("view");
@@ -1367,6 +1390,9 @@
   function handle(a, e) {
     var act = a.dataset.act;
     var id = a.dataset.id;
+    if (act && act.indexOf("vnd-") === 0 && window.CRMVendors) { CRMVendors.handle(a); return; }
+    if (act && act.indexOf("com-") === 0 && window.CRMCommissions) { CRMCommissions.handle(a); return; }
+    if (act && act.indexOf("sup-") === 0 && window.CRMSupply) { CRMSupply.handle(a); return; }
     if (act === "close") { closeDrawer(); return; }
     if (act === "mclose") { closeModal(); return; }
     if (act === "theme") { S.theme = S.theme === "dark" ? "light" : "dark"; localStorage.setItem("driven-crm-theme", S.theme); render(); return; }
@@ -1850,6 +1876,9 @@
     if (gen !== sessionGen) return;
     await runAutomations();
     if (gen !== sessionGen) return;
+    if (window.CRMVendors) await CRMVendors.load();
+    if (window.CRMCommissions) await CRMCommissions.load();
+    if (window.CRMSupply) await CRMSupply.load();
     var asked = new URLSearchParams(location.search).get("view");
     if (asked && VIEW_CAT[asked]) S.view = asked;
     render();
@@ -1897,6 +1926,8 @@
 
   document.addEventListener("change", function (e) {
     var el = e.target;
+    if (el.dataset && el.dataset.vnd && window.CRMVendors) { CRMVendors.onChange(el); return; }
+    if (el.dataset && el.dataset.com && window.CRMCommissions) { CRMCommissions.onChange(el); return; }
     if (el.dataset.act === "rule-on") { saveRule(+el.dataset.id, { active: el.checked }); return; }
     if (el.dataset.act === "via") { saveVia(+el.dataset.id, el.value); return; }
     if (el.dataset.ruleMsg) { saveRule(+el.dataset.ruleMsg, { message: el.value }); return; }
@@ -2153,6 +2184,26 @@
     vSetup();
     toast("Imported " + rows.length + " products. QuickBooks was not changed.");
   }
+
+  window.CRMHooks = {
+    esc: esc,
+    toast: toast,
+    openDrawer: openDrawer,
+    closeDrawer: closeDrawer,
+    openModal: openModal,
+    closeModal: closeModal,
+    meName: meName,
+    email: function () { return S.authEmail || ""; },
+    companies: function () { return S.companies; },
+    render: render,
+    setView: function (view, extra) {
+      if (extra && extra.calcCat != null) S.calcCat = extra.calcCat;
+      S.view = view;
+      closeDrawer();
+      render();
+      window.scrollTo(0, 0);
+    }
+  };
 
   function boot() {
     S.theme = localStorage.getItem("driven-crm-theme") || "dark";
