@@ -51,6 +51,14 @@ body:has(#driven-calculator[data-theme="dark"]) { background: #09090B; }
 #driven-calculator h2 { font-size: 1.1rem; margin: 0 0 8px; color: var(--calc-ink); }
 #driven-calculator p, #driven-calculator .label { margin: 0 0 10px; color: var(--calc-muted); }
 #driven-calculator .head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+#driven-calculator .head-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; flex: none; }
+#driven-calculator .head-actions a {
+  display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+  min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--calc-line);
+  background: var(--calc-card); color: var(--calc-ink); font-weight: 700; white-space: nowrap;
+}
+#driven-calculator .head-actions a.nav-home { background: #17884a; color: #fff; border-color: #17884a; }
+#driven-calculator[data-theme="dark"] .head-actions a.nav-home { background: #FFB347; color: #1A1208; border-color: #FFB347; }
 #driven-calculator .theme { flex: none; border-radius: 999px; min-height: 44px; }
 #driven-calculator .groups { display: grid; gap: 10px; margin-bottom: 12px; }
 #driven-calculator .group { border: 1px solid var(--calc-line); border-top: 3px solid #A86B12; border-radius: 12px; padding: 10px; background: var(--calc-card); }
@@ -581,7 +589,11 @@ rows:CM_DEFAULT_ROWS.map(function(r){return Object.assign({},r)})
         <h1>Driven Solutions</h1>
         <p>Packaging calculator and pallet builder. Enter dimensions and any one price. No vendor cost and no margin.</p>
       </div>
-      <button type="button" id="theme" class="theme" aria-label="${i==="dark"?"Dark mode on. Switch to light mode.":"Light mode on. Switch to dark mode."}"><span aria-hidden="true">${i==="dark"?"\u263E":"\u2600"}</span> ${i==="dark"?"Dark":"Light"}</button>
+      <div class="head-actions">
+        <a class="nav-home noprint" id="calc-home" href="index.html" target="_top">Home</a>
+        <a class="nav-back noprint" id="calc-back" href="crm.html" target="_top">← Back</a>
+        <button type="button" id="theme" class="theme" aria-label="${i==="dark"?"Dark mode on. Switch to light mode.":"Light mode on. Switch to dark mode."}"><span aria-hidden="true">${i==="dark"?"\u263E":"\u2600"}</span> ${i==="dark"?"Dark":"Light"}</button>
+      </div>
     </div>
     <div class="row noprint">
       ${["in","ft","mm"].map(d=>`<button type="button" data-unit="${d}" class="${u.lengthUnit===d?"on":""}">${d}</button>`).join("")}
