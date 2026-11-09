@@ -58,6 +58,11 @@ select,input{color-scheme:dark}
 .tab:hover{color:var(--tx)}
 .tab.active{color:var(--g);border-bottom-color:var(--g)}
 .tab .tab-icon{font-size:16px}
+a.tab.tab-link{text-decoration:none;color:var(--td)}
+a.tab.tab-link:hover{color:var(--tx)}
+.tab-stack{display:flex;flex-direction:column;align-items:flex-start;gap:1px;line-height:1.05}
+.tab-sub{font-family:'Barlow',sans-serif;font-size:9px;font-weight:600;letter-spacing:.15px;text-transform:none;color:var(--tm)}
+a.tab.tab-link:hover .tab-sub{color:var(--td)}
 .tab-badge{background:var(--red);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:1px 8px;font-family:'Barlow',sans-serif;letter-spacing:0}
 .panel{display:none}.panel.active{display:block}
 
@@ -278,6 +283,7 @@ body.print-scorecard-only #panel-l10{display:block!important}
     <div class="tab" data-panel="marketing" onclick="showPanel('marketing',this)"><span class="tab-icon">📣</span>Marketing</div>
     <div class="tab" data-panel="sales" onclick="showPanel('sales',this)"><span class="tab-icon">💵</span>Sales</div>
     <div class="tab" data-panel="service" onclick="showPanel('service',this)"><span class="tab-icon">🎧</span>Customer Service</div>
+    <a class="tab tab-link" href="https://cursor.com/canvas/store-a06293c5-ba1a-4f53-bc31-f4c630cdbe96/0e2b7dc4-f2a7-441d-af6c-4e21d2cb4606" target="_blank" rel="noopener"><span class="tab-icon" aria-hidden="true">🏭</span><span class="tab-stack"><span>Vendors</span><span class="tab-sub">Vendor Management (Supplier Map)</span></span></a>
     <div class="tab" data-panel="ops" onclick="showPanel('ops',this)"><span class="tab-icon">⚙️</span>Ops</div>
     <div class="tab" data-panel="l10" onclick="showPanel('l10',this)"><span class="tab-icon">📊</span>Scorecard</div>
   </div>
