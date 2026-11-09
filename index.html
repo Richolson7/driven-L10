@@ -94,7 +94,9 @@ select,input{color-scheme:dark}
 .trow.done .trow-title{text-decoration:line-through}
 .trow input[type=checkbox]{margin-top:2px;width:16px;height:16px}
 .trow-body{flex:1}
-.trow-title{font-size:14px;color:var(--tx);margin-bottom:6px}
+.trow-title{font-size:14px;color:var(--tx);margin-bottom:6px;white-space:pre-wrap}
+.trow-title.can-edit{cursor:pointer}
+.trow-title.can-edit:hover{color:var(--g)}
 .chip-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .chip{font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px;letter-spacing:.5px}
 .chip.owner{display:flex;align-items:center;gap:5px;background:var(--s3);color:var(--td)}
@@ -175,6 +177,7 @@ select,input{color-scheme:dark}
 .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
 .chart-card{background:var(--s2);border:1px solid var(--br);border-radius:4px;padding:14px}
 .chart-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--td);margin-bottom:10px}
+.chart-note{font-family:'Barlow',sans-serif;font-size:10px;font-weight:500;letter-spacing:.2px;color:var(--td);margin:-6px 0 8px}
 .chart-wrap{position:relative;height:190px}
 
 .rock-row{display:grid;grid-template-columns:1fr 110px 90px auto 32px;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05);background:var(--s2)}
@@ -198,6 +201,7 @@ select,input{color-scheme:dark}
   body{background:#fff;color:#000}
   .kpi-table td,.kpi-table th{color:#000;border-color:#ccc}
   .chart-card{border-color:#ccc;background:#fff}
+  .chart-note{color:#555}
   .content{padding:10px 20px}
   .chart-grid{page-break-inside:avoid}
   .panel{display:block!important}
@@ -420,9 +424,9 @@ const KPIS = {
 
 const AGENDA = [
   {key:'segue', label:'Segue', min:5},
+  {key:'headlines', label:'Headlines', min:5},
   {key:'scorecard', label:'Scorecard', min:10},
   {key:'rocks', label:'Rocks', min:5},
-  {key:'headlines', label:'Headlines', min:5},
   {key:'todos', label:'To-Dos', min:5},
   {key:'ids', label:'IDS', min:55},
   {key:'conclude', label:'Conclude', min:5},
@@ -625,6 +629,9 @@ function printScorecardOnly(){
 let taskFilter = 'All';
 let ownerFilter = 'All';
 let categoryFilter = 'All';
+let editingTaskId = null;
+const TASK_CATEGORIES = ['General','Finance','Sales','Ops','Marketing','Admin'];
+const TASK_PRIORITIES = ['Low','Medium','High'];
 
 function renderOwnerSummary(){
   const el = document.getElementById('owner-summary');
@@ -746,6 +753,44 @@ async function deleteTask(id){
 async function saveTaskAttachments(id, attachments){
   try { await db.from('driven_tasks').update({attachments, updated_at:new Date().toISOString()}).eq('id',id); } catch(e){ toast('⚠️ Attachment upload failed — try again'); }
 }
+function startEditTask(id){
+  editingTaskId = id;
+  renderTasks();
+  const nodes = [...document.querySelectorAll(`.edit-task-text[data-id="${id}"]`)];
+  const el = nodes.find(n => n.offsetParent !== null) || nodes[0];
+  if (el){
+    el.focus();
+    const len = el.value.length;
+    if (el.setSelectionRange) el.setSelectionRange(len, len);
+  }
+}
+function cancelEditTask(){ editingTaskId = null; renderTasks(); }
+async function saveEditTask(id, el){
+  const root = el && el.closest ? el.closest('.trow') : null;
+  if (!root) return;
+  const text = root.querySelector('.edit-task-text').value.trim();
+  if (!text){ toast('⚠️ Task text can\'t be empty'); return; }
+  const owner = root.querySelector('.edit-task-owner').value.trim();
+  const category = root.querySelector('.edit-task-category').value;
+  const priority = root.querySelector('.edit-task-priority').value;
+  const dueVal = root.querySelector('.edit-task-due').value;
+  const due = dueVal || null;
+  const t = tasks.find(x=>x.id===id);
+  if (t){ t.text = text; t.owner = owner; t.category = category; t.priority = priority; t.due = due || ''; }
+  editingTaskId = null;
+  renderTasks();
+  try {
+    const {error} = await db.from('driven_tasks').update({
+      text, owner, category, priority, due, updated_at: new Date().toISOString()
+    }).eq('id', id);
+    if (error) throw error;
+  } catch(e){ toast('⚠️ Could not save the edit — try again'); }
+}
+function taskSelectOptions(values, current){
+  const opts = values.slice();
+  if (current && !opts.includes(current)) opts.unshift(current);
+  return opts.map(v=>`<option value="${escapeAttr(v)}"${v===current?' selected':''}>${escapeAttr(v)}</option>`).join('');
+}
 
 function setTaskFilter(f){ taskFilter = f; renderTasks(); }
 function setOwnerFilter(v){ ownerFilter = v; renderTasks(); }
@@ -782,18 +827,36 @@ function matchesFilter(t){
 function taskRowHtml(t){
   const overdue = t.due && !t.done && t.due < todayStr();
   const od = overdue ? daysOverdue(t.due) : 0;
+  if (editingTaskId === t.id){
+    return `<div class="trow ${overdue?'':'ok'} ${t.done?'done':''}">
+      <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})">
+      <div class="trow-body">
+        <textarea class="tinp edit-task-text" data-id="${t.id}" style="width:100%;min-height:52px;resize:vertical" onkeydown="if(event.key==='Escape')cancelEditTask()">${escapeAttr(t.text)}</textarea>
+        <div class="chip-row" style="margin-top:6px">
+          <input class="tinp edit-task-owner" value="${escapeAttr(t.owner)}" placeholder="Owner" style="max-width:140px">
+          <select class="tsel edit-task-priority">${taskSelectOptions(TASK_PRIORITIES, t.priority||'Medium')}</select>
+          <select class="tsel edit-task-category">${taskSelectOptions(TASK_CATEGORIES, t.category||'General')}</select>
+          <input class="tinp edit-task-due" type="date" value="${escapeAttr(String(t.due||'').slice(0,10))}">
+        </div>
+        ${attachmentsHtml('task', t.id, t.attachments)}
+      </div>
+      <button class="attach-btn" title="Save" onclick="saveEditTask(${t.id}, this)">✔️</button>
+      <button class="trow-del" title="Cancel" onclick="cancelEditTask()">✕</button>
+    </div>`;
+  }
   return `<div class="trow ${overdue?'':'ok'} ${t.done?'done':''}">
     <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})">
     <div class="trow-body">
-      <div class="trow-title">${t.text}</div>
+      <div class="trow-title can-edit" title="Edit" onclick="startEditTask(${t.id})">${escapeAttr(t.text)}</div>
       <div class="chip-row">
-        <span class="chip owner"><span class="av">${ownerInitials(t.owner)}</span>${t.owner||'Unassigned'}</span>
+        <span class="chip owner"><span class="av">${ownerInitials(t.owner)}</span>${escapeAttr(t.owner)||'Unassigned'}</span>
         ${overdue?`<span class="chip overdue">${od}d overdue</span>`:''}
-        ${t.priority?`<span class="chip prio-${(t.priority||'').toLowerCase()}">${t.priority}</span>`:''}
-        ${t.category?`<span class="chip cat">${t.category}</span>`:''}
+        ${t.priority?`<span class="chip prio-${escapeAttr((t.priority||'').toLowerCase())}">${escapeAttr(t.priority)}</span>`:''}
+        ${t.category?`<span class="chip cat">${escapeAttr(t.category)}</span>`:''}
       </div>
       ${attachmentsHtml('task', t.id, t.attachments)}
     </div>
+    <button class="attach-btn" title="Edit" onclick="startEditTask(${t.id})">✏️</button>
     <button class="attach-btn" title="Attach a doc" onclick="startAttach('task',${t.id},this)">📎</button>
     <button class="trow-del" onclick="deleteTask(${t.id})">✕</button>
   </div>`;
@@ -828,6 +891,12 @@ function renderTasks(){
   const badge = document.getElementById('task-badge');
   badge.textContent = open;
   badge.style.display = open ? 'inline-block' : 'none';
+
+  const openList = document.getElementById('step-todos-list');
+  if (openList){
+    const openTasks = tasks.filter(t=>!t.done);
+    openList.innerHTML = openTasks.length ? openTasks.map(taskRowHtml).join('') : '<div style="color:var(--td);font-size:12px">Nothing open. Nice.</div>';
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1102,26 +1171,50 @@ function updateIssueNotes(id, val){
   const i = issues.find(x=>x.id===id);
   if (i){ i.notes = val; saveAllData(); }
 }
-async function addTaskFromIssue(id){
+function taskTextFromIssue(issue){
+  const title = (issue.text || '').trim();
+  const notes = (issue.notes || '').trim();
+  if (!title && !notes) return '';
+  if (!notes || notes === title) return title;
+  if (!title) return notes;
+  return title + '\n\n' + notes;
+}
+async function addTaskFromIssue(id, btn){
   const i = issues.find(x=>x.id===id);
   if (!i) return;
+  const rowEl = btn && btn.closest ? btn.closest('.issue-row') : null;
+  const notesEl = rowEl && rowEl.querySelector('textarea');
+  if (notesEl && notesEl.value !== (i.notes||'')){
+    i.notes = notesEl.value;
+    saveAllData();
+  }
+  const text = taskTextFromIssue(i);
+  if (!text){ toast('⚠️ Add a finding before creating a to-do'); return; }
+  if (btn) btn.disabled = true;
   try {
     const {data:row, error} = await db.from('driven_tasks').insert({
-      text: i.text, owner: i.owner||'', category:'General', priority:'Medium', due:null, done:false, attachments:[]
+      text, owner: i.owner||'', category:'General', priority:'Medium', due:null, done:false, attachments:[]
     }).select().single();
     if (error) throw error;
-    if (!tasks.find(t=>t.id===row.id)) tasks.push(rowToTask(row));
-    toast('✅ Task added from issue');
-  } catch(e){ toast('⚠️ Could not add task — try again'); }
+    const mapped = rowToTask(row);
+    tasks = [mapped, ...tasks.filter(t=>t.id!==mapped.id)];
+    renderTasks();
+    if (AGENDA[stepIdx] && AGENDA[stepIdx].key === 'ids') renderStepMain();
+    else if (AGENDA[stepIdx] && AGENDA[stepIdx].key === 'todos') renderStepMain();
+    toast('To-do added to the To-Do list and the Task Tracker');
+  } catch(e){
+    if (btn) btn.disabled = false;
+    toast('⚠️ Could not add task — try again');
+  }
 }
 function issueRowHtml(i){
   const label = i.status.charAt(0).toUpperCase()+i.status.slice(1);
   return `<div class="issue-row" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05);background:var(--s2)">
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="trow-title" style="flex:1">${i.text}</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="trow-title" style="flex:1;min-width:160px">${i.text}</div>
       <div style="font-size:11px;color:var(--td)">${i.owner||'—'}</div>
       <button class="status-btn ${i.status}" onclick="cycleIssue(${i.id})">${label}</button>
-      <button class="attach-btn" title="Add a task from this issue" onclick="addTaskFromIssue(${i.id})">+ Task</button>
+      <button class="tbtn green" style="flex-shrink:0" title="Create a to-do from this finding and its notes" onclick="addTaskFromIssue(${i.id}, this)">Create to-do from finding</button>
       <button class="trow-del" onclick="deleteIssue(${i.id})">✕</button>
     </div>
     <textarea class="tinp" placeholder="What did we discuss / decide..." style="width:100%;min-height:44px;resize:vertical" onchange="updateIssueNotes(${i.id}, this.value)">${i.notes||''}</textarea>
@@ -1135,12 +1228,56 @@ function renderIssues(){
 // ══════════════════════════════════════════════════════════
 // KPI TABLES / CHARTS
 // ══════════════════════════════════════════════════════════
+// Scale to the four weekly values. A target is drawn only when it fits on that
+// scale without squeezing the W1–W4 trend into a flat line.
+function weeklyAxis(trend, target){
+  const nums = trend.map(v => Number.isFinite(+v) ? +v : 0);
+  const lo = Math.min(...nums);
+  const hi = Math.max(...nums);
+  const span = hi - lo;
+  const pad = span > 0 ? span * 0.25 : (Math.abs(hi) > 0 ? Math.abs(hi) * 0.2 : 1);
+  let yMin = lo - pad;
+  let yMax = hi + pad;
+  const nonNeg = nums.every(v => v >= 0);
+  if (nonNeg && yMin < 0) yMin = 0;
+  if (yMax <= yMin) yMax = yMin + 1;
+
+  let showTarget = false;
+  if (target == null || target === '') return { yMin, yMax, showTarget };
+  const t = Number(target);
+  if (Number.isFinite(t)) {
+    if (t >= yMin && t <= yMax) {
+      showTarget = true;
+    } else if (span > 0) {
+      const extMin = Math.min(yMin, t);
+      const extMax = Math.max(yMax, t);
+      const axis = extMax - extMin || 1;
+      if ((hi - lo) / axis >= 0.4) {
+        yMin = extMin;
+        yMax = extMax;
+        showTarget = true;
+      }
+    }
+    if (showTarget) {
+      const slack = (yMax - yMin) * 0.06 || 1;
+      if (t > hi) yMax = t + slack;
+      if (t < lo) yMin = nonNeg ? Math.max(0, t - slack) : t - slack;
+    }
+  }
+  return { yMin, yMax, showTarget };
+}
 function sparkline(key, kpi){
   const trend = ['w1','w2','w3','w4'].map(w=>getW(key,w));
   const status = getStatus(trend[3], kpi);
   const color = status==='g' ? '#5CB800' : status==='a' ? '#FFB800' : trend[3] ? '#FF4444' : '#4A5E58';
-  const max = Math.max(kpi.target, ...trend.filter(v=>v>0)) * 1.15 || 1;
-  const w=100,h=32,pts=trend.map((v,i)=> v>0 ? `${(i/3)*w},${h-(v/max)*h}` : null).filter(Boolean).join(' ');
+  const { yMin, yMax } = weeklyAxis(trend, null);
+  const range = (yMax - yMin) || 1;
+  const w=100, h=32;
+  const pts = trend.map((v,i)=>{
+    const x = (i/3)*w;
+    const y = 1 + (h-2) * (1 - (v - yMin) / range);
+    return `${x},${y}`;
+  }).join(' ');
   return `<svg class="mini-chart" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 function renderKPITable(tab){
@@ -1174,7 +1311,10 @@ function renderChartsInto(containerId, tabs){
   tabs.forEach(tab=>{
     KPIS[tab].forEach((kpi,idx)=>{
       const id = `chart-${containerId}-${tab}-${idx}-${kpi.key}`;
-      html += `<div class="chart-card"><div class="chart-title">${kpi.label}</div><div class="chart-wrap"><canvas id="${id}"></canvas></div></div>`;
+      const trend = ['w1','w2','w3','w4'].map(w=>getW(kpi.key,w));
+      const axis = weeklyAxis(trend, kpi.target);
+      const note = axis.showTarget ? '' : `<div class="chart-note">Target ${Number(kpi.target).toLocaleString()} off this scale</div>`;
+      html += `<div class="chart-card"><div class="chart-title">${kpi.label}</div>${note}<div class="chart-wrap"><canvas id="${id}"></canvas></div></div>`;
     });
   });
   grid.innerHTML = html;
@@ -1184,15 +1324,22 @@ function renderChartsInto(containerId, tabs){
       const ctx = document.getElementById(id);
       if (!ctx) return;
       const trend = ['w1','w2','w3','w4'].map(w=>getW(kpi.key,w));
+      const axis = weeklyAxis(trend, kpi.target);
+      const datasets = [
+        { label:kpi.label, data:trend, borderColor:'#39FF14', backgroundColor:'#39FF1422', tension:.3, fill:true, pointRadius:3 }
+      ];
+      if (axis.showTarget) {
+        datasets.push({ label:'Target', data:[kpi.target,kpi.target,kpi.target,kpi.target], borderColor:'#7c3aed', borderDash:[4,3], pointRadius:0 });
+      }
       chartInstances[id] = new Chart(ctx, {
         type:'line',
-        data:{ labels:['W1','W2','W3','W4'], datasets:[
-          { label:kpi.label, data:trend, borderColor:'#39FF14', backgroundColor:'#39FF1422', tension:.3, fill:true },
-          { label:'Target', data:[kpi.target,kpi.target,kpi.target,kpi.target], borderColor:'#7c3aed', borderDash:[4,3], pointRadius:0 },
-        ]},
+        data:{ labels:['W1','W2','W3','W4'], datasets },
         options:{ responsive:true, maintainAspectRatio:false,
           plugins:{ legend:{labels:{color:'#8FA8A0',font:{size:10}}} },
-          scales:{ x:{ticks:{color:'#8FA8A0'},grid:{color:'rgba(255,255,255,.05)'}}, y:{ticks:{color:'#8FA8A0'},grid:{color:'rgba(255,255,255,.05)'}} }
+          scales:{
+            x:{ticks:{color:'#8FA8A0'},grid:{color:'rgba(255,255,255,.05)'}},
+            y:{min:axis.yMin, max:axis.yMax, ticks:{color:'#8FA8A0', callback:v=>Number(v).toLocaleString()}, grid:{color:'rgba(255,255,255,.05)'}}
+          }
         }
       });
     });
@@ -1395,7 +1542,7 @@ function renderStepMain(){
   else if (step.key === 'ids'){
     main.innerHTML = `
       <div class="step-title">IDS — IDENTIFY, DISCUSS, SOLVE — 55 min</div>
-      <div class="step-sub">Click a status chip to cycle it: Identified → Discussing → Solved.</div>
+      <div class="step-sub">Click a status chip to cycle it: Identified → Discussing → Solved. Create to-do from finding adds that issue and its notes to the To-Do list and the Task Tracker.</div>
       <div class="add-row">
         <input class="tinp" id="new-issue-text" placeholder="Issue...">
         <button class="mic-btn" onclick="startVoiceInto('new-issue-text', this)">🎤</button>
@@ -1480,12 +1627,12 @@ function buildAgendaText(snapshot){
   out += `1. SEGUE — GOOD NEWS\n`;
   const sb = s.notes.segueByPerson || {};
   out += Object.keys(sb).length ? Object.entries(sb).map(([p,v])=>`  ${p}: ${v||'—'}`).join('\n')+'\n\n' : '  (none)\n\n';
+  out += `2. CUSTOMER / EMPLOYEE HEADLINES\n${(s.notes.headlines||'—')}\n\n`;
   const allKpis = [...KPIS.Sales, ...KPIS.Ops];
   const reds = allKpis.filter(k => getW(k.key,'w4') && getStatus(getW(k.key,'w4'),k)==='r').length;
   const ambers = allKpis.filter(k => getW(k.key,'w4') && getStatus(getW(k.key,'w4'),k)==='a').length;
-  out += `2. SCORECARD REVIEW\n${allKpis.length-reds-ambers} On Target, ${ambers} Watch, ${reds} Below Floor\n\n`;
-  out += `3. ROCK REVIEW\n` + (s.rocks.length ? s.rocks.map(r=>`  [${r.onTrack?'ON TRACK':'OFF TRACK'}] ${r.text} (${r.owner||'—'}${r.due?', due '+r.due:''})`).join('\n')+'\n\n' : '  (none)\n\n');
-  out += `4. CUSTOMER / EMPLOYEE HEADLINES\n${(s.notes.headlines||'—')}\n\n`;
+  out += `3. SCORECARD REVIEW\n${allKpis.length-reds-ambers} On Target, ${ambers} Watch, ${reds} Below Floor\n\n`;
+  out += `4. ROCK REVIEW\n` + (s.rocks.length ? s.rocks.map(r=>`  [${r.onTrack?'ON TRACK':'OFF TRACK'}] ${r.text} (${r.owner||'—'}${r.due?', due '+r.due:''})`).join('\n')+'\n\n' : '  (none)\n\n');
   out += `5. TO-DO LIST REVIEW\n` + (s.tasks.length ? s.tasks.map(t=>`  [${t.done?'x':' '}] ${t.text} (${t.owner||'—'}${t.due?', due '+t.due:''})`).join('\n')+'\n\n' : '  (none)\n\n');
   out += `6. IDS — ISSUES\n` + (s.issues.length ? s.issues.map(i=>`  [${i.status.toUpperCase()}] ${i.text} (${i.owner||'—'})`).join('\n')+'\n\n' : '  (none)\n\n');
   out += `7. CONCLUDE\nCascading message: ${(s.notes.cascade||'—')}\nMeeting rating: ${(s.notes.rating||'—')}/10\n`;
