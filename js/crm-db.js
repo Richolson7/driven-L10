@@ -69,7 +69,8 @@
   }
 
   async function insert(table, row, what, opts) {
-    var res = await db.from(table).insert(row).select().single();
+    var q = db.from(table).insert(row);
+    var res = opts && opts.cols ? await q.select(opts.cols).single() : await q.select().single();
     if (res.error && opts && opts.ignoreUnique && res.error.code === "23505") return { duplicate: true };
     if (res.error) return reportError(what, res.error);
     if (!res.data) return reportError(what, { message: "Supabase returned no row." });
@@ -77,8 +78,9 @@
     return res.data;
   }
 
-  async function update(table, id, row, what) {
-    var res = await db.from(table).update(row).eq("id", id).select().single();
+  async function update(table, id, row, what, opts) {
+    var q = db.from(table).update(row).eq("id", id);
+    var res = opts && opts.cols ? await q.select(opts.cols).single() : await q.select().single();
     if (res.error) return reportError(what, res.error);
     if (!res.data) return reportError(what, { message: "No row was updated." });
     reportOk(what);

@@ -1,0 +1,30 @@
+var assert = require("assert");
+var M = require("./crm-commission-math.js");
+
+assert.strictEqual(M.tierRate(9999.99), 0.05);
+assert.strictEqual(M.tierRate(10000), 0.075);
+assert.strictEqual(M.tierRate(20000), 0.075);
+assert.strictEqual(M.tierRate(50000), 0.075);
+assert.strictEqual(M.tierRate(50000.01), 0.1);
+assert.strictEqual(M.commissionAmount(0.075, 5000), 375);
+assert.strictEqual(M.commissionAmount(0.3, 1000), 300);
+assert.strictEqual(M.commissionAmount(0.2, 1000), 200);
+
+assert.strictEqual(M.payStatus(null, null), "Earned, awaiting full payment");
+assert.strictEqual(M.payStatus(null, { amount_paid: 100, balance_due: 19900 }), "Earned, awaiting full payment");
+assert.strictEqual(M.paymentState({ amount_paid: 100, balance_due: 19900 }).label, "Partially paid");
+assert.strictEqual(M.payStatus(null, { paid_in_full_at: "2026-11-01", payment_source: "manual" }), "Payable");
+assert.strictEqual(M.payStatus("paid", { paid_in_full_at: null }), "Paid");
+assert.strictEqual(M.canMarkPaid("Payable"), true);
+assert.strictEqual(M.canMarkPaid("Earned, awaiting full payment"), false);
+assert.strictEqual(M.canMarkPaid("Paid"), false);
+assert.strictEqual(M.nextPayroll("2026-11-10"), "2026-11-15");
+assert.strictEqual(M.nextPayroll("2026-11-15"), "2026-11-30");
+assert.strictEqual(M.nextPayroll("2026-11-30"), "2026-12-15");
+assert.strictEqual(M.inSetterWindow("2026-01-15", "2026-01-15"), true);
+assert.strictEqual(M.inSetterWindow("2026-07-15", "2026-01-15"), true);
+assert.strictEqual(M.inSetterWindow("2026-07-16", "2026-01-15"), false);
+assert.strictEqual(M.sheetGroup("Ridgid"), "Rigid");
+assert.strictEqual(M.sheetGroup("Stretch Wrap / Film"), "Flexible");
+assert.strictEqual(M.sheetGroup("Pallets"), "Pallets");
+console.log("crm-commission-math tests ok");
