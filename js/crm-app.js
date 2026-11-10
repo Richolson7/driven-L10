@@ -80,7 +80,25 @@
   var DATE_KEYS = { quote_sent_date: 1, est_ship_date: 1, est_delivery_date: 1, invoice_sent_date: 1, paid_date: 1 };
   var NUM_KEYS = { price_per_unit: 1, quantity: 1, vendor_price_per_unit: 1, vendor_quantity: 1, freight: 1, ship_to_id: 1, vendor_id: 1, company_id: 1 };
 
-  var S = { theme: "dark", view: "pipeline", meId: null, authEmail: "", authLocked: false, entered: false, stages: [], team: [], rules: [], fields: [], companies: [], contacts: [], shipTos: [], deals: [], tasks: [], activity: [], stepRows: [], targets: [], outreach: [], products: [], messages: [], sequenceNote: "", targetsNote: "", quotesNote: "", linesNote: "", productsNote: "", messagesNote: "", feedback: "" };
+  var S = { theme: "dark", view: "pipeline", calcReturn: "", meId: null, authEmail: "", authLocked: false, entered: false, stages: [], team: [], rules: [], fields: [], companies: [], contacts: [], shipTos: [], deals: [], tasks: [], activity: [], stepRows: [], targets: [], outreach: [], products: [], messages: [], sequenceNote: "", targetsNote: "", quotesNote: "", linesNote: "", productsNote: "", messagesNote: "", feedback: "" };
+  function rememberCalcReturn(fromView) {
+    if (!fromView || fromView === "calculator") return;
+    S.calcReturn = fromView;
+    var href = fromView === "pipeline" ? "crm.html" : "crm.html?view=" + encodeURIComponent(fromView);
+    try { sessionStorage.setItem("driven-calc-return", href); } catch (e) {}
+  }
+  function calcBackHref() {
+    var from = "";
+    try { from = new URLSearchParams(location.search).get("from") || ""; } catch (e) {}
+    if (from === "vendors" || S.calcReturn === "vendors") return "vendors.html";
+    if (S.calcReturn && S.calcReturn !== "pipeline" && S.calcReturn !== "calculator") return "crm.html?view=" + encodeURIComponent(S.calcReturn);
+    try {
+      var stored = sessionStorage.getItem("driven-calc-return") || "";
+      if (stored === "vendors.html") return stored;
+      if (/^crm\.html(\?view=[\w-]+)?$/.test(stored)) return stored;
+    } catch (e2) {}
+    return "crm.html";
+  }
   var sessionGen = 0;
   var admitEmail = "";
   var gateHold = false;
@@ -798,7 +816,8 @@
     view.dataset.calcTheme = theme;
     view.dataset.calcCat = S.calcCat || "";
     var cat = S.calcCat ? "&cat=" + encodeURIComponent(S.calcCat) : "";
-    view.innerHTML = "<div class='calc-banner'>Customer Service<span class='calc-banner-sub'>Packaging calculator and pallet builder</span></div><iframe class='calc-frame' title='Packaging calculator and pallet builder' src='calculator.html?theme=" + theme + cat + "'></iframe>";
+    var back = calcBackHref();
+    view.innerHTML = "<div class='calc-banner'><a class='ghost' href='" + esc(back) + "' style='text-decoration:none'>← Back</a>Customer Service<span class='calc-banner-sub'>Packaging calculator and pallet builder</span><span class='calc-banner-sub'><a href='index.html'>Home</a> · <a href='crm.html'>CRM</a> · <a href='vendors.html'>Vendors</a> · <a href='huddle.html'>Huddle</a></span></div><iframe class='calc-frame' title='Packaging calculator and pallet builder' src='calculator.html?theme=" + theme + cat + "&back=" + encodeURIComponent(back) + "'></iframe>";
   }
 
   function vPipeline() {
@@ -1375,6 +1394,7 @@
     var tab = e.target.closest(".tab");
     if (tab) {
       if (tab.tagName === "A" && tab.getAttribute("href")) return;
+      if (tab.dataset.view === "calculator") rememberCalcReturn(S.view);
       S.view = tab.dataset.view;
       if (S.view === "calculator") S.calcCat = tab.dataset.calc || "";
       if (window.history && history.replaceState) {
@@ -1398,6 +1418,7 @@
     if (act === "mclose") { closeModal(); return; }
     if (act === "theme") { S.theme = S.theme === "dark" ? "light" : "dark"; localStorage.setItem("driven-crm-theme", S.theme); render(); return; }
     if (act === "open-calc") {
+      rememberCalcReturn(S.view);
       S.view = "calculator";
       if (window.history && history.replaceState) {
         var calcUrl = new URL(location.href);
@@ -1882,6 +1903,10 @@
     if (window.CRMSupply) await CRMSupply.load();
     var asked = new URLSearchParams(location.search).get("view");
     if (asked === "vendors") { location.replace("vendors.html"); return; }
+    if (asked === "calculator" && new URLSearchParams(location.search).get("from") === "vendors") {
+      S.calcReturn = "vendors";
+      try { sessionStorage.setItem("driven-calc-return", "vendors.html"); } catch (e) {}
+    }
     if (asked && VIEW_CAT[asked]) S.view = asked;
     render();
     var signedIn = S.team.find(function (t) { return t.id === +S.meId; });
@@ -2200,6 +2225,7 @@
     render: render,
     setView: function (view, extra) {
       if (extra && extra.calcCat != null) S.calcCat = extra.calcCat;
+      if (view === "calculator") rememberCalcReturn(S.view);
       S.view = view;
       closeDrawer();
       render();
