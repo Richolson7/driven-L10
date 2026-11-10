@@ -1374,6 +1374,7 @@
     if (oc) { openCompany(+oc.dataset.openCompany); return; }
     var tab = e.target.closest(".tab");
     if (tab) {
+      if (tab.tagName === "A" && tab.getAttribute("href")) return;
       S.view = tab.dataset.view;
       if (S.view === "calculator") S.calcCat = tab.dataset.calc || "";
       if (window.history && history.replaceState) {
@@ -1880,6 +1881,7 @@
     if (window.CRMCommissions) await CRMCommissions.load();
     if (window.CRMSupply) await CRMSupply.load();
     var asked = new URLSearchParams(location.search).get("view");
+    if (asked === "vendors") { location.replace("vendors.html"); return; }
     if (asked && VIEW_CAT[asked]) S.view = asked;
     render();
     var signedIn = S.team.find(function (t) { return t.id === +S.meId; });
