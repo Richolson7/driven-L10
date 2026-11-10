@@ -265,6 +265,14 @@ li.agentnote{border-left:3px solid var(--fill);padding-left:10px}
 #tour h3{font-size:21px;margin:2px 0 4px;color:var(--train)}
 #tour p{margin:0 0 12px;font-size:14px}
 .tour-hl{outline:3px solid var(--train)!important;outline-offset:3px;border-radius:6px}
+#tour .crm-intro-video{margin:4px 0 0}
+.crm-intro{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--train);border-radius:8px;padding:12px 14px;margin:0 0 16px;max-width:760px}
+.crm-intro-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.crm-intro-head h2{font-size:20px;color:var(--train)}
+.crm-intro-mini{margin:0 0 12px}
+.crm-intro-video{display:block;width:100%;max-width:720px;aspect-ratio:16/9;background:#000;border-radius:6px;margin-top:8px}
+.crm-steps{margin:0;padding-left:20px}
+.crm-steps li{margin:0 0 8px}
 .vr{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
 .vr input{margin-top:3px;width:18px;height:18px;accent-color:var(--accent);flex:none}
 .vbox{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:8px;font-size:14px}
@@ -391,6 +399,7 @@ details.seq[open] summary{background:var(--raise)}
     <button class="tab" data-view="sequences" data-cat="sales">Sequences<span class="n" id="seqCount" hidden></span></button>
     <button class="tab" data-view="setup" data-cat="admin">Setup</button>
     <button class="tab" data-view="commissions" data-cat="acct" id="commissionsTab" hidden>Commissions</button>
+    <button class="tab" data-view="training" data-cat="train">Training</button>
   </nav>
   <div class="spacer"></div>
   <button class="ghost" data-act="quick-log" data-kind="call">Log call</button>

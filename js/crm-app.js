@@ -785,7 +785,7 @@
     });
   }
 
-  var VIEW_CAT = { pipeline: "sales", companies: "sales", vendors: "sales", docs: "admin", tasks: "sales", calendar: "ops", orders: "ops", automations: "admin", sequences: "sales", setup: "admin", calculator: "cs", commissions: "acct" };
+  var VIEW_CAT = { training: "train", pipeline: "sales", companies: "sales", vendors: "sales", docs: "admin", tasks: "sales", calendar: "ops", orders: "ops", automations: "admin", sequences: "sales", setup: "admin", calculator: "cs", commissions: "acct" };
 
   function render() {
     document.documentElement.dataset.theme = S.theme;
@@ -805,8 +805,73 @@
     if (window.CRMCommissions) CRMCommissions.syncNav();
     var calcCat = S.calcCat || "";
     if (S.view === "calculator" && view && view.dataset.calcTheme === theme && view.dataset.calcCat === calcCat && view.querySelector("iframe.calc-frame")) return;
-    var views = { pipeline: vPipeline, companies: vCompanies, vendors: function () { if (window.CRMVendors) CRMVendors.render(); }, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, automations: vAutomations, sequences: vSequences, setup: vSetup, calculator: vCalculator, commissions: function () { if (window.CRMCommissions) CRMCommissions.render(); } };
+    var views = { pipeline: vPipeline, companies: vCompanies, vendors: function () { if (window.CRMVendors) CRMVendors.render(); }, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, automations: vAutomations, sequences: vSequences, setup: vSetup, calculator: vCalculator, training: vTraining, commissions: function () { if (window.CRMCommissions) CRMCommissions.render(); } };
     (views[S.view] || vPipeline)();
+  }
+
+  var INTRO_VIDEO = "assets/video/Driven_CRM_Intro_v1.mp4";
+  var INTRO_HIDE_KEY = "driven-crm-intro-hidden";
+  function introHidden() { try { return localStorage.getItem(INTRO_HIDE_KEY) === "1"; } catch (e) { return false; } }
+  function introVideo(label) {
+    return "<video class='crm-intro-video' controls preload='metadata' playsinline aria-label='" + esc(label || "Driven CRM intro") + "'><source src='" + INTRO_VIDEO + "' type='video/mp4'></video>";
+  }
+  function introBlock(where) {
+    if (where === "home" && introHidden()) {
+      return "<div class='crm-intro-mini'><button class='ghost' data-act='intro-show'>Watch the CRM intro</button></div>";
+    }
+    var h = "<div class='crm-intro' id='crmIntro'><div class='crm-intro-head'><h2>Intro</h2>";
+    if (where === "home") h += "<button class='linkbtn' data-act='intro-hide'>Hide intro</button>";
+    h += "</div><p class='log'>Why the CRM matters, and how to use it every day. About a minute and a half.</p>" + introVideo() + "</div>";
+    return h;
+  }
+
+  function vTraining() {
+    var h = "<div class='grid2'><div class='sect'><h2>Training</h2><p class='lead'>Start with the intro, then take the guided tour. You can replay both any time.</p>" + introBlock("training");
+    h += "<div class='mactions' style='justify-content:flex-start;margin-top:12px'><button class='cat-ctl train' type='button' data-act='tour'>Take the tour</button><a class='ghost' href='vendors.html' style='text-decoration:none'>Vendor portal training</a></div></div>";
+    h += "<div class='sect'><h2>Every day</h2><div class='panel' style='padding:14px'><ol class='crm-steps'>";
+    h += "<li><b>Sign in as yourself.</b> Check that Signed in as shows your name.</li>";
+    h += "<li><b>Work your Follow-ups.</b> Overdue first, then Today. Tick each one when it is done.</li>";
+    h += "<li><b>Search Companies first.</b> One record per company and contact. No duplicates.</li>";
+    h += "<li><b>Log it the same day.</b> Use Log call, Log email, or Log touch the moment you finish.</li>";
+    h += "<li><b>Move deals on the Pipeline.</b> Drag the card, or use the stage bar in the deal. Fill what the next stage asks for.</li>";
+    h += "<li><b>Customer PO?</b> Move the deal to Customer PO the same day. The order lands in Open orders.</li>";
+    h += "</ol></div></div></div>";
+    $("#view").innerHTML = h;
+  }
+
+  var TOUR = [
+    { title: "Welcome to the Driven CRM", body: "Watch this quick intro first, then click Next for a walk around the screen.", video: true },
+    { title: "Pipeline is home", body: "Deals move left to right through Sales, Operations, and Accounting. Drag a card to the next stage.", sel: ".tab[data-view='pipeline']", view: "pipeline" },
+    { title: "Companies", body: "Every customer and contact. Search before you add anything, so there are no duplicates.", sel: ".tab[data-view='companies']" },
+    { title: "Vendors", body: "Opens the vendor portal, with its own intro and training.", sel: ".tab[href='vendors.html']" },
+    { title: "Follow-ups", body: "Your to-do list. Work Overdue first, then Today.", sel: ".tab[data-view='tasks']" },
+    { title: "Log it the same day", body: "Log call, Log email, and Log touch save your work under your name for the huddle.", sel: "[data-act='quick-log'][data-kind='call']" },
+    { title: "Tools up top", body: "The route planner and the packaging calculator are one click away.", sel: "#calcBtn" },
+    { title: "Orders", body: "When a deal reaches Customer PO it lands in Open orders. Delivery dates live on the Order calendar.", sel: ".tab[data-view='orders']" },
+    { title: "Training", body: "The intro and these steps live here. Replay this tour any time with Take the tour.", sel: ".tab[data-view='training']" }
+  ];
+  var tourStep = 0;
+  function tourClearHl() { document.querySelectorAll(".tour-hl").forEach(function (el) { el.classList.remove("tour-hl"); }); }
+  function tourShow() {
+    var box = $("#tour");
+    if (!box) return;
+    var st = TOUR[tourStep];
+    tourClearHl();
+    if (st.view && S.view !== st.view) { S.view = st.view; render(); }
+    var h = "<div class='log'>Step " + (tourStep + 1) + " of " + TOUR.length + "</div><h3>" + esc(st.title) + "</h3><p>" + esc(st.body) + "</p>";
+    if (st.video) h += introVideo("Driven CRM intro, tour");
+    h += "<div class='mactions' style='justify-content:flex-start;margin-top:10px'>";
+    if (tourStep > 0) h += "<button class='ghost' data-act='tour-prev'>Back</button>";
+    h += tourStep < TOUR.length - 1 ? "<button class='primary' data-act='tour-next'>Next</button>" : "<button class='primary' data-act='tour-end'>Done</button>";
+    h += "<button class='linkbtn' data-act='tour-end'>Close</button></div>";
+    box.innerHTML = h;
+    box.hidden = false;
+    if (st.sel) { var el = document.querySelector(st.sel); if (el) { el.classList.add("tour-hl"); if (el.scrollIntoView) el.scrollIntoView({ block: "nearest", inline: "nearest" }); } }
+  }
+  function tourEnd() {
+    var box = $("#tour");
+    tourClearHl();
+    if (box) { box.querySelectorAll("video").forEach(function (v) { v.pause(); }); box.hidden = true; box.innerHTML = ""; }
   }
 
   function vCalculator() {
@@ -832,7 +897,7 @@
     var wonDeals = S.deals.filter(function (d) { return d.won_at && match(d); });
     var wv = wonDeals.reduce(function (a, d) { return a + val(d); }, 0), wc = wonDeals.reduce(function (a, d) { return a + cost(d); }, 0);
     var quotesOut = open.filter(function (d) { return d.stage === "quote_sent"; }).length;
-    var h = "<div class='bar'><input type='search' id='q' placeholder='Company or deal' value='" + esc(F.q) + "'><select id='repf'><option value=''>All reps</option>" + reps().map(function (r) { return "<option" + (F.rep === r ? " selected" : "") + ">" + esc(r) + "</option>"; }).join("") + "</select>";
+    var h = introBlock("home") + "<div class='bar'><input type='search' id='q' placeholder='Company or deal' value='" + esc(F.q) + "'><select id='repf'><option value=''>All reps</option>" + reps().map(function (r) { return "<option" + (F.rep === r ? " selected" : "") + ">" + esc(r) + "</option>"; }).join("") + "</select>";
     h += "<select id='stagef'><option value=''>All stages</option>" + S.stages.map(function (s) { return "<option value='" + esc(s.key) + "'" + (F.stage === s.key ? " selected" : "") + ">" + esc(s.name) + "</option>"; }).join("") + "</select>";
     h += "<label class='date'>Ship from <input type='date' id='shipFrom' value='" + esc(F.shipFrom) + "'></label><label class='date'>Ship to <input type='date' id='shipTo' value='" + esc(F.shipTo) + "'></label>";
     h += "<label class='switch'><input type='checkbox' id='showLost'" + (F.showLost ? " checked" : "") + "> Show lost</label>";
@@ -1415,6 +1480,12 @@
     if (act && act.indexOf("com-") === 0 && window.CRMCommissions) { CRMCommissions.handle(a); return; }
     if (act && act.indexOf("sup-") === 0 && window.CRMSupply) { CRMSupply.handle(a); return; }
     if (act === "close") { closeDrawer(); return; }
+    if (act === "tour") { tourStep = 0; tourShow(); return; }
+    if (act === "tour-next") { if (tourStep < TOUR.length - 1) tourStep += 1; tourShow(); return; }
+    if (act === "tour-prev") { if (tourStep > 0) tourStep -= 1; tourShow(); return; }
+    if (act === "tour-end") { tourEnd(); return; }
+    if (act === "intro-hide") { try { localStorage.setItem(INTRO_HIDE_KEY, "1"); } catch (err) {} render(); return; }
+    if (act === "intro-show") { try { localStorage.removeItem(INTRO_HIDE_KEY); } catch (err) {} render(); var iv = document.querySelector("#crmIntro video"); if (iv && iv.play) iv.play().catch(function () {}); return; }
     if (act === "mclose") { closeModal(); return; }
     if (act === "theme") { S.theme = S.theme === "dark" ? "light" : "dark"; localStorage.setItem("driven-crm-theme", S.theme); render(); return; }
     if (act === "open-calc") {
