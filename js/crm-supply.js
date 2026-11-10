@@ -39,7 +39,8 @@
     S.served = served.error ? [] : (served.data || []);
     S.note = pay.error ? "Invoice payment is not in the database yet. Apply the commissions migration." : "";
     if (full()) {
-      var po = await CRMDB.db.from("crm_vendor_pos").select("id,po_number,vendor_id,po_date,status,total,deal_id,ship_to,source,last_synced_at");
+      var po = await CRMDB.db.from("crm_vendor_pos").select("id,po_number,vendor_id,po_date,status,total,deal_id,ship_to,source,last_synced_at,promised_on,received_on");
+      if (po.error) po = await CRMDB.db.from("crm_vendor_pos").select("id,po_number,vendor_id,po_date,status,total,deal_id,ship_to,source,last_synced_at");
       S.pos = po.error ? [] : (po.data || []);
       var bills = await CRMDB.db.from("crm_vendor_bills").select("*");
       S.bills = bills.error ? [] : (bills.data || []);
@@ -139,7 +140,12 @@
   async function resolve(id) {
     var u = S.unmatched.filter(function (x) { return String(x.id) === String(id); })[0];
     if (!u || !window.CRMHooks) return;
-    var vendors = window.CRMVendors ? CRMVendors.rows() : [];
+    var vendors = window.CRMVendors && CRMVendors.rows ? CRMVendors.rows() : [];
+    if (!vendors.length) {
+      var listed = await CRMDB.db.from("crm_vendors_visible").select("id,supplier").order("supplier");
+      if (listed.error) listed = await CRMDB.db.from("crm_vendors").select("id,supplier").order("supplier");
+      vendors = listed.error ? [] : (listed.data || []);
+    }
     var companies = CRMHooks.companies();
     CRMHooks.openModal("<h2>Resolve " + esc(u.entity) + "</h2><p>" + esc(u.reason) + "</p><div class='f'><label>Link vendor</label><select id='unVen'><option value=''>Choose…</option>" + vendors.map(function (v) { return "<option value='" + v.id + "'>" + esc(v.supplier) + "</option>"; }).join("") + "</select></div><div class='f'><label>Link customer</label><select id='unCo'><option value=''>Choose…</option>" + companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) { return "<option value='" + c.id + "'>" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='f'><label>Link order id</label><input id='unDeal' inputmode='numeric'></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='sup-resolve-ok' data-id='" + u.id + "'>Save link</button></div>");
   }
