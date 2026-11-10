@@ -181,7 +181,7 @@ insert into public.crm_vendor_portal_settings (id, intro_video_url)
 values (1, null)
 on conflict (id) do nothing;
 comment on table public.crm_vendor_portal_settings is
-  'Optional replacement for assets/video/Driven_Vendor_Portal_Intro_v2.mp4. Null keeps the file that ships with the portal.';
+  'Optional replacement for assets/video/Driven_Vendor_Portal_Intro_v5.mp4. Null keeps the file that ships with the portal.';
 
 -- Scores stay append-only. A new rating is a new row. The latest row is current.
 create or replace function private.crm_vendor_scores_append_only()
