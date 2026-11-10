@@ -55,7 +55,11 @@
     companies: function () { return companies; },
     render: function () { if (window.CRMVendors) CRMVendors.render(); },
     setView: function (view) {
-      if (view === "calculator") location.href = "crm.html?view=calculator";
+      if (view === "calculator") {
+        try { sessionStorage.setItem("driven-calc-return", "vendors.html"); } catch (e) {}
+        location.href = "crm.html?view=calculator&from=vendors";
+        return;
+      }
       else location.href = "crm.html" + (view ? "?view=" + encodeURIComponent(view) : "");
     }
   };
