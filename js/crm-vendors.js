@@ -37,7 +37,7 @@
     listShow: "crm", openKey: null, detailTab: "overview", dragKey: null,
     videoUrl: ""
   };
-  var INTRO_VIDEO = "assets/video/Driven_Vendor_Portal_Intro_v2.mp4";
+  var INTRO_VIDEO = "assets/video/Driven_Vendor_Portal_Intro_v5.mp4";
 
   /* ---------- helpers ---------- */
   function esc(s) {
