@@ -173,7 +173,7 @@
   }
   function mapCompany(row) {
     var c = row.custom || {};
-    return { id: row.id, name: row.name || "", kind: row.kind || "prospect", list: row.list || "potential", owner: row.owner || "", billing: row.billing_address || "", status: row.status_note || "", notes: row.notes || "", last: day(row.last_contact_at), custom: userCustom(c), setup: c._setup || {}, setup_started: c._setup_started || null, qb_id: c._qb_id || "", alert_amber: !!c._alert_amber, ready_for_qb: !!c._ready_qb, docs: c._docs || [], textOk: c._text_ok || {}, enrollments: c._enrollments || [], target_account_id: row.target_account_id || null };
+    return { id: row.id, name: row.name || "", kind: row.kind || "prospect", list: row.list || "potential", owner: row.owner || "", billing: row.billing_address || "", status: row.status_note || "", notes: row.notes || "", last: day(row.last_contact_at), custom: userCustom(c), setup: c._setup || {}, setup_started: c._setup_started || null, qb_id: c._qb_id || "", alert_amber: !!c._alert_amber, ready_for_qb: !!c._ready_qb, docs: c._docs || [], textOk: c._text_ok || {}, enrollments: c._enrollments || [], target_account_id: row.target_account_id || null, archived: !!(c._archived || row.archived_at) };
   }
   function companyBag(c) {
     var bag = {};
@@ -186,6 +186,7 @@
     bag._docs = c.docs || [];
     bag._text_ok = c.textOk || {};
     bag._enrollments = c.enrollments || [];
+    bag._archived = !!c.archived;
     return bag;
   }
   function blankQuote(d) {
@@ -635,8 +636,9 @@
   function inputFor(f, v, d, attr) {
     var a = attr + '="' + f.k + '"';
     if (f.t === "company" || f.t === "vendor") {
-      var list = S.companies.filter(function (c) { return f.t === "vendor" ? c.kind === "vendor" : c.kind !== "vendor"; });
-      return "<select " + a + "><option value=''>Choose…</option>" + list.map(function (c) { return "<option value='" + c.id + "'" + (+v === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>"; }).join("") + "</select>";
+      var picked = window.CRMPick ? (f.t === "vendor" ? CRMPick.vendors(S.companies) : CRMPick.customers(S.companies)) : S.companies;
+      if (window.CRMPick) return CRMPick.field({ list: picked, selected: v, placeholder: f.t === "vendor" ? "Search vendors" : "Search customers", attr: a });
+      return "<select " + a + "><option value=''>Choose…</option>" + picked.map(function (c) { return "<option value='" + c.id + "'" + (+v === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>"; }).join("") + "</select>";
     }
     if (f.t === "shipto") {
       var ships = S.shipTos.filter(function (s) { return s.company_id === +d.company_id; });
@@ -838,6 +840,7 @@
   }
 
   function render() {
+    var kept = window.scrollY || document.documentElement.scrollTop || 0;
     pinChrome();
     document.documentElement.dataset.theme = S.theme;
     var themeBtn = $("#themeBtn");
@@ -864,7 +867,8 @@
     if (S.view === "calculator" && view && view.dataset.calcTheme === theme && view.dataset.calcCat === calcCat && view.querySelector("iframe.calc-frame")) return;
     var views = { pipeline: vPipeline, companies: vCompanies, vendors: function () { if (window.CRMVendors) CRMVendors.render(); }, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, reorder: vReorder, automations: vAutomations, sequences: vSequences, setup: vSetup, calculator: vCalculator, training: vTraining, commissions: function () { if (window.CRMCommissions) CRMCommissions.render(); }, "customer-portal": customerPortalView };
     (views[S.view] || vPipeline)();
-    if (window.requestAnimationFrame) requestAnimationFrame(pinChrome);
+    if (kept) window.scrollTo(0, kept);
+    if (window.requestAnimationFrame) requestAnimationFrame(function () { pinChrome(); if (kept) window.scrollTo(0, kept); });
   }
 
   var INTRO_VIDEO = "assets/video/Driven_CRM_Intro_v1.mp4";
@@ -1065,10 +1069,7 @@
   function productLinesHtml(d) {
     var lines = linesOf(d);
     var math = dealMath(d);
-    var vend = S.companies.filter(function (x) { return x.kind === "vendor"; });
-    function sel(attr, list, v, lab) {
-      return "<select " + attr + "><option value=''>Choose…</option>" + list.map(function (o) { return "<option value='" + o.id + "'" + (+v === o.id ? " selected" : "") + ">" + esc(lab(o)) + "</option>"; }).join("") + "</select>";
-    }
+    var vend = window.CRMPick ? CRMPick.vendors(S.companies) : S.companies.filter(function (x) { return x.kind === "vendor" && !x.archived; });
     var h = "<fieldset><legend>Products</legend>";
     h += "<p class='log'>Each color or product is its own line. Pick a catalog product, or type a name and a QuickBooks item id when it is not in the catalog. Line sell, cost, and margin are calculated. A blank unit cost counts as $0. Freight is added once. The customer quote does not include cost or margin.</p>";
     if (S.productsNote && !S.products.length) h += "<p class='log'>" + esc(S.productsNote) + "</p>";
@@ -1079,7 +1080,7 @@
       }).join("") + "</select>";
       var fig = CRMLines.lineFigures(l);
       var marginText = fig.margin == null || CRMLines.num(l.price) == null ? "—" : (money(fig.margin) + (fig.marginPct == null ? "" : " · " + pct(fig.marginPct)));
-      return "<tr><td>" + catalog + "</td><td><input data-dl='" + i + ":desc' list='qbItemNames' value='" + esc(l.desc || "") + "' placeholder='Colored pallet, blue' aria-label='Product'></td><td><input data-dl='" + i + ":qb_item_id' value='" + esc(l.qb_item_id || "") + "' placeholder='Item id' aria-label='QuickBooks item id'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-dl='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + ((l.unit || "each") === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-dl='" + i + ":vendor_id'", vend, l.vendor_id || d.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-dl='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Unit cost'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Unit sell'></td><td class='calc'>" + (fig.sell == null ? "—" : money(fig.sell)) + "</td><td class='calc'>" + (CRMLines.num(l.qty) == null ? "—" : money(fig.cost)) + "</td><td class='calc'>" + marginText + "</td><td>" + (lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
+      return "<tr><td>" + catalog + "</td><td><input data-dl='" + i + ":desc' list='qbItemNames' value='" + esc(l.desc || "") + "' placeholder='Colored pallet, blue' aria-label='Product'></td><td><input data-dl='" + i + ":qb_item_id' value='" + esc(l.qb_item_id || "") + "' placeholder='Item id' aria-label='QuickBooks item id'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-dl='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + ((l.unit || "each") === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + (window.CRMPick ? CRMPick.field({ list: vend, selected: l.vendor_id || d.vendor_id, placeholder: "Search vendors", attr: "data-dl='" + i + ":vendor_id'" }) : "") + "</td><td class='n'><input type='number' step='any' data-dl='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Unit cost'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Unit sell'></td><td class='calc'>" + (fig.sell == null ? "—" : money(fig.sell)) + "</td><td class='calc'>" + (CRMLines.num(l.qty) == null ? "—" : money(fig.cost)) + "</td><td class='calc'>" + marginText + "</td><td>" + (lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
     }).join("");
     h += "</tbody><tfoot><tr><td colspan='8'>Deal total" + (math.freight ? " · freight " + money(math.freight) : "") + "</td><td class='calc'>" + money(math.value) + "</td><td class='calc'>" + money(math.cost) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : money(math.grossMargin) + " · " + pct(math.marginPct)) + "</td><td></td></tr></tfoot></table></div>";
     h += "<datalist id='qbItemNames'>" + (S.qbItems || []).map(function (item) { return "<option value='" + esc(item.name) + "'>"; }).join("") + "</datalist>";
@@ -1112,6 +1113,7 @@
   function vCompanies() {
     var q = coQ.toLowerCase();
     var list = S.companies.filter(function (c) {
+      if (c.archived) return false;
       var kindOk = coFilter === "all" || (coFilter === "vendor" ? c.kind === "vendor" : c.list === coFilter && c.kind !== "vendor");
       var blob = (c.name + " " + c.billing + " " + S.contacts.filter(function (x) { return x.company_id === c.id; }).map(function (x) { return x.name + " " + x.email; }).join(" ")).toLowerCase();
       return kindOk && (!q || blob.indexOf(q) >= 0);
@@ -1169,7 +1171,7 @@
     if (touches.length) h += "<fieldset><legend>Outreach log</legend><p class='log'>Read only. This page does not send outreach.</p><ul class='mini'>" + touches.map(function (o) { return "<li>" + esc(o.contact || "") + " · " + esc(o.status || "") + "<br><span class='log'>" + esc(o.notes || "") + "</span></li>"; }).join("") + "</ul></fieldset>";
     h += "<fieldset><legend>Email and text status</legend>" + messageList(null, c.id) + "</fieldset>";
     h += notesHtml(c.id, null);
-    h += "</div><div class='dfoot'>" + (c.kind !== "vendor" ? "<button class='primary' data-act='quick-log' data-kind='call' data-id='" + c.id + "'>Log call</button><button class='ghost' data-act='quick-log' data-kind='email' data-id='" + c.id + "'>Log email</button><button class='ghost' data-act='quick-log' data-kind='touch' data-id='" + c.id + "'>Log touch</button><button class='ghost' data-act='new-quote' data-company='" + c.id + "'>New quote</button><button class='ghost' data-act='new-deal' data-company='" + c.id + "'>New deal</button>" : "") + "</div>";
+    h += "</div><div class='dfoot'>" + (c.kind !== "vendor" ? "<button class='primary' data-act='quick-log' data-kind='call' data-id='" + c.id + "'>Log call</button><button class='ghost' data-act='quick-log' data-kind='email' data-id='" + c.id + "'>Log email</button><button class='ghost' data-act='quick-log' data-kind='touch' data-id='" + c.id + "'>Log touch</button><button class='ghost' data-act='new-quote' data-company='" + c.id + "'>New quote</button><button class='ghost' data-act='new-deal' data-company='" + c.id + "'>New deal</button>" : "") + "<button class='danger' data-act='delete-company' data-id='" + c.id + "'>Delete " + esc(c.name) + "</button></div>";
     openDrawer(h, !!portalHtml);
     $("#drawer").dataset.company = c.id;
   }
@@ -1196,8 +1198,10 @@
   }
   async function openPacketUrl(url, name) {
     var saved = false;
+    var status = 0;
     try {
       var res = await fetch(url);
+      status = res.status;
       if (res.ok) {
         var blob = await res.blob();
         var objectUrl = URL.createObjectURL(blob);
@@ -1205,8 +1209,13 @@
         setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 60000);
         saved = true;
       }
-    } catch (e) { /* the signed link still carries the file name */ }
-    if (!saved) clickSave(url, name);
+    } catch (e) { status = 0; }
+    if (saved) return;
+    if (status && status !== 200) {
+      toast(name + " did not download (HTTP " + status + ").", "bad");
+      return;
+    }
+    clickSave(url, name);
   }
   async function downloadPacket(kind, onlyNames) {
     if (packetBusy) return;
@@ -1243,7 +1252,25 @@
     var vrows = S.companies.filter(function (c) { return c.kind === "vendor"; }).map(function (c) { syncReadyFlags(c); return { c: c, st: setupStatus(c) }; });
     h += "<div class='grid2' style='margin-top:28px'><div class='sect'><h2>Vendor setup</h2><p class='lead'>When the vendor form and W-9 are both checked, the company is flagged Alert Amber and Ready for QuickBooks.</p><div class='panel tablewrap'><table><thead><tr><th>Vendor</th><th>Progress</th><th>Flags</th></tr></thead><tbody>" + (vrows.length ? vrows.map(function (r) { return "<tr class='click' data-open-company='" + r.c.id + "'><td><b>" + esc(r.c.name) + "</b></td><td>" + r.st.done + " of " + r.st.total + "</td><td>" + (r.c.alert_amber ? "<span class='chip'>Alert Amber</span> " : "") + (r.c.ready_for_qb ? "<span class='chip active'>Ready for QuickBooks</span>" : "") + (r.c.qb_id ? "<span class='chip active'>Marked</span>" : "") + "</td></tr>"; }).join("") : "<tr><td colspan='3' class='empty'>No vendors yet.</td></tr>") + "</tbody></table></div></div>";
     h += packetSection("vendor", "Vendor packet", PACKET.vtemplate) + "</div>";
+    h += "<p id='packetCheck' class='log'>Checking the setup files…</p>";
     $("#view").innerHTML = h;
+    checkPackets();
+  }
+  async function checkPackets() {
+    var el = $("#packetCheck");
+    if (!el || !window.CRMDB || !CRMDB.db || !CRMDB.db.storage) return;
+    var bucket = CRMDB.db.storage.from("crm-forms");
+    var cust = await bucket.list("customer");
+    var vend = await bucket.list("vendor");
+    if ((cust && cust.error) || (vend && vend.error)) {
+      el.textContent = "Could not check the setup files. " + ((cust && cust.error && cust.error.message) || (vend && vend.error && vend.error.message) || "");
+      return;
+    }
+    var have = {};
+    (cust.data || []).forEach(function (f) { have["customer/" + f.name] = 1; });
+    (vend.data || []).forEach(function (f) { have["vendor/" + f.name] = 1; });
+    var missing = PACKET.template.map(function (n) { return "customer/" + n; }).concat(PACKET.vtemplate.map(function (n) { return "vendor/" + n; })).filter(function (p) { return !have[p]; });
+    el.textContent = missing.length ? "Missing from storage: " + missing.join(", ") : "All 8 setup files are in storage. The links above download them for a signed-in teammate. They are not public.";
   }
 
   function vTasks() {
@@ -1481,15 +1508,19 @@
     var c = co(q.company_id) || {};
     var ships = S.shipTos.filter(function (s) { return s.company_id === +q.company_id; });
     var cons = S.contacts.filter(function (x) { return x.company_id === +q.company_id; });
-    var vend = S.companies.filter(function (x) { return x.kind === "vendor"; });
+    var vend = window.CRMPick ? CRMPick.vendors(S.companies) : S.companies.filter(function (x) { return x.kind === "vendor" && !x.archived; });
+    var buyers = window.CRMPick ? CRMPick.customers(S.companies) : S.companies.filter(function (x) { return x.kind !== "vendor" && !x.archived; });
     function sel(attr, list, v, lab) {
       return "<select " + attr + "><option value=''>Choose…</option>" + list.map(function (o) { return "<option value='" + o.id + "'" + (+v === o.id ? " selected" : "") + ">" + esc(lab(o)) + "</option>"; }).join("") + "</select>";
+    }
+    function pick(attr, list, v, placeholder) {
+      return window.CRMPick ? CRMPick.field({ list: list, selected: v, placeholder: placeholder, attr: attr }) : sel(attr, list, v, function (o) { return o.name; });
     }
     var h = "<div class='dhead'><div style='flex:1'><div class='sub'>" + esc(c.name || "No customer") + "</div><h2>Quote " + esc(q.number || "") + "</h2><div class='sub'><span class='chip'>" + esc(q.status || "draft") + "</span></div></div><button class='ghost' data-act='close'>Close</button></div><div class='dbody'>";
     if (S.quotesNote) h += "<p class='banner'>" + esc(S.quotesNote) + "</p>";
     h += "<p class='log'>Each field you change is copied onto the linked deal and saved on its own. Print and Download leave out vendor cost and margin. Nothing is emailed.</p>";
     h += "<fieldset><legend>Customer</legend><div class='fields'>" +
-      "<div class='f'><label>Customer</label>" + sel("data-q='company_id'", S.companies.filter(function (x) { return x.kind !== "vendor"; }), q.company_id, function (o) { return o.name; }) + "</div>" +
+      "<div class='f'><label>Customer</label>" + pick("data-q='company_id'", buyers, q.company_id, "Search customers") + "</div>" +
       "<div class='f'><label>Attention</label>" + sel("data-q='contact_id'", cons, q.contact_id, function (o) { return o.name; }) + "</div>" +
       "<div class='f'><label>Ship-to</label>" + sel("data-q='ship_to_id'", ships, q.ship_to_id, function (o) { return o.label + ": " + o.address; }) + "</div>" +
       "<div class='f'><label>Sales rep</label><select data-q='rep'>" + repOptions().map(function (r) { return "<option" + (q.rep === r ? " selected" : "") + ">" + esc(r) + "</option>"; }).join("") + "</select></div>" +
@@ -1506,10 +1537,10 @@
           return "<option value='" + p.id + "'" + (+l.product_id === p.id ? " selected" : "") + ">" + esc(p.sku ? p.sku + " · " + p.name : p.name) + "</option>";
         }).join("") + "</select>";
         var fig = CRMLines.lineFigures(l);
-        return "<tr><td>" + catalog + "</td><td><input data-ql='" + i + ":desc' value='" + esc(l.desc || "") + "' aria-label='Product'></td><td><select data-ql='" + i + ":category'><option value=''>Choose…</option>" + Orders.CATEGORIES.map(function (c) { return "<option" + (l.category === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select></td><td><input data-ql='" + i + ":invoice_number' value='" + esc(l.invoice_number || "") + "' aria-label='Invoice number'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-ql='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + (l.unit === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-ql='" + i + ":vendor_id'", vend, l.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-ql='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Vendor cost'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Sell price'></td><td class='calc'>" + (fig.sell == null ? "—" : Orders.money(fig.sell)) + "</td><td class='calc'>" + (fig.marginPct == null ? "—" : pct(fig.marginPct)) + "</td><td>" + (q.lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
+        return "<tr><td>" + catalog + "</td><td><input data-ql='" + i + ":desc' value='" + esc(l.desc || "") + "' aria-label='Product'></td><td><select data-ql='" + i + ":category'><option value=''>Choose…</option>" + Orders.CATEGORIES.map(function (c) { return "<option" + (l.category === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select></td><td><input data-ql='" + i + ":invoice_number' value='" + esc(l.invoice_number || "") + "' aria-label='Invoice number'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-ql='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + (l.unit === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + pick("data-ql='" + i + ":vendor_id'", vend, l.vendor_id, "Search vendors") + "</td><td class='n'><input type='number' step='any' data-ql='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Vendor cost'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Sell price'></td><td class='calc'>" + (fig.sell == null ? "—" : Orders.money(fig.sell)) + "</td><td class='calc'>" + (fig.marginPct == null ? "—" : pct(fig.marginPct)) + "</td><td>" + (q.lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
       }).join("") + "</tbody></table></div><button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> <button class='ghost' data-act='usual-order' data-id='" + d.id + "'>Use usual order</button><p class='log'>Every line is included in the deal total. The first line still fills the deal's unit price, quantity, and vendor so older screens keep a product on the deal. Vendor cost and margin stay off the customer PDF. Pick a catalog product, or type a QuickBooks item name when it is not in the catalog.</p></fieldset>";
     h += "<fieldset><legend>Terms on the quote</legend><div class='f'><textarea data-q='terms'>" + esc(q.terms || "") + "</textarea></div></fieldset></div>";
-    h += "<div class='dfoot'><button class='primary' data-act='q-download' data-id='" + d.id + "'>Download PDF</button><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-open-deal='" + d.id + "'>Open deal</button></div>";
+    h += "<div class='dfoot'><button class='primary' data-act='q-download' data-id='" + d.id + "'>Download PDF</button><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-open-deal='" + d.id + "'>Open deal</button><button class='danger' data-act='delete-quote' data-id='" + d.id + "'>Delete quote " + esc(q.number || "") + "</button></div>";
     openDrawer(h, true);
     $("#drawer").dataset.quote = d.id;
     $("#drawer").dataset.deal = "";
@@ -1517,11 +1548,15 @@
 
   function openDrawer(html, wide) {
     var dr = $("#drawer");
+    var prev = dr.classList.contains("open") ? dr.querySelector(".dbody") : null;
+    var dy = prev ? prev.scrollTop : 0;
     dr.classList.toggle("wide", !!wide);
     dr.innerHTML = html;
     dr.classList.add("open");
     dr.setAttribute("aria-hidden", "false");
     $("#scrim").classList.add("open");
+    var next = dr.querySelector(".dbody");
+    if (next && dy) next.scrollTop = dy;
   }
   function closeDrawer() {
     var dr = $("#drawer");
@@ -1660,6 +1695,12 @@
     if (act === "intro-hide") { try { localStorage.setItem(INTRO_HIDE_KEY, "1"); } catch (err) {} render(); return; }
     if (act === "intro-show") { try { localStorage.removeItem(INTRO_HIDE_KEY); } catch (err) {} render(); var iv = document.querySelector("#crmIntro video"); if (iv && iv.play) iv.play().catch(function () {}); return; }
     if (act === "mclose") { closeModal(); return; }
+    if (act === "delete-company") { askDeleteCompany(+id); return; }
+    if (act === "delete-quote") { askDeleteQuote(+id); return; }
+    if (act === "delete-company-go") { closeModal(); hardDeleteCompany(+id); return; }
+    if (act === "archive-company") { closeModal(); archiveCompany(+id); return; }
+    if (act === "merge-company") { mergeCompany(+id); return; }
+    if (act === "delete-quote-go") { closeModal(); removeQuote(+id); return; }
     if (act === "theme") { S.theme = S.theme === "dark" ? "light" : "dark"; localStorage.setItem("driven-crm-theme", S.theme); render(); return; }
     if (act === "open-calc") {
       rememberCalcReturn(S.view);
@@ -1700,7 +1741,7 @@
     if (act === "new-company") { openModal("<h2>New company</h2><div class='fields'><div class='f wide'><label>Company name</label><input id='ncoName'></div><div class='f'><label>Type</label><select id='ncoKind'><option value='prospect'>Prospect</option><option value='customer'>Customer</option><option value='vendor'>Vendor</option></select></div><div class='f'><label>Owner</label><select id='ncoOwner'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nco-ok'>Add company</button></div>"); return; }
     if (act === "nco-ok") { createCompanyFromModal(); return; }
     if (act === "new-quote") { ensureQuote(a.dataset.deal ? +a.dataset.deal : null, a.dataset.company ? +a.dataset.company : null); return; }
-    if (act === "new-quote-pick") { openModal("<h2>New quote</h2><div class='f'><label>Customer</label><select id='nqCo'><option value=''>Choose…</option>" + S.companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) { return "<option value='" + c.id + "'>" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nq-ok'>Start quote</button></div>"); return; }
+    if (act === "new-quote-pick") { openModal("<h2>New quote</h2><div class='f'><label>Customer</label>" + (window.CRMPick ? CRMPick.field({ id: "nqCo", list: CRMPick.customers(S.companies), placeholder: "Search customers" }) : "<select id='nqCo'></select>") + "</div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nq-ok'>Start quote</button></div>"); return; }
     if (act === "nq-ok") { var cid = +$("#nqCo").value; if (!cid) { toast("Pick a customer."); return; } closeModal(); ensureQuote(null, cid); return; }
     if (act === "open-quote") { openQuote(+id); return; }
     if (act === "q-print") { var pd = dealById(+id); if (pd) printQuote(quoteForPdf(pd)); return; }
@@ -1792,7 +1833,7 @@
     if (await commitMove(d, toKey)) { render(); openDeal(d.id); }
   }
   function newDealModal(pre) {
-    openModal("<h2>New deal</h2><div class='fields'><div class='f wide'><label>Customer</label><select id='ndCo'><option value=''>Choose…</option>" + S.companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) { return "<option value='" + c.id + "'" + (+pre === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='f wide'><label>Brief description</label><input id='ndDesc'></div><div class='f'><label>Sales rep</label><select id='ndRep'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nd-ok'>Create deal</button></div>");
+    openModal("<h2>New deal</h2><div class='fields'><div class='f wide'><label>Customer</label>" + (window.CRMPick ? CRMPick.field({ id: "ndCo", list: CRMPick.customers(S.companies), selected: pre, placeholder: "Search customers" }) : "<select id='ndCo'></select>") + "</div><div class='f wide'><label>Brief description</label><input id='ndDesc'></div><div class='f'><label>Sales rep</label><select id='ndRep'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nd-ok'>Create deal</button></div>");
   }
   async function createDealFromModal() {
     var cid = +$("#ndCo").value;
@@ -2079,6 +2120,8 @@
     if (view) view.innerHTML = "";
     var shell = $("#shell");
     var gate = $("#authGate");
+    var wait = $("#authWait");
+    if (wait) wait.hidden = true;
     if (shell) shell.hidden = true;
     if (gate) gate.hidden = false;
     document.documentElement.dataset.crmGate = "signed-out";
@@ -2150,6 +2193,8 @@
     var shell = $("#shell");
     if (gate) gate.hidden = true;
     if (shell) shell.hidden = false;
+    var wait = $("#authWait");
+    if (wait) wait.hidden = true;
     document.documentElement.dataset.crmGate = "signed-in";
     paintWho();
     if (!ok) return;
@@ -2509,15 +2554,104 @@
     }
   };
 
-  function boot() {
+  async function askDeleteCompany(id) {
+    var c = co(id);
+    if (!c || !window.CRMArchive) return;
+    var counts = await CRMArchive.loadCounts(CRMDB.db, id);
+    var choices = (c.kind === "vendor" ? CRMPick.vendors(S.companies) : CRMPick.customers(S.companies)).filter(function (x) { return x.id !== c.id; });
+    openModal(CRMArchive.companyDialog(c, counts, choices));
+  }
+  async function hardDeleteCompany(id) {
+    var c = co(id);
+    if (!c) return;
+    var counts = await CRMArchive.loadCounts(CRMDB.db, id);
+    if (CRMArchive.blocked(counts)) { toast(c.name + " still has linked records. Archive it or merge it.", "bad"); return; }
+    var saved = await CRMDB.remove("crm_companies", id, "company");
+    if (!saved) return;
+    S.companies = S.companies.filter(function (x) { return x.id !== id; });
+    closeDrawer();
+    render();
+    toast("Deleted " + c.name + ".");
+  }
+  async function archiveCompany(id) {
+    var c = co(id);
+    if (!c) return;
+    c.archived = true;
+    var ok = await saveCompany(c, ["custom"]);
+    if (!ok) { c.archived = false; return; }
+    closeDrawer();
+    render();
+    toast(c.name + " is archived. Orders and invoices stay. It is hidden from the lists.");
+  }
+  async function mergeCompany(id) {
+    var into = +($("#mergeInto") && $("#mergeInto").value);
+    var c = co(id);
+    var keep = co(into);
+    if (!c || !keep) { toast("Choose the record to keep."); return; }
+    if (c.kind !== keep.kind) { toast("Merge a " + (c.kind === "vendor" ? "vendor" : "customer") + " into the same kind of record."); return; }
+    var errors = await CRMArchive.repoint(CRMDB.db, id, into);
+    if (errors.length) { toast(errors[0], "bad"); return; }
+    closeModal();
+    await loadAll();
+    var counts = await CRMArchive.loadCounts(CRMDB.db, id);
+    if (CRMArchive.blocked(counts)) {
+      var left = co(id);
+      if (left) { left.archived = true; await saveCompany(left, ["custom"]); }
+      render();
+      toast(c.name + " was merged into " + keep.name + " and archived. Orders and invoices stay.");
+      return;
+    }
+    var removed = await CRMDB.remove("crm_companies", id, "company");
+    if (!removed) {
+      var still = co(id);
+      if (still) { still.archived = true; await saveCompany(still, ["custom"]); }
+    }
+    await loadAll();
+    closeDrawer();
+    render();
+    toast(c.name + " was merged into " + keep.name + ".");
+  }
+  function askDeleteQuote(dealId) {
+    var d = dealById(dealId);
+    if (!d || !window.CRMArchive) return;
+    var q = qOf(d) || {};
+    var company = co(d.company_id);
+    openModal(CRMArchive.quoteDialog({ number: q.number || "quote", company: company ? company.name : "", dealId: d.id }));
+  }
+  async function removeQuote(dealId) {
+    var d = dealById(dealId);
+    if (!d) return;
+    var number = (qOf(d) || {}).number || "quote";
+    if (d.quote && d.quote.id && d.quote.db) {
+      var removed = await CRMDB.remove("crm_quotes", d.quote.id, "quote");
+      if (!removed) return;
+    }
+    d.quote = null;
+    await saveQuoteDoc(d);
+    closeDrawer();
+    render();
+    toast("Deleted quote " + number + ". The deal and any order stay.");
+  }
+
+  async function boot() {
     S.theme = localStorage.getItem("driven-crm-theme") || "dark";
     document.documentElement.dataset.theme = S.theme;
-    document.documentElement.dataset.crmGate = "signed-out";
     S.feedback = localStorage.getItem("driven-crm-feedback") || "";
+    if (window.CRMPick) CRMPick.bind(document);
+    var wait = $("#authWait");
+    var gate = $("#authGate");
+    var shell = $("#shell");
+    if (gate) gate.hidden = true;
+    if (shell) shell.hidden = true;
+    if (wait) wait.hidden = false;
     if (!window.CRMAuth) {
+      if (wait) wait.hidden = true;
+      if (gate) gate.hidden = false;
       setGateMsg("The sign-in script did not load. Reload the page.", "bad");
       return;
     }
+    var session = null;
+    try { session = await CRMAuth.ready(); } catch (e) { session = null; }
     window.addEventListener("resize", pinChrome);
     CRMAuth.bind({
       place: "CRM",
@@ -2532,6 +2666,8 @@
         document.documentElement.dataset.crmGate = "signed-out";
       }
     });
+    if (session && session.user && session.user.email) enterCrm(session);
+    else showGate("");
   }
   boot();
 })();

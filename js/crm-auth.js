@@ -248,8 +248,14 @@
     });
   }
 
+  async function ready() {
+    var res = await CRMDB.db.auth.getSession();
+    return (res && res.data && res.data.session) || null;
+  }
+
   window.CRMAuth = {
     bind: bind,
+    ready: ready,
     isRecovery: function () { return recoveryPending; },
     hold: function (value) { held = !!value; },
     setMessage: setMessage,
