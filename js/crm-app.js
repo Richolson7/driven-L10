@@ -820,7 +820,7 @@
     if (window.CRMCommissions) CRMCommissions.syncNav();
     var calcCat = S.calcCat || "";
     if (S.view === "calculator" && view && view.dataset.calcTheme === theme && view.dataset.calcCat === calcCat && view.querySelector("iframe.calc-frame")) return;
-    var views = { pipeline: vPipeline, companies: vCompanies, vendors: function () { if (window.CRMVendors) CRMVendors.render(); }, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, automations: vAutomations, sequences: vSequences, setup: vSetup, calculator: vCalculator, training: vTraining, commissions: function () { if (window.CRMCommissions) CRMCommissions.render(); } };
+    var views = { pipeline: vPipeline, companies: vCompanies, vendors: function () { if (window.CRMVendors) CRMVendors.render(); }, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, automations: vAutomations, sequences: vSequences, setup: vSetup, calculator: vCalculator, training: vTraining, commissions: function () { if (window.CRMCommissions) CRMCommissions.render(); }, "customer-portal": customerPortalView };
     (views[S.view] || vPipeline)();
   }
 
@@ -2418,6 +2418,15 @@
     }
     vSetup();
     toast("Imported " + rows.length + " products. QuickBooks was not changed.");
+  }
+
+  function customerPortalView() {
+    var view = document.getElementById("view");
+    if (window.CRMCustomerPortal) {
+      CRMCustomerPortal.render();
+      return;
+    }
+    if (view) view.innerHTML = "<p class='banner'>Customer Portal did not load. Reload the page.</p>";
   }
 
   window.CRMHooks = {
