@@ -1,5 +1,6 @@
-/* Morning huddle task counts. Dates are America/Chicago calendar days, YYYY-MM-DD.
-   This file does not talk to the database and does not change tasks. */
+/* Morning huddle tasks. Dates are America/Chicago calendar days, YYYY-MM-DD.
+   This file does not talk to the database and does not change tasks.
+   The page renders the table. Adding a task happens in huddle.js. */
 (function (root, factory) {
   var api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -95,44 +96,62 @@
     });
   }
 
-  function countCell(label, value, tone) {
-    var cls = tone ? " class='" + tone + "'" : "";
-    return "<span" + cls + "><b>" + value + "</b><small>" + esc(label) + "</small></span>";
+  function statusOf(task, today) {
+    if (isDone(task)) return "Done";
+    var due = dueYmd(task);
+    if (due && due < today) return "Overdue";
+    return "Open";
+  }
+  function list(tasks, today, people) {
+    var roster = people || PEOPLE;
+    var rank = { Overdue: 0, Open: 1, Done: 2 };
+    var out = [];
+    (tasks || []).forEach(function (task) {
+      if (!task) return;
+      if (!peopleInOwner(task.owner, roster).length) return;
+      var due = dueYmd(task);
+      out.push({
+        id: task.id,
+        text: task.text == null ? "" : String(task.text),
+        owner: task.owner == null ? "" : String(task.owner),
+        due: due,
+        status: statusOf(task, today)
+      });
+    });
+    out.sort(function (a, b) {
+      if (rank[a.status] !== rank[b.status]) return rank[a.status] - rank[b.status];
+      if (a.due && b.due && a.due !== b.due) return a.due < b.due ? -1 : 1;
+      if (a.due && !b.due) return -1;
+      if (!a.due && b.due) return 1;
+      return 0;
+    });
+    return out;
   }
 
-  function sectionHtml(summary, note) {
+  function sectionHtml(rows, note) {
     var html = "<section class='tasks' id='taskAccountability' aria-label='Team tasks'>";
     html += "<h2>Tasks</h2>";
-    html += "<p class='fine'>Call these out before the close. Next 7 days is after today, through seven days out. A shared task counts for every person named.</p>";
+    html += "<p class='fine'>Top 3 tasks are the first three open rows. A shared task is one row. Overdue means open and due before today.</p>";
     if (note) html += "<p class='fine'>" + esc(note) + "</p>";
-    if (!summary) {
+    if (!rows) {
       html += "</section>";
       return html;
     }
-    html += "<div class='task-grid'>";
-    summary.forEach(function (person) {
-      var counts = person.counts;
-      html += "<article class='task-card'><h3>" + esc(person.name) + "</h3><div class='task-counts'>";
-      html += countCell("Open", counts.open, "");
-      html += countCell("Overdue", counts.overdue, counts.overdue ? "bad" : "");
-      html += countCell("Due today", counts.dueToday, counts.dueToday ? "today" : "");
-      html += countCell("Next 7 days", counts.comingDue, "");
-      html += countCell("Done", counts.done, "");
-      html += "</div>";
-      if (!person.callouts.length) {
-        html += "<p class='fine'>Nothing overdue or due today.</p>";
-      } else {
-        html += "<ul class='task-list'>";
-        person.callouts.forEach(function (item) {
-          var overdue = item.kind === "overdue";
-          html += "<li><span class='flag " + (overdue ? "overdue" : "today") + "'>" + (overdue ? "Overdue" : "Due today") + "</span>";
-          html += esc(item.text || "(no text)") + " <span class='when'>" + esc(prettyDue(item.due)) + "</span></li>";
-        });
-        html += "</ul>";
-      }
-      html += "</article>";
-    });
-    html += "</div></section>";
+    html += "<div class='scroll'><table class='task-table'><thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>";
+    if (!rows.length) {
+      html += "<tr><td colspan='4'>No team tasks.</td></tr>";
+    } else {
+      var topped = 0;
+      rows.forEach(function (row) {
+        var mark = "";
+        if (row.status !== "Done" && topped < 3) { mark = " class='top'"; topped += 1; }
+        var due = row.due ? prettyDue(row.due) : "—";
+        var cls = row.status === "Done" ? "done" : (row.status === "Overdue" ? "overdue" : "open");
+        html += "<tr" + mark + "><td>" + esc(row.text || "(no text)") + "</td><td>" + esc(row.owner) + "</td><td>" + esc(due) + "</td>";
+        html += "<td><span class='pill " + cls + "'>" + esc(row.status) + "</span></td></tr>";
+      });
+    }
+    html += "</tbody></table></div></section>";
     return html;
   }
 
@@ -142,6 +161,7 @@
     splitOwners: splitOwners,
     peopleInOwner: peopleInOwner,
     summarize: summarize,
+    list: list,
     sectionHtml: sectionHtml
   };
 });

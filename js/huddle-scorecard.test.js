@@ -159,34 +159,38 @@ assert.strictEqual(snap.ops.on_time_delivery, null);
 assert.strictEqual(snap.loads.yesterday.actual, 1);
 assert.strictEqual(snap.loads.people[0].name, "Patrick");
 
+function noCommandCenter(label, html) {
+  ["Financial snapshot", "Financial", "Revenue", "Gross margin", "Net profit", "Cash on hand", "A/R days", "A/P days", "Labor", "Command center", "Week Of", "$23,236", "$82,169", "-$19,354", "45.4", "25%", "23236", "82169", "19354"].forEach(function (needle) {
+    assert.ok(html.indexOf(needle) < 0, label + " still shows " + needle);
+  });
+}
+
 var html = Card.sectionHtml({ snapshot: snap, note: "" });
-assert.ok(html.indexOf("Loads per day") > -1);
+assert.ok(html.indexOf("Customer service") < html.indexOf("in-house loads delivered"));
+assert.ok(html.indexOf(">B</span>Logistics") > -1);
+assert.ok(html.indexOf("In-house truck") > -1);
 assert.ok(html.indexOf("Order fulfillment") > -1);
 assert.ok(html.indexOf("Vendor performance") > -1);
 assert.ok(html.indexOf("On time delivery") > -1);
+assert.ok(html.indexOf("Quotes won") > -1);
+assert.ok(html.indexOf("Week · goal 3") > -1);
+assert.ok(html.indexOf("Sales landed") > -1);
+assert.ok(html.indexOf("$2,000") > -1);
 assert.ok(html.indexOf("n/a") > -1);
-assert.ok(html.indexOf("$23,236") > -1);
-assert.ok(html.indexOf("$82,169") > -1);
-assert.ok(html.indexOf("-$19,354") > -1);
-assert.ok(html.indexOf("45.4") > -1);
-assert.ok(html.indexOf("25%") > -1);
-assert.ok(html.indexOf("Stored Week Of label: Mon, Sep 21") > -1);
-assert.ok(html.indexOf("This week") > -1);
-assert.ok(html.indexOf("Annie") > -1);
-assert.ok(html.indexOf("Amber") > -1);
 assert.ok(html.indexOf("&lt;Patrick&gt;") > -1);
 assert.ok(html.indexOf("22592") < 0);
 assert.ok(html.indexOf("does not recompute") > -1);
-assert.ok(html.indexOf("freight brokerage") < 0);
+assert.ok(html.toLowerCase().indexOf("brokerage") < 0);
+assert.ok(html.toLowerCase().indexOf("commission") < 0);
+assert.ok(html.indexOf("huddleSalesSlot") > -1);
+noCommandCenter("snapshot", html);
 
 var blank = Card.sectionHtml({ snapshot: null, huddleDay: "2026-11-05", note: "No snapshot was saved at 10:00 AM CT for this huddle." });
 assert.ok(blank.indexOf("not captured") > -1);
-assert.ok(blank.indexOf("Loads per day") > -1);
+assert.ok(blank.indexOf("In-house truck") > -1);
 assert.ok(blank.indexOf("Order fulfillment") > -1);
-assert.ok(blank.indexOf("Net profit") > -1);
-assert.ok(blank.indexOf("Labor % of sales") > -1);
-assert.ok(blank.indexOf("$23,236") < 0);
-assert.ok(blank.indexOf("23236") < 0);
+assert.ok(blank.indexOf("$2,000") < 0);
+noCommandCenter("blank", blank);
 
 var noneHtml = Card.sectionHtml({
   snapshot: Card.build({
@@ -206,8 +210,8 @@ var noneHtml = Card.sectionHtml({
 });
 assert.ok(noneHtml.indexOf("none logged") > -1);
 assert.ok(noneHtml.indexOf(">0<") > -1);
-assert.ok(noneHtml.indexOf("No week label is stored") > -1);
-assert.ok(noneHtml.indexOf(">0%<") > -1);
-assert.ok(noneHtml.indexOf(">$0<") > -1);
+assert.ok(noneHtml.indexOf("0%") < 0);
+assert.ok(noneHtml.indexOf(">$0<") < 0);
+noCommandCenter("empty loads", noneHtml);
 
 console.log("huddle-scorecard tests passed");
