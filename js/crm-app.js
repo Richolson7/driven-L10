@@ -44,6 +44,8 @@
     { key: "qb", label: "Set up in QuickBooks" },
     { key: "ap", label: "Accounting contact added", auto: "ap" }
   ];
+  // Names are the object keys under customer/ and vendor/ in the private crm-forms bucket.
+  // The vendor NDA is a .docx. Do not rewrite these extensions.
   var PACKET = {
     template: ["NEW CUSTOMER FORM.pdf", "Driven Solutions W-9.pdf", "Driven INFO for Customers.pdf"],
     vtemplate: ["Driven New Vendor Form.pdf", "Driven Solutions W-9.pdf", "Driven S-211 WI exemption certificate.pdf", "Unilateral NDA.docx", "Driven INFO for Vendors.pdf"]
@@ -1085,13 +1087,75 @@
     $("#drawer").dataset.company = c.id;
   }
 
+  var packetBusy = false;
+  function packetSection(kind, title, names) {
+    if (!window.CRMForms) return "<div class='sect'><h2>" + esc(title) + "</h2><p class='banner'>Reload the page to download setup packet files.</p></div>";
+    return CRMForms.section({ kind: kind, title: title, names: names });
+  }
+  function setPacketStatus(kind, text, bad) {
+    var el = document.getElementById("packet-status-" + (kind === "vendor" ? "vendor" : "customer"));
+    if (!el) return;
+    el.textContent = text || "";
+    el.classList.toggle("bad", !!bad);
+  }
+  function clickSave(href, name) {
+    var a = document.createElement("a");
+    a.href = href;
+    a.download = name;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  async function openPacketUrl(url, name) {
+    var saved = false;
+    try {
+      var res = await fetch(url);
+      if (res.ok) {
+        var blob = await res.blob();
+        var objectUrl = URL.createObjectURL(blob);
+        clickSave(objectUrl, name);
+        setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 60000);
+        saved = true;
+      }
+    } catch (e) { /* the signed link still carries the file name */ }
+    if (!saved) clickSave(url, name);
+  }
+  async function downloadPacket(kind, onlyNames) {
+    if (packetBusy) return;
+    if (!window.CRMForms || !window.CRMDB || !CRMDB.db || !CRMDB.db.storage) {
+      toast("Setup packet downloads did not load. Reload the page.", "bad");
+      return;
+    }
+    var folder = kind === "vendor" ? "vendor" : "customer";
+    var names = onlyNames && onlyNames.length ? onlyNames : (folder === "vendor" ? PACKET.vtemplate : PACKET.template);
+    var list = CRMForms.files(folder, names);
+    packetBusy = true;
+    setPacketStatus(folder, names.length === 1 ? "Preparing " + names[0] + "…" : "Preparing " + names.length + " files…", false);
+    try {
+      var result = await CRMForms.download(list, {
+        getSession: function () { return CRMDB.db.auth.getSession(); },
+        storage: CRMDB.db.storage,
+        openUrl: openPacketUrl
+      });
+      setPacketStatus(folder, result.message, !result.ok);
+      toast(result.message, result.ok ? "" : "bad");
+    } catch (err) {
+      var text = "Could not download the setup packet. " + ((err && err.message) || "Try again.");
+      setPacketStatus(folder, text, true);
+      toast(text, "bad");
+    } finally {
+      packetBusy = false;
+    }
+  }
+
   function vDocs() {
     var rows = S.companies.filter(function (c) { return c.kind !== "vendor" && (c.kind === "customer" || c.setup_started); }).map(function (c) { return { c: c, st: setupStatus(c) }; });
     var h = "<div class='grid2'><div class='sect'><h2>Customer setup</h2><p class='lead'>Checklist state saves on the company. Alerts become follow-ups or drafts. Nothing is emailed.</p><div class='panel tablewrap'><table><thead><tr><th>Customer</th><th>Progress</th><th>Still missing</th></tr></thead><tbody>" + (rows.length ? rows.map(function (r) { return "<tr class='click' data-open-company='" + r.c.id + "'><td><b>" + esc(r.c.name) + "</b></td><td>" + r.st.done + " of " + r.st.total + "</td><td>" + (r.st.missing.length ? esc(r.st.missing.join(", ")) : "<span class='mg-good'>Complete</span>") + "</td></tr>"; }).join("") : "<tr><td colspan='3' class='empty'>No customers in setup.</td></tr>") + "</tbody></table></div></div>";
-    h += "<div class='sect'><h2>Setup packet</h2><p class='lead'>File names only. The files themselves are not uploaded.</p><div class='panel'>" + PACKET.template.map(function (name) { return "<div class='cf'><b>" + esc(name) + "</b></div>"; }).join("") + "</div></div></div>";
+    h += packetSection("customer", "Setup packet", PACKET.template) + "</div>";
     var vrows = S.companies.filter(function (c) { return c.kind === "vendor"; }).map(function (c) { syncReadyFlags(c); return { c: c, st: setupStatus(c) }; });
     h += "<div class='grid2' style='margin-top:28px'><div class='sect'><h2>Vendor setup</h2><p class='lead'>When the vendor form and W-9 are both checked, the company is flagged Alert Amber and Ready for QuickBooks.</p><div class='panel tablewrap'><table><thead><tr><th>Vendor</th><th>Progress</th><th>Flags</th></tr></thead><tbody>" + (vrows.length ? vrows.map(function (r) { return "<tr class='click' data-open-company='" + r.c.id + "'><td><b>" + esc(r.c.name) + "</b></td><td>" + r.st.done + " of " + r.st.total + "</td><td>" + (r.c.alert_amber ? "<span class='chip'>Alert Amber</span> " : "") + (r.c.ready_for_qb ? "<span class='chip active'>Ready for QuickBooks</span>" : "") + (r.c.qb_id ? "<span class='chip active'>Marked</span>" : "") + "</td></tr>"; }).join("") : "<tr><td colspan='3' class='empty'>No vendors yet.</td></tr>") + "</tbody></table></div></div>";
-    h += "<div class='sect'><h2>Vendor packet</h2><div class='panel'>" + PACKET.vtemplate.map(function (name) { return "<div class='cf'><b>" + esc(name) + "</b></div>"; }).join("") + "</div></div></div>";
+    h += packetSection("vendor", "Vendor packet", PACKET.vtemplate) + "</div>";
     $("#view").innerHTML = h;
   }
 
@@ -1532,6 +1596,8 @@
     if (act === "open-quote") { openQuote(+id); return; }
     if (act === "q-print") { var pd = dealById(+id); if (pd && pd.quote) printQuote(pd.quote); return; }
     if (act === "q-download") { var dd = dealById(+id); if (dd && dd.quote) downloadQuote(dd.quote); return; }
+    if (act === "packet-dl") { downloadPacket(a.dataset.kind, a.dataset.name ? [a.dataset.name] : []); return; }
+    if (act === "packet-all") { downloadPacket(a.dataset.kind, null); return; }
     if (act === "orders-csv") { exportOrders(); return; }
     if (act === "usual-order") { useUsual(+id); return; }
     if (act === "import-products") { importProducts(); return; }
