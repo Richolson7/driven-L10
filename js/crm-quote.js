@@ -47,8 +47,9 @@
   }
 
   /* Which crm_deals columns this one quote edit should write.
-     Line 0 is the opportunity's price, quantity, and vendor.
-     Extra lines only change the description summary. */
+     Line 0 still fills the deal's unit price, quantity, and vendor so a
+     single-product deal keeps those columns. The deal total is the sum of
+     every line (see CRMLines), not line 0 alone. */
   function dealPatch(quote, change) {
     var patch = {};
     if (!change) return patch;

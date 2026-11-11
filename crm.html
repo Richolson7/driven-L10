@@ -290,6 +290,8 @@ li.agentnote{border-left:3px solid var(--fill);padding-left:10px}
 .qlines td{padding:4px;border-bottom:1px solid var(--line)}
 .qlines input,.qlines select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px;min-width:0}
 .qlines .n{width:96px}.qlines .s{width:84px}
+.qlines .calc{white-space:nowrap;font-variant-numeric:tabular-nums}
+.qlines tfoot td{font-weight:700;border-bottom:0}
 .qbox{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--raise);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:14px}
 .qhist{border-top:1px solid var(--line);padding:8px 0;font-size:14px}
 .qhist .ql{font-size:13px;color:var(--muted)}
@@ -441,6 +443,7 @@ details.seq[open] summary{background:var(--raise)}
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="js/crm-db.js"></script>
 <script src="js/crm-auth.js"></script>
+<script src="js/crm-lines.js"></script>
 <script src="js/crm-quote.js"></script>
 <script src="js/crm-orders.js"></script>
 <script src="js/crm-commission-math.js"></script>
