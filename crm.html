@@ -250,6 +250,11 @@ button.zone{background:none;color:inherit;text-align:left;cursor:pointer;border-
 .setup-stage{display:grid;grid-template-columns:28px 1fr 130px;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
 .setup-stage input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
 .cf{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);gap:8px}
+button.packet-file{flex:1;background:none;border:0;padding:0;font-weight:700;color:inherit;text-align:left}
+button.packet-file:hover,button.packet-file:focus-visible{color:var(--accent)}
+.packet-status{margin:8px 0 0;color:var(--muted);font-size:13px}
+.packet-status:empty{display:none}
+.packet-status.bad{color:var(--bad);font-weight:600}
 .cfadd{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:6px;padding:10px 12px}
 .cfadd input,.cfadd select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
 
@@ -441,6 +446,7 @@ details.seq[open] summary{background:var(--raise)}
 <script src="js/crm-commission-math.js"></script>
 <script src="js/crm-supply.js"></script>
 <script src="js/crm-commissions.js"></script>
+<script src="js/crm-forms.js"></script>
 <script src="js/crm-app.js"></script>
 </body>
 </html>
