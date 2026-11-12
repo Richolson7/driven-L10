@@ -82,6 +82,8 @@ details{margin-top:12px}
 .flag.today{color:var(--g)}
 #authGate{max-width:440px;margin:8px 0 24px}
 #authGate[hidden],#shell[hidden]{display:none}
+html.crm-has-session #authGate{display:none !important}
+html.crm-has-session #shell[hidden]{display:block !important}
 .gate-card{background:var(--s);border:1px solid var(--br);border-radius:12px;padding:22px 20px}
 .gate-card h2{margin:0 0 8px;font-size:1.4rem}
 .gate-card p{color:var(--td);margin:0 0 14px}
@@ -92,6 +94,7 @@ details{margin-top:12px}
 .gate-msg{min-height:1.3em;margin:8px 0 0}
 .gate-msg.bad{color:var(--red)}
 </style>
+<script src="js/crm-session-boot.js"></script>
 </head>
 <body>
 <header>

@@ -68,7 +68,8 @@
 
   async function loadCompanies() {
     var res = await CRMDB.db.from("crm_companies").select("id,name,kind,custom,owner,last_contact_at,notes").order("name");
-    companies = res.error ? [] : (res.data || []);
+    companies = res.error ? [] : (res.data || []).filter(function (c) { return !c.archived_at; });
+    companies.sort(function (a, b) { return String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base", numeric: true }); });
   }
   async function loadMe(session) {
     email = (session.user && session.user.email) || "";
@@ -126,12 +127,14 @@
       place: "vendor portal",
       onSession: function (session) { enter(session); },
       onSignedOut: function () {
+        document.documentElement.classList.remove("crm-has-session");
         $("shell").hidden = true;
         $("authGate").hidden = false;
         closeDrawer();
         closeModal();
       },
       onRecovery: function () {
+        document.documentElement.classList.remove("crm-has-session");
         $("shell").hidden = true;
         $("authGate").hidden = false;
       }

@@ -85,12 +85,19 @@
       var res = null;
       try {
         res = await deps.storage.from(BUCKET).createSignedUrl(file.path, SIGNED_SECONDS, { download: file.name });
+        if (!res || res.error || !res.data || !res.data.signedUrl) {
+          res = await deps.storage.from(BUCKET).createSignedUrl(file.path, SIGNED_SECONDS);
+        }
       } catch (err) {
-        failures.push(failureText(file, err));
-        continue;
+        try {
+          res = await deps.storage.from(BUCKET).createSignedUrl(file.path, SIGNED_SECONDS);
+        } catch (err2) {
+          failures.push(failureText(file, err2 || err));
+          continue;
+        }
       }
       if (!res || res.error || !res.data || !res.data.signedUrl) {
-        failures.push(failureText(file, (res && res.error) || { message: "No download link came back." }));
+        failures.push(failureText(file, (res && res.error) || { message: "No download link came back for " + file.path + "." }));
         continue;
       }
       ready.push({ url: res.data.signedUrl, name: file.name });
