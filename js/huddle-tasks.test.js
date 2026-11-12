@@ -92,14 +92,31 @@ summary.forEach(function (row) {
   assert.ok(counts.open >= counts.overdue + counts.dueToday + counts.comingDue);
 });
 
-var html = Tasks.sectionHtml(summary, "Tasks did not load. <script>");
-assert.ok(html.indexOf("<h3>Patrick</h3>") < html.indexOf("<h3>Annie</h3>"));
-assert.ok(html.indexOf("<h3>Annie</h3>") < html.indexOf("<h3>Rich</h3>"));
-assert.ok(html.indexOf("<h3>Rich</h3>") < html.indexOf("<h3>Landon</h3>"));
-assert.ok(html.indexOf("<h3>Landon</h3>") < html.indexOf("<h3>Amber</h3>"));
-assert.ok(html.indexOf("Shared quote follow-up") > 0);
-assert.ok(html.indexOf("Review the price sheet") > 0);
-assert.ok(html.indexOf("Nothing overdue or due today.") > 0);
+var listed = Tasks.list(rows, TODAY);
+assert.strictEqual(listed.filter(function (row) { return row.text === "Shared quote follow-up"; }).length, 1);
+assert.ok(listed.every(function (row) { return row.text !== "Not on this huddle" && row.text !== "Service desk"; }));
+assert.deepStrictEqual(listed.map(function (row) { return row.status + ":" + row.text; }), [
+  "Overdue:Older Patrick item",
+  "Overdue:Shared quote follow-up",
+  "Overdue:Call the yard",
+  "Open:Review the price sheet",
+  "Open:Whole team check",
+  "Open:Send the packing list",
+  "Open:Later rock",
+  "Open:No date yet",
+  "Done:Already filed",
+  "Done:Finished today"
+]);
+
+var html = Tasks.sectionHtml(listed, "Tasks did not load. <script>");
+assert.ok(html.indexOf("<th>Task</th><th>Owner</th><th>Due</th><th>Status</th>") > 0);
+assert.ok(html.indexOf("Older Patrick item") < html.indexOf("Shared quote follow-up"));
+assert.ok(html.indexOf("Shared quote follow-up") < html.indexOf("Review the price sheet"));
+assert.ok(html.indexOf("Review the price sheet") < html.indexOf("Already filed"));
+assert.ok(html.indexOf("class='pill overdue'") > 0);
+assert.ok(html.indexOf("class='pill open'") > 0);
+assert.ok(html.indexOf("class='pill done'") > 0);
+assert.ok(html.indexOf("class='top'") > 0);
 assert.ok(html.indexOf("&lt;script&gt;") > 0);
 assert.strictEqual(html.indexOf("<button"), -1);
 assert.strictEqual(html.indexOf("<input"), -1);
@@ -114,6 +131,7 @@ blank.forEach(function (row) {
 });
 
 assert.strictEqual(Tasks.addDays("2026-10-29", 7), "2026-11-05");
-assert.strictEqual(Tasks.sectionHtml(null, "").indexOf("task-grid"), -1);
+assert.strictEqual(Tasks.sectionHtml(null, "").indexOf("task-table"), -1);
+assert.ok(Tasks.sectionHtml([], "").indexOf("No team tasks") > 0);
 
 console.log("huddle-tasks tests passed");

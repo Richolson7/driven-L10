@@ -90,22 +90,20 @@
     if (TOUCH_KINDS[kind]) bucket.touches += 1;
   }
   function inWindow(day, start, end) { return !!day && day >= start && day <= end; }
+  var SALES_ROSTER = ["Rich", "Landon", "Annie", "Patrick"];
   function repNames(goals) {
-    var names = [];
+    var names = SALES_ROSTER.slice();
+    var extras = [];
     (goals || []).forEach(function (g) {
       if (g.active === false || g.scope !== "rep" || !g.rep) return;
-      if (!names.some(function (n) { return sameName(n, g.rep); })) names.push(String(g.rep).trim());
+      var rep = String(g.rep).trim();
+      if (!rep) return;
+      if (names.some(function (n) { return sameName(n, rep); })) return;
+      if (extras.some(function (n) { return sameName(n, rep); })) return;
+      extras.push(rep);
     });
-    var preferred = ["Rich", "Landon"];
-    names.sort(function (a, b) {
-      var ia = preferred.findIndex(function (n) { return sameName(n, a); });
-      var ib = preferred.findIndex(function (n) { return sameName(n, b); });
-      if (ia < 0 && ib < 0) return a.localeCompare(b);
-      if (ia < 0) return 1;
-      if (ib < 0) return -1;
-      return ia - ib;
-    });
-    return names;
+    extras.sort(function (a, b) { return a.localeCompare(b); });
+    return names.concat(extras);
   }
   function findRep(names, value) {
     return names.find(function (n) { return sameName(n, value); }) || "";
@@ -143,6 +141,15 @@
       var day = ymdInChicago(row.at);
       var rep = findRep(names, row.by_user);
       var kind = row.kind || "";
+      if (kind === "quote") {
+        if (rep) {
+          if (day === yesterday) byRep[rep].y.quotes_sent += 1;
+          if (inWindow(day, weekStart, yesterday)) byRep[rep].w.quotes_sent += 1;
+        }
+        if (day === yesterday) teamY.quotes_sent += 1;
+        if (inWindow(day, weekStart, yesterday)) teamW.quotes_sent += 1;
+        return;
+      }
       if (!TOUCH_KINDS[kind]) return;
       if (!rep) { unmatched += 1; return; }
       if (day === yesterday) addActivity(byRep[rep].y, kind);
@@ -248,6 +255,7 @@
 
   return {
     METRICS: METRICS,
+    SALES_ROSTER: SALES_ROSTER,
     chicagoToday: chicagoToday,
     priorWorkday: priorWorkday,
     weekStartMonday: weekStartMonday,

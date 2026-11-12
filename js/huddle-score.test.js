@@ -81,7 +81,12 @@ assert.strictEqual(landon.cells.quotes_sent.yesterday.actual, 2);
 assert.strictEqual(landon.cells.wins.yesterday.actual, 0);
 assert.strictEqual(landon.cells.sales_landed.yesterday.actual, 0);
 
-assert.strictEqual(tue.team.cells.touches.yesterday.actual, 7);
+assert.deepStrictEqual(tue.reps.map(function (row) { return row.name; }), ["Rich", "Landon", "Annie", "Patrick"]);
+assert.strictEqual(tue.reps[2].cells.touches.yesterday.actual, 1);
+assert.strictEqual(tue.reps[2].cells.calls.yesterday.goal, null);
+assert.strictEqual(tue.reps[3].cells.calls.yesterday.actual, 0);
+
+assert.strictEqual(tue.team.cells.touches.yesterday.actual, 8);
 assert.strictEqual(tue.team.cells.touches.yesterday.goal, 50);
 assert.strictEqual(tue.team.cells.calls.yesterday.goal, 30);
 assert.strictEqual(tue.team.cells.sales_landed.yesterday.actual, 3500);
@@ -91,7 +96,7 @@ assert.strictEqual(tue.team.cells.wins.yesterday.actual, 2);
 assert.strictEqual(tue.team.cells.wins.yesterday.goal, null);
 assert.strictEqual(tue.team.cells.wins.week.goal, 3);
 assert.strictEqual(tue.team.cells.quotes_sent.yesterday.actual, 3);
-assert.strictEqual(tue.unmatched, 1);
+assert.strictEqual(tue.unmatched, 0);
 assert.strictEqual(tue.lastWeek, false);
 assert.strictEqual(tue.weekDays, 1);
 
@@ -110,5 +115,23 @@ assert.strictEqual(mon.team.cells.sales_landed.week.tone, "hit");
 assert.strictEqual(mon.team.cells.wins.week.actual, 1);
 assert.strictEqual(mon.team.cells.wins.week.tone, "miss");
 assert.strictEqual(mon.reps[0].cells.sales_landed.yesterday.actual, 115000);
+
+var quoted = run("2026-10-27", {
+  activity: [
+    { kind: "quote", by_user: "Patrick", at: "2026-10-26T15:00:00Z" },
+    { kind: "quote", by_user: "House", at: "2026-10-26T16:00:00Z" }
+  ]
+});
+assert.strictEqual(quoted.reps[3].name, "Patrick");
+assert.strictEqual(quoted.reps[3].cells.quotes_sent.yesterday.actual, 1);
+assert.strictEqual(quoted.reps[3].cells.touches.yesterday.actual, 0);
+assert.strictEqual(quoted.team.cells.quotes_sent.yesterday.actual, 2);
+assert.strictEqual(quoted.unmatched, 0);
+
+var withAmber = run("2026-10-27", {
+  goals: goals.concat([{ scope: "rep", rep: "Amber", metric: "calls", period: "day", target: 5, active: true }])
+});
+assert.deepStrictEqual(withAmber.reps.map(function (row) { return row.name; }), ["Rich", "Landon", "Annie", "Patrick", "Amber"]);
+assert.strictEqual(withAmber.reps[4].cells.calls.yesterday.goal, 5);
 
 console.log("huddle-score tests passed");

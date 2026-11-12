@@ -1,7 +1,10 @@
 /* Morning huddle scorecard. Dates are America/Chicago.
    This file does not talk to the database.
    The page saves one snapshot at 10:00 AM on a weekday and then only reloads it.
-   Loads are in-house truck deliveries. The goal is 2 per day. */
+   Loads are in-house truck deliveries. Driven delivers its own loads. The goal is 2 per day.
+   Financial snapshot tiles use the weekly scorecard when a _w4 value exists.
+   A/P days and labor percent have no field yet, so they stay n/a.
+   The page hides the financial snapshot from setter logins. */
 (function (root, factory) {
   var api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -24,7 +27,16 @@
     { key: "net_profit", label: "Net profit", unit: "money", sub: "This week" },
     { key: "cash_on_hand", label: "Cash on hand", unit: "money", sub: "Amber" },
     { key: "ar_days", label: "A/R days outstanding", unit: "number" },
+    { key: "ap_days", label: "A/P days outstanding", unit: "number" },
     { key: "labor_pct_sales", label: "Labor % of sales", unit: "percent" }
+  ];
+  var FINANCE_FIELDS = [
+    { key: "revenue_weekly", label: "Revenue", unit: "money", sub: "This week" },
+    { key: "gross_margin", label: "Gross margin", unit: "percent", sub: "This week" },
+    { key: "net_profit", label: "Net profit", unit: "money", sub: "This week" },
+    { key: "cash_on_hand", label: "Cash on hand", unit: "money", sub: "This week" },
+    { key: "ap_days", label: "A/P days outstanding", unit: "number", sub: "n/a" },
+    { key: "labor_pct_sales", label: "Labor % of sales", unit: "percent", sub: "n/a" }
   ];
 
   function pad(n) { return String(n).padStart(2, "0"); }
@@ -232,14 +244,27 @@
       command: command
     };
   }
-  function goalText(goal, unit) {
-    if (goal == null) return "";
-    if (unit === "money") return "goal " + formatMoney(goal);
-    return "goal " + formatNum(goal);
-  }
+  var SERVICE_OPS = [
+    { key: "fulfillment_time", label: "Order fulfillment", unit: "number", sub: "days" },
+    { key: "on_time_delivery", label: "On time delivery", unit: "percent", sub: "This week" },
+    { key: "vendor_performance", label: "Vendor performance", unit: "percent", sub: "This week" }
+  ];
+
   function tile(label, value, sub, tone) {
     var cls = tone === "hit" || tone === "miss" ? " " + tone : "";
     return "<article class='tile" + cls + "'><small>" + esc(label) + "</small><b>" + esc(value) + "</b><span>" + esc(sub) + "</span></article>";
+  }
+  function sourcedTile(label, value, unit, sub) {
+    if (value == null || value === "" || isNaN(+value)) return tile(label, "—", "n/a", "");
+    return tile(label, formatByUnit(value, unit), sub, "");
+  }
+  function countTile(label, cell, sub, asMoney) {
+    if (!cell || cell.actual == null || cell.actual === "" || isNaN(+cell.actual)) return tile(label, "—", "n/a", "");
+    var shown = asMoney ? formatMoney(cell.actual) : formatNum(cell.actual);
+    return tile(label, shown, sub, cell.tone);
+  }
+  function letter(ch) {
+    return "<span class='letter'>" + esc(ch) + "</span>";
   }
   function loadFig(title, count, noneLogged) {
     var tone = count.tone === "hit" || count.tone === "miss" ? count.tone : "";
@@ -251,29 +276,67 @@
   function blankLoads() {
     return "<div><b>—</b><span>Yesterday</span><small>Not captured</small></div><div><b>—</b><span>Week</span><small>Not captured</small></div>";
   }
+  function serviceTiles(snapshot) {
+    var html = "";
+    if (!snapshot) {
+      html += tile("Quotes won", "—", "n/a", "");
+      html += tile("Sales landed", "—", "n/a", "");
+    } else {
+      var winsW = snapshot.ownership && snapshot.ownership.wins && snapshot.ownership.wins.week;
+      var salesY = snapshot.ownership && snapshot.ownership.sales_landed && snapshot.ownership.sales_landed.yesterday;
+      var winSub = "Week";
+      if (winsW && winsW.goal != null) winSub += " · goal " + formatNum(winsW.goal);
+      var salesSub = "Yesterday";
+      if (salesY && salesY.goal != null) salesSub += " · goal " + formatMoney(salesY.goal);
+      html += countTile("Quotes won", winsW, winSub, false);
+      html += countTile("Sales landed", salesY, salesSub, true);
+    }
+    SERVICE_OPS.forEach(function (field) {
+      if (!snapshot) html += tile(field.label, "—", "n/a", "");
+      else html += sourcedTile(field.label, snapshot.ops[field.key], field.unit, field.sub);
+    });
+    var ar = snapshot && snapshot.command ? snapshot.command.ar_days : null;
+    html += sourcedTile("A/R days outstanding", ar, "number", ar == null ? "n/a" : "This week");
+    return html;
+  }
+  function financeTiles(snapshot) {
+    var html = "";
+    FINANCE_FIELDS.forEach(function (field) {
+      var value = snapshot && snapshot.command ? snapshot.command[field.key] : null;
+      html += sourcedTile(field.label, value, field.unit, value == null ? "n/a" : field.sub);
+    });
+    return html;
+  }
   function sectionHtml(view) {
     var snapshot = view && view.snapshot;
     var note = view && view.note || "";
-    var html = "<section class='scorecard' id='huddleScorecard' aria-label='Scorecard'>";
-    html += "<div class='scorecard-head'><h2>Scorecard</h2>";
+    var html = "<section class='scoreboard' id='huddleScorecard' aria-label='Scoreboard'>";
+    html += "<h2>Scoreboard</h2>";
     if (snapshot) {
-      var weekWord = snapshot.lastWeek ? "Last week" : "Week to date";
-      html += "<p class='frozen'>Frozen at 10:00 AM CT · " + esc(pretty(snapshot.huddleDay)) + " · " + esc(weekWord) + " " + esc(pretty(snapshot.weekStart)) + " – " + esc(pretty(snapshot.weekEnd)) + "</p>";
+      html += "<p class='frozen'>Snapshot at 10:00 AM CT · " + esc(pretty(snapshot.huddleDay)) + "</p>";
     } else {
       html += "<p class='frozen'>Snapshot at 10:00 AM CT · " + esc(pretty(view && view.huddleDay)) + " · not captured</p>";
     }
-    html += "</div>";
     if (note) html += "<p class='fine'>" + esc(note) + "</p>";
-    html += "<div class='loads-hero'><p class='kicker'>Loads per day</p>";
-    html += "<p class='fine'>In-house truck. Goal is 2 deliveries a day. Patrick owns this number.</p>";
+    html += "<h3 id='customer-service'>" + letter("A") + "Customer service</h3><div class='tile-grid'>";
+    html += serviceTiles(snapshot);
+    html += "</div>";
+    if (!view || view.showFinancial !== false) {
+      html += "<h3 id='financial-snapshot'>" + letter("B") + "Financial snapshot</h3><div class='tile-grid'>";
+      html += financeTiles(snapshot);
+      html += "</div>";
+    }
+    html += "<h3 id='logistics'>" + letter("C") + "Logistics</h3>";
+    html += "<div class='loads-hero'><div class='band-copy'><p class='kicker'>Logistics: in-house loads delivered</p>";
+    html += "<p class='fine'>In-house truck · Goal 2/day</p></div>";
     html += "<div class='loads-figs'>";
     if (!snapshot) html += blankLoads();
     else {
       var loads = snapshot.loads;
-      html += loadFig("Team · yesterday", loads.yesterday, loads.noneLogged && loads.yesterday.actual === 0);
-      html += loadFig(snapshot.lastWeek ? "Team · last week" : "Team · week to date", loads.week, loads.noneLogged && loads.week.actual === 0);
+      html += loadFig("Yesterday", loads.yesterday, loads.noneLogged && loads.yesterday.actual === 0);
+      html += loadFig("Week", loads.week, loads.noneLogged && loads.week.actual === 0);
     }
-    html += "</div>";
+    html += "</div></div>";
     if (snapshot && snapshot.loads.people.length) {
       html += "<div class='load-people'>";
       snapshot.loads.people.forEach(function (person) {
@@ -285,44 +348,14 @@
       html += "<p class='fine'>Team total. No driver is stored on the deliveries, so there is no per-person split.</p>";
     }
     if (snapshot && snapshot.loads.capped) html += "<p class='fine'>The deal list hit 2,000 rows, so some deliveries may be missing from this snapshot.</p>";
-    html += "</div>";
-    html += "<h3>Customer service</h3><div class='tile-grid'>";
-    if (!snapshot) {
-      OPS_FIELDS.forEach(function (field) { html += tile(field.label, "—", "n/a", ""); });
-      html += tile("Sales landed", "—", "Annie · yesterday", "");
-      html += tile("Sales landed", "—", "Annie · week", "");
-      html += tile("Wins", "—", "Week · goal 3", "");
-      html += tile("Cash on hand", "—", "Amber", "");
-    } else {
-      OPS_FIELDS.forEach(function (field) {
-        var value = snapshot.ops[field.key];
-        html += tile(field.label, formatByUnit(value, field.unit === "percent" ? "percent" : "number"), value == null ? "n/a" : (field.unit === "days" ? "days" : "This week"), "");
-      });
-      var salesY = snapshot.ownership.sales_landed.yesterday;
-      var salesW = snapshot.ownership.sales_landed.week;
-      var winsW = snapshot.ownership.wins.week;
-      html += tile("Sales landed", formatMoney(salesY.actual), "Annie · yesterday" + (salesY.goal == null ? "" : " · " + goalText(salesY.goal, "money")), salesY.tone);
-      html += tile("Sales landed", formatMoney(salesW.actual), "Annie · " + (snapshot.lastWeek ? "last week" : "week") + (salesW.goal == null ? "" : " · " + goalText(salesW.goal, "money")), salesW.tone);
-      html += tile("Wins", winsW.actual == null ? "—" : formatNum(winsW.actual), "Week" + (winsW.goal == null ? "" : " · " + goalText(winsW.goal, "number")), winsW.tone);
-      html += tile("Cash on hand", formatMoney(snapshot.ownership.cash_on_hand), snapshot.ownership.cash_on_hand == null ? "Amber · n/a" : "Amber", "");
+    if (snapshot) {
+      html += "<details class='sources'><summary>Where these numbers come from</summary>";
+      html += "<p class='fine'>Loads are in-house truck deliveries from CRM orders at Customer PO or later, using the delivery date, or the ship date when delivery is blank. Quotes won and sales landed are the huddle team totals from this same 10:00 AM snapshot. A/R days uses the weekly scorecard when that value is saved. Order fulfillment, on time delivery, and vendor performance have no scorecard field yet, so they stay n/a.";
+      if (!view || view.showFinancial !== false) html += " The financial snapshot uses the weekly scorecard for revenue, gross margin, net profit, and cash on hand. A/P days and labor percent of sales have no field yet.";
+      html += " Refresh reloads the snapshot. It does not recompute these tiles.</p>";
+      html += "</details>";
     }
-    html += "</div><h3>Command center</h3>";
-    if (!snapshot) html += "<p class='fine'>Week label shows here when a snapshot is saved.</p>";
-    else if (snapshot.command.weekOf) html += "<p class='fine'>Stored Week Of label: " + esc(pretty(ymd(snapshot.command.weekOf)) || snapshot.command.weekOf) + ". Net profit is the weekly figure.</p>";
-    else html += "<p class='fine'>No week label is stored. Net profit is the weekly figure.</p>";
-    html += "<div class='tile-grid'>";
-    COMMAND_FIELDS.forEach(function (field) {
-      if (!snapshot) {
-        html += tile(field.label, "—", "n/a", "");
-        return;
-      }
-      var value = snapshot.command[field.key];
-      var sub = value == null ? "n/a" : (field.sub || "This week");
-      html += tile(field.label, formatByUnit(value, field.unit), sub, "");
-    });
-    html += "</div>";
-    if (snapshot) html += "<p class='fine'>Loads come from CRM orders at Customer PO or later, using the delivery date, or the ship date when delivery is blank. Customer service and the command center are the weekly scorecard _w4 values. Sales landed and wins are the huddle team totals from this same 10:00 AM snapshot. Refresh reloads the snapshot. It does not recompute these tiles.</p>";
-    html += "</section>";
+    html += "<div id='huddleSalesSlot'></div></section>";
     return html;
   }
 
@@ -331,6 +364,7 @@
     CAPTURE_MINUTES: CAPTURE_MINUTES,
     OPS_FIELDS: OPS_FIELDS,
     COMMAND_FIELDS: COMMAND_FIELDS,
+    FINANCE_FIELDS: FINANCE_FIELDS,
     chicagoParts: chicagoParts,
     huddleStart: huddleStart,
     plan: plan,
