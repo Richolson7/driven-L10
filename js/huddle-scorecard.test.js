@@ -159,19 +159,28 @@ assert.strictEqual(snap.ops.on_time_delivery, null);
 assert.strictEqual(snap.loads.yesterday.actual, 1);
 assert.strictEqual(snap.loads.people[0].name, "Patrick");
 
-function noCommandCenter(label, html) {
-  ["Financial snapshot", "Financial", "Revenue", "Gross margin", "Net profit", "Cash on hand", "A/R days", "A/P days", "Labor", "Command center", "Week Of", "$23,236", "$82,169", "-$19,354", "45.4", "25%", "23236", "82169", "19354"].forEach(function (needle) {
+function hiddenFromSetters(label, html) {
+  ["Financial snapshot", "Revenue", "Gross margin", "Net profit", "Cash on hand", "A/P days", "Labor"].forEach(function (needle) {
     assert.ok(html.indexOf(needle) < 0, label + " still shows " + needle);
   });
 }
 
-var html = Card.sectionHtml({ snapshot: snap, note: "" });
-assert.ok(html.indexOf("Customer service") < html.indexOf("in-house loads delivered"));
-assert.ok(html.indexOf(">B</span>Logistics") > -1);
+var html = Card.sectionHtml({ snapshot: snap, note: "", showFinancial: true });
+assert.ok(html.indexOf("Customer service") < html.indexOf("Financial snapshot"));
+assert.ok(html.indexOf("Financial snapshot") < html.indexOf("in-house loads delivered"));
+assert.ok(html.indexOf(">B</span>Financial snapshot") > -1);
+assert.ok(html.indexOf(">C</span>Logistics") > -1);
 assert.ok(html.indexOf("In-house truck") > -1);
 assert.ok(html.indexOf("Order fulfillment") > -1);
 assert.ok(html.indexOf("Vendor performance") > -1);
 assert.ok(html.indexOf("On time delivery") > -1);
+assert.ok(html.indexOf("A/R days outstanding") > -1);
+assert.ok(html.indexOf("45.4") > -1);
+assert.ok(html.indexOf("Revenue") > -1);
+assert.ok(html.indexOf("$23,236") > -1);
+assert.ok(html.indexOf("25%") > -1);
+assert.ok(html.indexOf("A/P days outstanding") > -1);
+assert.ok(html.indexOf("Labor % of sales") > -1);
 assert.ok(html.indexOf("Quotes won") > -1);
 assert.ok(html.indexOf("Week · goal 3") > -1);
 assert.ok(html.indexOf("Sales landed") > -1);
@@ -183,14 +192,19 @@ assert.ok(html.indexOf("does not recompute") > -1);
 assert.ok(html.toLowerCase().indexOf("brokerage") < 0);
 assert.ok(html.toLowerCase().indexOf("commission") < 0);
 assert.ok(html.indexOf("huddleSalesSlot") > -1);
-noCommandCenter("snapshot", html);
 
-var blank = Card.sectionHtml({ snapshot: null, huddleDay: "2026-11-05", note: "No snapshot was saved at 10:00 AM CT for this huddle." });
+var setterHtml = Card.sectionHtml({ snapshot: snap, note: "", showFinancial: false });
+hiddenFromSetters("setter", setterHtml);
+assert.ok(setterHtml.indexOf("A/R days outstanding") > -1);
+assert.ok(setterHtml.indexOf(">C</span>Logistics") > -1);
+
+var blank = Card.sectionHtml({ snapshot: null, huddleDay: "2026-11-05", note: "No snapshot was saved at 10:00 AM CT for this huddle.", showFinancial: true });
 assert.ok(blank.indexOf("not captured") > -1);
 assert.ok(blank.indexOf("In-house truck") > -1);
 assert.ok(blank.indexOf("Order fulfillment") > -1);
+assert.ok(blank.indexOf("Financial snapshot") > -1);
 assert.ok(blank.indexOf("$2,000") < 0);
-noCommandCenter("blank", blank);
+assert.ok(blank.indexOf("$23,236") < 0);
 
 var noneHtml = Card.sectionHtml({
   snapshot: Card.build({
@@ -210,8 +224,21 @@ var noneHtml = Card.sectionHtml({
 });
 assert.ok(noneHtml.indexOf("none logged") > -1);
 assert.ok(noneHtml.indexOf(">0<") > -1);
-assert.ok(noneHtml.indexOf("0%") < 0);
-assert.ok(noneHtml.indexOf(">$0<") < 0);
-noCommandCenter("empty loads", noneHtml);
+assert.ok(noneHtml.indexOf("Labor % of sales") > -1);
+var loadsOnly = Card.sectionHtml({ snapshot: Card.build({
+  today: "2026-11-05",
+  yesterday: "2026-11-04",
+  weekStart: "2026-11-02",
+  weekEnd: "2026-11-04",
+  weekDays: 3,
+  lastWeek: false,
+  deals: [],
+  wonStageKeys: won,
+  team: scored.team.cells,
+  weekData: {},
+  weekOf: ""
+}), showFinancial: false });
+assert.ok(loadsOnly.indexOf(">$0<") < 0);
+hiddenFromSetters("empty loads", loadsOnly);
 
 console.log("huddle-scorecard tests passed");

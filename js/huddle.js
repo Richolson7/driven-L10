@@ -125,6 +125,19 @@
     if (!payload || typeof payload !== "object") return null;
     return payload;
   }
+  async function isSetter(person) {
+    var name = String(person && person.name || "").trim().toLowerCase();
+    if (name === "annie" || name === "patrick") return true;
+    try {
+      var res = await CRMDB.db.from("crm_commission_rates").select("rep,plan").limit(40);
+      if (!res.error && res.data && res.data.length) {
+        return res.data.some(function (row) {
+          return String(row.plan || "") === "setter_tier" && String(row.rep || "").trim().toLowerCase() === name;
+        });
+      }
+    } catch (e) { /* fall through to the name check above */ }
+    return false;
+  }
   async function readSnapshot(day) {
     var res = await CRMDB.db.from("huddle_snapshots").select("huddle_day,payload,captured_for").eq("huddle_day", day).maybeSingle();
     return { error: res.error || null, payload: payloadOf(res.data) };
@@ -132,15 +145,15 @@
   async function resolveScorecard(result, deals, wonKeys) {
     var decision = Card.plan(new Date());
     var read = await readSnapshot(decision.displayDay);
-    if (read.error) return { snapshot: null, huddleDay: decision.displayDay, note: snapshotProblem(read.error) };
-    if (read.payload) return { snapshot: read.payload, huddleDay: decision.displayDay, note: "" };
+    if (read.error) return { snapshot: null, huddleDay: decision.displayDay, note: snapshotProblem(read.error), showFinancial: !me.setter };
+    if (read.payload) return { snapshot: read.payload, huddleDay: decision.displayDay, note: "", showFinancial: !me.setter };
     if (!decision.capture || result.today !== decision.displayDay) {
-      return { snapshot: null, huddleDay: decision.displayDay, note: "No snapshot was saved at 10:00 AM CT for this huddle. Refresh loads the saved snapshot only. It does not recompute the tiles." };
+      return { snapshot: null, huddleDay: decision.displayDay, note: "No snapshot was saved at 10:00 AM CT for this huddle. Refresh loads the saved snapshot only. It does not recompute the tiles.", showFinancial: !me.setter };
     }
     var dash = await CRMDB.db.from("dashboard_data").select('week_data,"Week Of"').eq("id", "driven_cmd").maybeSingle();
     if (dash.error || !Card.plan(new Date()).capture) {
       var why = dash.error ? CRMDB.explain(dash.error) : "Huddle start passed before the snapshot could be saved.";
-      return { snapshot: null, huddleDay: decision.displayDay, note: "No snapshot was saved. " + why + " The tiles were left blank." };
+      return { snapshot: null, huddleDay: decision.displayDay, note: "No snapshot was saved. " + why + " The tiles were left blank.", showFinancial: !me.setter };
     }
     var row = dash.data || {};
     var payload = Card.build({
@@ -164,13 +177,13 @@
     if (saved.error) {
       if (saved.error.code === "23505") {
         var again = await readSnapshot(decision.displayDay);
-        if (again.payload) return { snapshot: again.payload, huddleDay: decision.displayDay, note: "" };
+        if (again.payload) return { snapshot: again.payload, huddleDay: decision.displayDay, note: "", showFinancial: !me.setter };
       }
-      return { snapshot: null, huddleDay: decision.displayDay, note: "The snapshot could not be saved, so the tiles were left blank. " + CRMDB.explain(saved.error) };
+      return { snapshot: null, huddleDay: decision.displayDay, note: "The snapshot could not be saved, so the tiles were left blank. " + CRMDB.explain(saved.error), showFinancial: !me.setter };
     }
     var stored = payloadOf(saved.data);
-    if (!stored) return { snapshot: null, huddleDay: decision.displayDay, note: "The snapshot did not save a row, so the tiles were left blank." };
-    return { snapshot: stored, huddleDay: decision.displayDay, note: "" };
+    if (!stored) return { snapshot: null, huddleDay: decision.displayDay, note: "The snapshot did not save a row, so the tiles were left blank.", showFinancial: !me.setter };
+    return { snapshot: stored, huddleDay: decision.displayDay, note: "", showFinancial: !me.setter };
   }
 
   function showGate() {
@@ -204,7 +217,7 @@
       return "<th>" + esc(METRIC_LABEL[metric]) + "<small>Yest</small></th><th>" + esc(METRIC_LABEL[metric]) + "<small>Week</small></th>";
     }).join("");
     var weekLabel = result.lastWeek ? "Last week" : "Week to date";
-    var html = "<h3 id='sales-rep'><span class='letter'>C</span>Sales rep</h3>";
+    var html = "<h3 id='sales-rep'><span class='letter'>D</span>Sales rep</h3>";
     html += "<div class='scroll'><table class='rep-table'><thead><tr><th>Rep</th>" + head + "</tr></thead><tbody>";
     html += salesRows(result).map(rowHtml).join("");
     html += "</tbody></table></div>";
@@ -317,6 +330,7 @@
       return;
     }
     me = person;
+    me.setter = await isSetter(person);
     showShell();
     setStatus("Loading yesterday…");
     var goalsRes = await CRMDB.db.from("huddle_goals").select("id,company,scope,rep,metric,period,target,active").eq("company", "driven").eq("active", true);

@@ -2,7 +2,9 @@
    This file does not talk to the database.
    The page saves one snapshot at 10:00 AM on a weekday and then only reloads it.
    Loads are in-house truck deliveries. Driven delivers its own loads. The goal is 2 per day.
-   Command center and financial scorecard figures are not shown on this page. */
+   Financial snapshot tiles use the weekly scorecard when a _w4 value exists.
+   A/P days and labor percent have no field yet, so they stay n/a.
+   The page hides the financial snapshot from setter logins. */
 (function (root, factory) {
   var api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -25,7 +27,16 @@
     { key: "net_profit", label: "Net profit", unit: "money", sub: "This week" },
     { key: "cash_on_hand", label: "Cash on hand", unit: "money", sub: "Amber" },
     { key: "ar_days", label: "A/R days outstanding", unit: "number" },
+    { key: "ap_days", label: "A/P days outstanding", unit: "number" },
     { key: "labor_pct_sales", label: "Labor % of sales", unit: "percent" }
+  ];
+  var FINANCE_FIELDS = [
+    { key: "revenue_weekly", label: "Revenue", unit: "money", sub: "This week" },
+    { key: "gross_margin", label: "Gross margin", unit: "percent", sub: "This week" },
+    { key: "net_profit", label: "Net profit", unit: "money", sub: "This week" },
+    { key: "cash_on_hand", label: "Cash on hand", unit: "money", sub: "This week" },
+    { key: "ap_days", label: "A/P days outstanding", unit: "number", sub: "n/a" },
+    { key: "labor_pct_sales", label: "Labor % of sales", unit: "percent", sub: "n/a" }
   ];
 
   function pad(n) { return String(n).padStart(2, "0"); }
@@ -284,6 +295,16 @@
       if (!snapshot) html += tile(field.label, "—", "n/a", "");
       else html += sourcedTile(field.label, snapshot.ops[field.key], field.unit, field.sub);
     });
+    var ar = snapshot && snapshot.command ? snapshot.command.ar_days : null;
+    html += sourcedTile("A/R days outstanding", ar, "number", ar == null ? "n/a" : "This week");
+    return html;
+  }
+  function financeTiles(snapshot) {
+    var html = "";
+    FINANCE_FIELDS.forEach(function (field) {
+      var value = snapshot && snapshot.command ? snapshot.command[field.key] : null;
+      html += sourcedTile(field.label, value, field.unit, value == null ? "n/a" : field.sub);
+    });
     return html;
   }
   function sectionHtml(view) {
@@ -300,7 +321,12 @@
     html += "<h3 id='customer-service'>" + letter("A") + "Customer service</h3><div class='tile-grid'>";
     html += serviceTiles(snapshot);
     html += "</div>";
-    html += "<h3 id='logistics'>" + letter("B") + "Logistics</h3>";
+    if (!view || view.showFinancial !== false) {
+      html += "<h3 id='financial-snapshot'>" + letter("B") + "Financial snapshot</h3><div class='tile-grid'>";
+      html += financeTiles(snapshot);
+      html += "</div>";
+    }
+    html += "<h3 id='logistics'>" + letter("C") + "Logistics</h3>";
     html += "<div class='loads-hero'><div class='band-copy'><p class='kicker'>Logistics: in-house loads delivered</p>";
     html += "<p class='fine'>In-house truck · Goal 2/day</p></div>";
     html += "<div class='loads-figs'>";
@@ -324,7 +350,9 @@
     if (snapshot && snapshot.loads.capped) html += "<p class='fine'>The deal list hit 2,000 rows, so some deliveries may be missing from this snapshot.</p>";
     if (snapshot) {
       html += "<details class='sources'><summary>Where these numbers come from</summary>";
-      html += "<p class='fine'>Loads are in-house truck deliveries from CRM orders at Customer PO or later, using the delivery date, or the ship date when delivery is blank. Order fulfillment, on time delivery, and vendor performance use the weekly scorecard _w4 values. Quotes won and sales landed are the huddle team totals from this same 10:00 AM snapshot. Refresh reloads the snapshot. It does not recompute these tiles.</p>";
+      html += "<p class='fine'>Loads are in-house truck deliveries from CRM orders at Customer PO or later, using the delivery date, or the ship date when delivery is blank. Quotes won and sales landed are the huddle team totals from this same 10:00 AM snapshot. A/R days uses the weekly scorecard when that value is saved. Order fulfillment, on time delivery, and vendor performance have no scorecard field yet, so they stay n/a.";
+      if (!view || view.showFinancial !== false) html += " The financial snapshot uses the weekly scorecard for revenue, gross margin, net profit, and cash on hand. A/P days and labor percent of sales have no field yet.";
+      html += " Refresh reloads the snapshot. It does not recompute these tiles.</p>";
       html += "</details>";
     }
     html += "<div id='huddleSalesSlot'></div></section>";
@@ -336,6 +364,7 @@
     CAPTURE_MINUTES: CAPTURE_MINUTES,
     OPS_FIELDS: OPS_FIELDS,
     COMMAND_FIELDS: COMMAND_FIELDS,
+    FINANCE_FIELDS: FINANCE_FIELDS,
     chicagoParts: chicagoParts,
     huddleStart: huddleStart,
     plan: plan,
