@@ -335,6 +335,8 @@ details.seq[open] summary{background:var(--raise)}
 @media (prefers-reduced-motion:reduce){.drawer{transition:none}}
 #authGate{min-height:100vh;display:grid;place-items:center;padding:24px}
 #authGate[hidden],#shell[hidden]{display:none}
+html.crm-has-session #authGate{display:none !important}
+html.crm-has-session #shell[hidden]{display:block !important}
 .gate-card{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px 24px;box-shadow:var(--shadow)}
 .gate-card h1{font-size:34px;margin-bottom:8px}
 .gate-card p{color:var(--muted);margin:0 0 16px}
@@ -353,6 +355,7 @@ button.tab{background:none;cursor:pointer;font:inherit}
 .top .spacer{flex:1}
 
 </style>
+<script src="js/crm-session-boot.js"></script>
 </head>
 <body>
 <div id="authGate">

@@ -141,6 +141,7 @@
   }
 
   function showGate() {
+    document.documentElement.classList.remove("crm-has-session");
     me = null;
     clearCapture();
     if (shell) shell.hidden = true;
@@ -150,6 +151,7 @@
     setStatus("");
   }
   function showShell() {
+    document.documentElement.classList.add("crm-has-session");
     if (gate) gate.hidden = true;
     if (shell) shell.hidden = false;
     if (signOutBtn) signOutBtn.hidden = false;

@@ -356,6 +356,13 @@ details.seq[open] summary{background:var(--raise)}
 @media (prefers-reduced-motion:reduce){.drawer{transition:none}}
 #authGate{min-height:100vh;display:grid;place-items:center;padding:24px}
 #authGate[hidden],#shell[hidden]{display:none}
+html.crm-has-session #authGate{display:none !important}
+html.crm-has-session #shell[hidden]{display:block !important}
+.pick{position:relative}
+.pick-q{width:100%}
+.pick-list{z-index:80;max-height:240px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow)}
+.pick-opt{display:block;width:100%;text-align:left;background:transparent;border:0;color:inherit;padding:8px 10px;cursor:pointer}
+.pick-opt:hover,.pick-opt[aria-selected=true]{background:var(--raise)}
 .gate-card{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px 24px;box-shadow:var(--shadow)}
 .gate-card h1{font-size:34px;margin-bottom:8px}
 .gate-card p{color:var(--muted);margin:0 0 16px}
@@ -366,6 +373,7 @@ details.seq[open] summary{background:var(--raise)}
 .gate-msg{min-height:1.3em;margin:8px 0 0;color:var(--text)}
 .gate-msg.bad{color:var(--bad)}
 </style>
+<script src="js/crm-session-boot.js"></script>
 </head>
 <body>
 <div id="authGate">
@@ -464,6 +472,8 @@ details.seq[open] summary{background:var(--raise)}
 <script src="js/crm-supply.js"></script>
 <script src="js/crm-commissions.js"></script>
 <script src="js/crm-forms.js"></script>
+<script src="js/crm-customer-pick.js"></script>
+<script src="js/crm-record-archive.js"></script>
 <script src="js/crm-app.js"></script>
 <script src="js/crm-customer-portal.js"></script>
 </body>

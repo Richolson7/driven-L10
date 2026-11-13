@@ -122,9 +122,11 @@ Promise.resolve()
       assert.strictEqual(result.opened, 4);
       assert.ok(result.message.indexOf("Downloading 4 files.") === 0);
       assert.ok(result.message.indexOf("Unilateral NDA.docx is not in storage.") >= 0);
-      assert.strictEqual(store.calls.length, 5);
-      assert.ok(store.calls.every(function (call) { return call.opts.download === call.path.split("/").pop(); }));
-      assert.ok(store.calls.some(function (call) { return call.opts.download === "Unilateral NDA.docx"; }));
+      assert.strictEqual(store.calls.length, 6);
+      var retry = store.calls.filter(function (call) { return !call.opts; });
+      assert.strictEqual(retry.length, 1);
+      assert.ok(retry[0].path.indexOf("Unilateral NDA.docx") >= 0);
+      assert.ok(store.calls.some(function (call) { return call.opts && call.opts.download === "Unilateral NDA.docx"; }));
     });
   })
   .then(function () {
