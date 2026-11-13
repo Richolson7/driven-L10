@@ -1,6 +1,6 @@
 /* Morning huddle screen. Numbers come from HuddleScore.
    CRM tables are read only after a team sign-in.
-   The scorecard is one saved snapshot at 10:00 AM CT. This file sends no email or text. */
+   Loads per day are one saved snapshot at 10:00 AM CT. This file sends no email or text. */
 (function () {
   "use strict";
   var Score = window.HuddleScore;
@@ -79,7 +79,7 @@
     var msg = CRMDB.explain(error);
     var code = error && error.code || "";
     if (code === "PGRST205" || code === "42P01" || /huddle_snapshots/i.test(msg) || /schema cache/i.test(msg) || /does not exist/i.test(msg)) {
-      return "The snapshot table is not in the database yet. Apply supabase/migrations/20261105160000_huddle_snapshots.sql on the Driven project. Until then this scorecard stays blank. Live numbers were not used.";
+      return "The snapshot table is not in the database yet. Apply supabase/migrations/20261105160000_huddle_snapshots.sql on the Driven project. Until then loads per day stay blank. Live numbers were not used.";
     }
     return "The saved snapshot did not load. " + msg + " Live numbers were not used.";
   }
@@ -160,7 +160,9 @@
       return "<th>" + esc(METRIC_LABEL[metric]) + "<small>Yesterday</small></th><th>" + esc(METRIC_LABEL[metric]) + "<small>Week</small></th>";
     }).join("");
     var weekLabel = result.lastWeek ? "Last week" : "Week to date";
-    var html = Card.sectionHtml(scorecard);
+    var html = "<section class='sales' id='huddleSales' aria-label='Sales'>";
+    html += "<h2>Sales</h2>";
+    html += Card.sectionHtml(scorecard);
     html += "<p class='range'>Yesterday " + esc(pretty(result.yesterday)) + " · " + esc(weekLabel) + " " + esc(pretty(result.weekStart)) + " – " + esc(pretty(result.weekEnd)) + " (" + result.weekDays + " weekday" + (result.weekDays === 1 ? "" : "s") + ")</p>";
     html += "<div class='scroll'><table><thead><tr><th>Rep</th>" + head + "</tr></thead><tbody>";
     html += result.reps.map(rowHtml).join("");
@@ -176,7 +178,7 @@
       var who = g.scope === "team" ? "Team" : g.rep;
       html += "<label>" + esc(who + " · " + (METRIC_LABEL[g.metric] || g.metric) + " / " + g.period) + "<input data-goal-id='" + g.id + "' type='number' min='0' step='1' value='" + esc(g.target) + "'></label>";
     });
-    html += "<button type='submit'>Save goals</button></form></details>";
+    html += "<button type='submit'>Save goals</button></form></details></section>";
     html += Tasks.sectionHtml(taskSummary, taskNote);
     board.innerHTML = html;
     board.querySelectorAll(".logbar button").forEach(function (btn) {
@@ -298,7 +300,6 @@
     });
     if (result.unmatched) notes.push(result.unmatched + " touch" + (result.unmatched === 1 ? "" : "es") + " had a name that is not Rich or Landon, so they are not in the rep rows.");
     notes.push("Green is at or above the goal. Red is below. A dash means that column has no goal.");
-    notes.push("Company week targets already in kpi_defs stay there: Revenue $115,000, Wins 3, New opportunities 5, Close rate 30%.");
     var scorecard = await resolveScorecard(result, deals, wonKeys);
     renderBoard(result, goalsRes.data || [], notes, taskSummary, taskNote, scorecard);
     armCapture();
