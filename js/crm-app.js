@@ -800,9 +800,45 @@
     });
   }
 
-  var VIEW_CAT = { training: "train", pipeline: "sales", companies: "sales", vendors: "sales", docs: "admin", tasks: "sales", calendar: "ops", orders: "ops", automations: "admin", sequences: "sales", setup: "admin", calculator: "cs", commissions: "acct" };
+  var VIEW_CAT = { training: "train", pipeline: "sales", companies: "sales", vendors: "sales", docs: "admin", tasks: "sales", calendar: "ops", orders: "ops", reorder: "ops", automations: "admin", sequences: "sales", setup: "admin", calculator: "cs", commissions: "acct", "customer-portal": "cs" };
+
+  function pinChrome() {
+    var narrow = window.matchMedia && window.matchMedia("(max-width: 820px)").matches;
+    var stick = document.getElementById("crmStick");
+    var actions = document.getElementById("crmActions");
+    if (!stick) return;
+    var brand = Math.ceil(stick.getBoundingClientRect().height);
+    var extra = !narrow && actions ? Math.ceil(actions.getBoundingClientRect().height) : 0;
+    if (brand > 0) document.documentElement.style.setProperty("--crm-brand-h", brand + "px");
+    if (brand + extra > 0) document.documentElement.style.setProperty("--crm-stick-h", (brand + extra) + "px");
+  }
+  function portalCtx() {
+    return {
+      companies: S.companies,
+      contacts: S.contacts.map(function (x) { return { id: x.id, name: x.name, company_id: x.company_id }; })
+    };
+  }
+  function printReorder(html) {
+    var area = $("#printArea");
+    if (!area) return;
+    area.innerHTML = html;
+    var old = document.title;
+    document.title = "Driven reorder report";
+    try { window.print(); } catch (e) { toast("Press Ctrl+P, or Cmd+P on a Mac, to print the reorder report."); }
+    document.title = old;
+  }
+  function vReorder() {
+    var view = $("#view");
+    if (!view) return;
+    if (!window.CRMPortal) {
+      view.innerHTML = "<p class='banner'>Reorder report did not load. Reload the page.</p>";
+      return;
+    }
+    CRMPortal.render(view, Object.assign({ print: printReorder }, portalCtx()));
+  }
 
   function render() {
+    pinChrome();
     document.documentElement.dataset.theme = S.theme;
     var themeBtn = $("#themeBtn");
     if (themeBtn) themeBtn.textContent = S.theme === "dark" ? "Light mode" : "Dark mode";
@@ -813,6 +849,12 @@
     var n = $("#taskCount"); if (n) { n.hidden = !open; n.textContent = open; }
     var pq = pendingQueue().length;
     var sc = $("#seqCount"); if (sc) { sc.hidden = !pq; sc.textContent = pq; }
+    var rc = $("#reorderCount");
+    if (rc && window.CRMPortal && CRMPortal.belowMinCount) {
+      var belowMin = CRMPortal.belowMinCount();
+      rc.hidden = !belowMin;
+      rc.textContent = belowMin;
+    }
     var view = $("#view");
     var cat = VIEW_CAT[S.view] || "sales";
     if (view) view.dataset.cat = cat;
@@ -820,8 +862,9 @@
     if (window.CRMCommissions) CRMCommissions.syncNav();
     var calcCat = S.calcCat || "";
     if (S.view === "calculator" && view && view.dataset.calcTheme === theme && view.dataset.calcCat === calcCat && view.querySelector("iframe.calc-frame")) return;
-    var views = { pipeline: vPipeline, companies: vCompanies, vendors: function () { if (window.CRMVendors) CRMVendors.render(); }, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, automations: vAutomations, sequences: vSequences, setup: vSetup, calculator: vCalculator, training: vTraining, commissions: function () { if (window.CRMCommissions) CRMCommissions.render(); }, "customer-portal": customerPortalView };
+    var views = { pipeline: vPipeline, companies: vCompanies, vendors: function () { if (window.CRMVendors) CRMVendors.render(); }, docs: vDocs, tasks: vTasks, calendar: vCalendar, orders: vOrders, reorder: vReorder, automations: vAutomations, sequences: vSequences, setup: vSetup, calculator: vCalculator, training: vTraining, commissions: function () { if (window.CRMCommissions) CRMCommissions.render(); }, "customer-portal": customerPortalView };
     (views[S.view] || vPipeline)();
+    if (window.requestAnimationFrame) requestAnimationFrame(pinChrome);
   }
 
   var INTRO_VIDEO = "assets/video/Driven_CRM_Intro_v1.mp4";
@@ -1080,7 +1123,8 @@
       var open = S.deals.filter(function (d) { return d.company_id === c.id && d.status !== "lost" && d.stage !== "paid"; });
       var age = c.last ? between(c.last, TODAY) : null;
       var late = age != null && ((c.list === "active" && age >= 14) || (c.list === "potential" && age >= 30));
-      return "<tr class='click' data-open-company='" + c.id + "'><td><b>" + esc(c.name) + "</b></td><td><span class='chip " + (c.kind === "vendor" ? "vendor" : c.list === "active" ? "active" : "") + "'>" + (c.kind === "vendor" ? "Vendor" : c.list === "active" ? "Active" : "Potential") + "</span></td><td>" + esc(c.owner) + "</td><td class='" + (late ? "late" : "") + "'>" + (age == null ? "—" : age === 0 ? "Today" : age + " days ago") + "</td><td>" + (open.length ? open.length + " · " + money(open.reduce(function (a, d) { return a + val(d); }, 0)) : "—") + "</td><td>" + esc(c.status) + (c.alert_amber ? " <span class='chip'>Alert Amber</span>" : "") + (c.ready_for_qb ? " <span class='chip active'>Ready for QuickBooks</span>" : "") + "</td></tr>";
+      var portal = window.CRMPortal && CRMPortal.linked(c.id);
+      return "<tr class='click' data-open-company='" + c.id + "'><td><b>" + esc(c.name) + "</b>" + (portal ? " <span class='chip active'>Portal</span>" : "") + "</td><td><span class='chip " + (c.kind === "vendor" ? "vendor" : c.list === "active" ? "active" : "") + "'>" + (c.kind === "vendor" ? "Vendor" : c.list === "active" ? "Active" : "Potential") + "</span></td><td>" + esc(c.owner) + "</td><td class='" + (late ? "late" : "") + "'>" + (age == null ? "—" : age === 0 ? "Today" : age + " days ago") + "</td><td>" + (open.length ? open.length + " · " + money(open.reduce(function (a, d) { return a + val(d); }, 0)) : "—") + "</td><td>" + esc(c.status) + (c.alert_amber ? " <span class='chip'>Alert Amber</span>" : "") + (c.ready_for_qb ? " <span class='chip active'>Ready for QuickBooks</span>" : "") + "</td></tr>";
     }).join("") : "<tr><td colspan='6' class='empty'>No companies yet.</td></tr>";
     h += "</tbody></table></div>";
     $("#view").innerHTML = h;
@@ -1100,7 +1144,9 @@
     var ships = S.shipTos.filter(function (s) { return s.company_id === c.id; });
     var cons = S.contacts.filter(function (x) { return x.company_id === c.id; });
     var deals = S.deals.filter(function (d) { return d.company_id === c.id || d.vendor_id === c.id; });
+    var portalHtml = window.CRMPortal ? CRMPortal.forCompany(c.id, portalCtx()) : "";
     var h = "<div class='dhead'><div style='flex:1'><div class='sub'>" + (c.kind === "vendor" ? "Vendor" : c.kind === "prospect" ? "Prospect" : "Customer") + "</div><h2>" + esc(c.name) + "</h2></div><button class='ghost' data-act='close'>Close</button></div><div class='dbody'>";
+    if (portalHtml) h += portalHtml;
     h += "<fieldset><legend>Company</legend><div class='fields'>" + f("name", "Company name") + f("kind", "Type", "kind") + f("list", "Follow-up list", "list") + f("owner", "Owner", "rep") + f("last", "Last contact", "date") + f("billing", "Billing address") + f("status", "Live status") + f("notes", "Notes", "area") + "</div></fieldset>";
     var st = setupStatus(c);
     h += "<fieldset><legend>" + (c.kind === "vendor" ? "Vendor setup" : "Customer setup") + " <span class='log'>" + (c.setup_started ? st.done + " of " + st.total : "not started") + "</span></legend>";
@@ -1124,7 +1170,7 @@
     h += "<fieldset><legend>Email and text status</legend>" + messageList(null, c.id) + "</fieldset>";
     h += notesHtml(c.id, null);
     h += "</div><div class='dfoot'>" + (c.kind !== "vendor" ? "<button class='primary' data-act='quick-log' data-kind='call' data-id='" + c.id + "'>Log call</button><button class='ghost' data-act='quick-log' data-kind='email' data-id='" + c.id + "'>Log email</button><button class='ghost' data-act='quick-log' data-kind='touch' data-id='" + c.id + "'>Log touch</button><button class='ghost' data-act='new-quote' data-company='" + c.id + "'>New quote</button><button class='ghost' data-act='new-deal' data-company='" + c.id + "'>New deal</button>" : "") + "</div>";
-    openDrawer(h);
+    openDrawer(h, !!portalHtml);
     $("#drawer").dataset.company = c.id;
   }
 
@@ -1662,6 +1708,18 @@
     if (act === "packet-dl") { downloadPacket(a.dataset.kind, a.dataset.name ? [a.dataset.name] : []); return; }
     if (act === "packet-all") { downloadPacket(a.dataset.kind, null); return; }
     if (act === "orders-csv") { exportOrders(); return; }
+    if (act === "open-reorder") {
+      closeDrawer();
+      S.view = "reorder";
+      if (window.history && history.replaceState) {
+        var reorderUrl = new URL(location.href);
+        reorderUrl.searchParams.delete("view");
+        history.replaceState(null, "", reorderUrl.pathname + reorderUrl.search + reorderUrl.hash);
+      }
+      render();
+      window.scrollTo(0, 0);
+      return;
+    }
     if (act === "usual-order") { useUsual(+id); return; }
     if (act === "import-products") { importProducts(); return; }
     if (act === "q-add-line") { addQuoteLine(+id); return; }
@@ -2102,6 +2160,7 @@
     if (window.CRMVendors) await CRMVendors.load();
     if (window.CRMCommissions) await CRMCommissions.load();
     if (window.CRMSupply) await CRMSupply.load();
+    if (window.CRMPortal) await CRMPortal.load();
     var asked = new URLSearchParams(location.search).get("view");
     if (asked === "vendors") { location.replace("vendors.html"); return; }
     if (asked === "calculator" && new URLSearchParams(location.search).get("from") === "vendors") {
@@ -2459,6 +2518,7 @@
       setGateMsg("The sign-in script did not load. Reload the page.", "bad");
       return;
     }
+    window.addEventListener("resize", pinChrome);
     CRMAuth.bind({
       place: "CRM",
       isHeld: function () { return gateHold; },
