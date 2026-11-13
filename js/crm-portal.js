@@ -521,7 +521,7 @@
       });
       h += "</tbody></table></div>";
     });
-    h += "<p style='margin-top:10px'><button type='button' class='ghost' data-act='open-reorder'>Open reorder report</button></p></fieldset>";
+    h += "<p style='margin-top:10px'><button type='button' class='ghost' data-act='open-reorder'>Open reorder report</button> <button type='button' class='ghost' data-act='open-portal-orders' data-company='" + esc(companyId) + "'>Portal orders</button></p></fieldset>";
     return h;
   }
   function merge(ctx, src) {

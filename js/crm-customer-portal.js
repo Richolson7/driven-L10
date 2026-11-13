@@ -320,7 +320,8 @@
     var view = document.getElementById("view");
     if (!view) return;
     view.dataset.cat = "cs";
-    view.innerHTML = directoryHtml(state);
+    if (state.team === false || !window.CRMPortalOrders) view.innerHTML = directoryHtml(state);
+    else CRMPortalOrders.paint(view);
     var tab = document.getElementById("customerPortalTab");
     if (tab && tab.scrollIntoView) {
       try { tab.scrollIntoView({ block: "nearest", inline: "nearest" }); } catch (err) { /* keep the tab in the nav */ }
@@ -691,6 +692,7 @@
     state.note = "";
     sample = previewSample();
     state.directory = buildDirectory(sample);
+    if (window.CRMPortalOrders) CRMPortalOrders.useSample();
     syncNav();
     var gate = document.getElementById("authGate");
     var shell = document.getElementById("shell");
