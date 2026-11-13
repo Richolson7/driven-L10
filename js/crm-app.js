@@ -825,23 +825,16 @@
   }
 
   var INTRO_VIDEO = "assets/video/Driven_CRM_Intro_v1.mp4";
-  var INTRO_HIDE_KEY = "driven-crm-intro-hidden";
-  function introHidden() { try { return localStorage.getItem(INTRO_HIDE_KEY) === "1"; } catch (e) { return false; } }
   function introVideo(label) {
     return "<video class='crm-intro-video' controls preload='metadata' playsinline aria-label='" + esc(label || "Driven CRM intro") + "'><source src='" + INTRO_VIDEO + "' type='video/mp4'></video>";
   }
-  function introBlock(where) {
-    if (where === "home" && introHidden()) {
-      return "<div class='crm-intro-mini'><button class='ghost' data-act='intro-show'>Watch the CRM intro</button></div>";
-    }
-    var h = "<div class='crm-intro' id='crmIntro'><div class='crm-intro-head'><h2>Intro</h2>";
-    if (where === "home") h += "<button class='linkbtn' data-act='intro-hide'>Hide intro</button>";
-    h += "</div><p class='log'>Why the CRM matters, and how to use it every day. About a minute and a half.</p>" + introVideo() + "</div>";
-    return h;
+  function introBlock() {
+    return "<div class='crm-intro' id='crmIntro'><div class='crm-intro-head'><h2>Intro</h2></div><p class='log'>Why the CRM matters, and how to use it every day. About a minute and a half.</p>" + introVideo() + "</div>";
   }
 
   function vTraining() {
-    var h = "<div class='grid2'><div class='sect'><h2>Training</h2><p class='lead'>Start with the intro, then take the guided tour. You can replay both any time.</p>" + introBlock("training");
+    var h = "<div class='grid2'><div class='sect'><h2>Training</h2><p class='lead'>Start with the intro, then take the guided tour. You can replay both any time.</p>" + introBlock();
+    h += "<p class='log'><a href='https://driven-vmi-portal.vercel.app/?tour=team' target='_blank' rel='noopener noreferrer'>Also on the portal Team tour</a></p>";
     h += "<div class='mactions' style='justify-content:flex-start;margin-top:12px'><button class='cat-ctl train' type='button' data-act='tour'>Take the tour</button><a class='ghost' href='vendors.html' style='text-decoration:none'>Vendor portal training</a></div></div>";
     h += "<div class='sect'><h2>Every day</h2><div class='panel' style='padding:14px'><ol class='crm-steps'>";
     h += "<li><b>Sign in as yourself.</b> Check that Signed in as shows your name.</li>";
@@ -912,7 +905,7 @@
     var wonDeals = S.deals.filter(function (d) { return d.won_at && match(d); });
     var wv = wonDeals.reduce(function (a, d) { return a + val(d); }, 0), wc = wonDeals.reduce(function (a, d) { return a + cost(d); }, 0);
     var quotesOut = open.filter(function (d) { return d.stage === "quote_sent"; }).length;
-    var h = introBlock("home") + "<div class='bar'><input type='search' id='q' placeholder='Company or deal' value='" + esc(F.q) + "'><select id='repf'><option value=''>All reps</option>" + reps().map(function (r) { return "<option" + (F.rep === r ? " selected" : "") + ">" + esc(r) + "</option>"; }).join("") + "</select>";
+    var h = "<div class='bar'><input type='search' id='q' placeholder='Company or deal' value='" + esc(F.q) + "'><select id='repf'><option value=''>All reps</option>" + reps().map(function (r) { return "<option" + (F.rep === r ? " selected" : "") + ">" + esc(r) + "</option>"; }).join("") + "</select>";
     h += "<select id='stagef'><option value=''>All stages</option>" + S.stages.map(function (s) { return "<option value='" + esc(s.key) + "'" + (F.stage === s.key ? " selected" : "") + ">" + esc(s.name) + "</option>"; }).join("") + "</select>";
     h += "<label class='date'>Ship from <input type='date' id='shipFrom' value='" + esc(F.shipFrom) + "'></label><label class='date'>Ship to <input type='date' id='shipTo' value='" + esc(F.shipTo) + "'></label>";
     h += "<label class='switch'><input type='checkbox' id='showLost'" + (F.showLost ? " checked" : "") + "> Show lost</label>";
@@ -1611,8 +1604,6 @@
     if (act === "tour-next") { if (tourStep < TOUR.length - 1) tourStep += 1; tourShow(); return; }
     if (act === "tour-prev") { if (tourStep > 0) tourStep -= 1; tourShow(); return; }
     if (act === "tour-end") { tourEnd(); return; }
-    if (act === "intro-hide") { try { localStorage.setItem(INTRO_HIDE_KEY, "1"); } catch (err) {} render(); return; }
-    if (act === "intro-show") { try { localStorage.removeItem(INTRO_HIDE_KEY); } catch (err) {} render(); var iv = document.querySelector("#crmIntro video"); if (iv && iv.play) iv.play().catch(function () {}); return; }
     if (act === "mclose") { closeModal(); return; }
     if (act === "theme") { S.theme = S.theme === "dark" ? "light" : "dark"; localStorage.setItem("driven-crm-theme", S.theme); render(); return; }
     if (act === "open-calc") {
