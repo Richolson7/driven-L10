@@ -93,6 +93,8 @@ summary.forEach(function (row) {
 });
 
 var html = Tasks.sectionHtml(summary, "Tasks did not load. <script>");
+assert.ok(html.indexOf("<h2>What we need to do</h2>") > 0);
+assert.ok(html.indexOf("<h2>Tasks</h2>") < 0);
 assert.ok(html.indexOf("<h3>Patrick</h3>") < html.indexOf("<h3>Annie</h3>"));
 assert.ok(html.indexOf("<h3>Annie</h3>") < html.indexOf("<h3>Rich</h3>"));
 assert.ok(html.indexOf("<h3>Rich</h3>") < html.indexOf("<h3>Landon</h3>"));

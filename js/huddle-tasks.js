@@ -101,8 +101,8 @@
   }
 
   function sectionHtml(summary, note) {
-    var html = "<section class='tasks' id='taskAccountability' aria-label='Team tasks'>";
-    html += "<h2>Tasks</h2>";
+    var html = "<section class='tasks' id='taskAccountability' aria-label='What we need to do'>";
+    html += "<h2>What we need to do</h2>";
     html += "<p class='fine'>Call these out before the close. Next 7 days is after today, through seven days out. A shared task counts for every person named.</p>";
     if (note) html += "<p class='fine'>" + esc(note) + "</p>";
     if (!summary) {
