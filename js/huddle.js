@@ -321,11 +321,22 @@
     board.innerHTML = "<p class='lead'>The sign-in script did not load. Reload the page.</p>";
     return;
   }
-  CRMAuth.bind({
-    place: "huddle",
-    isHeld: function () { return held; },
-    onSession: function () { load(); },
-    onSignedOut: function () { if (!held) showGate(); },
-    onRecovery: function () { showGate(); }
+  var wait = document.getElementById("authWait");
+  if (gate) gate.hidden = true;
+  if (wait) wait.hidden = false;
+  CRMAuth.ready().then(function (session) {
+    if (wait) wait.hidden = true;
+    CRMAuth.bind({
+      place: "huddle",
+      isHeld: function () { return held; },
+      onSession: function () { load(); },
+      onSignedOut: function () { if (!held) showGate(); },
+      onRecovery: function () { showGate(); }
+    });
+    if (session) load();
+    else showGate();
+  }).catch(function () {
+    if (wait) wait.hidden = true;
+    showGate();
   });
 })();

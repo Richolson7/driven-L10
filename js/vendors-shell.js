@@ -108,7 +108,7 @@
     else closeDrawer();
   });
 
-  function boot() {
+  async function boot() {
     try { theme = localStorage.getItem("driven-crm-theme") || "dark"; } catch (e) { theme = "dark"; }
     applyTheme(theme);
     var themeBtn = $("themeBtn");
@@ -122,6 +122,15 @@
       if (msg) msg.textContent = "The sign-in script did not load. Reload the page.";
       return;
     }
+    var wait = $("authWait");
+    var gate = $("authGate");
+    var shell = $("shell");
+    if (gate) gate.hidden = true;
+    if (shell) shell.hidden = true;
+    if (wait) wait.hidden = false;
+    var session = null;
+    try { session = await CRMAuth.ready(); } catch (e) { session = null; }
+    if (wait) wait.hidden = true;
     CRMAuth.bind({
       place: "vendor portal",
       onSession: function (session) { enter(session); },
@@ -136,6 +145,11 @@
         $("authGate").hidden = false;
       }
     });
+    if (session) enter(session);
+    else {
+      $("shell").hidden = true;
+      $("authGate").hidden = false;
+    }
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();

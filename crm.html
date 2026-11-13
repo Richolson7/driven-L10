@@ -381,10 +381,17 @@ details.seq[open] summary{background:var(--raise)}
 .gate-card .linkbtn{display:block;width:100%;text-align:center;margin:2px 0 8px}
 .gate-msg{min-height:1.3em;margin:8px 0 0;color:var(--text)}
 .gate-msg.bad{color:var(--bad)}
+.pick{position:relative}
+.pick-q{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+.pick-list{z-index:80;max-height:240px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow);padding:4px}
+.pick-opt{display:block;width:100%;text-align:left;background:none;border:0;border-radius:4px;padding:7px 8px}
+.pick-opt:hover,.pick-opt[aria-selected="true"]{background:var(--raise)}
+#authWait{max-width:440px;margin:18vh auto;text-align:center;color:var(--muted)}
 </style>
 </head>
 <body>
-<div id="authGate">
+<p id="authWait">Checking sign-in…</p>
+<div id="authGate" hidden>
   <form class="gate-card" id="gateForm">
     <h1>Driven CRM</h1>
     <p id="gateLead">Sign in with your work email and password. Day-to-day sign-in does not send email.</p>
@@ -487,6 +494,8 @@ details.seq[open] summary{background:var(--raise)}
 <script src="js/crm-supply.js"></script>
 <script src="js/crm-commissions.js"></script>
 <script src="js/crm-forms.js"></script>
+<script src="js/crm-pick.js"></script>
+<script src="js/crm-archive.js"></script>
 <script src="js/crm-portal.js"></script>
 <script src="js/crm-app.js"></script>
 <script src="js/crm-customer-portal.js"></script>
