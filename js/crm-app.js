@@ -894,6 +894,15 @@
     h += "<li><b>Move deals on the Pipeline.</b> Drag the card, or use the stage bar in the deal. Fill what the next stage asks for.</li>";
     h += "<li><b>Customer PO?</b> Move the deal to Customer PO the same day. The order lands in Open orders.</li>";
     h += "</ol></div></div></div>";
+    var topics = window.CRMPortalOrders ? CRMPortalOrders.trainingTopics() : [];
+    if (topics.length) {
+      h += "<div class='sect' style='margin-top:28px'><h2>Portal and the tab bar</h2><div class='grid2'>";
+      topics.forEach(function (topic) {
+        h += "<div class='panel' style='padding:14px'><h3 class='cond' style='font-size:20px'>" + esc(topic.title) + "</h3><p>" + esc(topic.body) + "</p>";
+        h += "<p style='margin:8px 0 0'><button class='ghost' type='button' data-act='go-view' data-view='" + esc(topic.view) + "'>" + esc(topic.link) + "</button></p></div>";
+      });
+      h += "</div></div>";
+    }
     $("#view").innerHTML = h;
   }
 
@@ -1708,6 +1717,22 @@
     if (act === "packet-dl") { downloadPacket(a.dataset.kind, a.dataset.name ? [a.dataset.name] : []); return; }
     if (act === "packet-all") { downloadPacket(a.dataset.kind, null); return; }
     if (act === "orders-csv") { exportOrders(); return; }
+    if (act === "go-view") {
+      var nextView = a.dataset.view;
+      if (nextView === "customer-portal" && window.CRMPortalOrders) { CRMPortalOrders.show("all"); return; }
+      if (nextView && VIEW_CAT[nextView]) {
+        S.view = nextView;
+        closeDrawer();
+        render();
+        window.scrollTo(0, 0);
+      }
+      return;
+    }
+    if (act === "open-portal-orders") {
+      closeDrawer();
+      if (window.CRMPortalOrders) CRMPortalOrders.show(a.dataset.company || "all");
+      return;
+    }
     if (act === "open-reorder") {
       closeDrawer();
       S.view = "reorder";
@@ -2161,6 +2186,7 @@
     if (window.CRMCommissions) await CRMCommissions.load();
     if (window.CRMSupply) await CRMSupply.load();
     if (window.CRMPortal) await CRMPortal.load();
+    if (window.CRMPortalOrders) await CRMPortalOrders.load();
     var asked = new URLSearchParams(location.search).get("view");
     if (asked === "vendors") { location.replace("vendors.html"); return; }
     if (asked === "calculator" && new URLSearchParams(location.search).get("from") === "vendors") {
