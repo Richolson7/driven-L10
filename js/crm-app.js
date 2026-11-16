@@ -140,6 +140,30 @@
   function SI(k) { return S.stages.findIndex(function (s) { return s.key === k; }); }
   function WON() { var i = SI("customer_po"); return i < 0 ? 2 : i; }
   function stageName(k) { var s = S.stages.find(function (x) { return x.key === k; }); return s ? s.name : (k || ""); }
+  function ensureRejectedStage() {
+    if (!S.stages.length) return;
+    if (S.stages.some(function (s) { return s.key === "quote_rejected" || /reject|expired/i.test(s.name || ""); })) return;
+    var stage = { id: null, key: "quote_rejected", name: "Expired / Rejected", position: 2.5, team: "sales", req: [], active: true, local: true };
+    var i = SI("quote_sent");
+    if (i >= 0) S.stages.splice(i + 1, 0, stage);
+    else {
+      var won = SI("customer_po");
+      if (won >= 0) S.stages.splice(won, 0, stage);
+      else S.stages.push(stage);
+    }
+  }
+  function rejectedStageKey() {
+    var s = S.stages.find(function (x) { return x.key === "quote_rejected" || /reject|expired/i.test(x.name || ""); });
+    return s ? s.key : "quote_rejected";
+  }
+  function rejectedStage() { return S.stages.find(function (s) { return s.key === rejectedStageKey(); }) || null; }
+  function countedOnHost(d) {
+    if (!d || !d.on_quote || d.status === "lost") return false;
+    var host = dealById(d.on_quote);
+    if (!host || host.status === "lost" || host.stage === rejectedStageKey()) return false;
+    var lines = host.quote && host.quote.lines;
+    return !!(lines && lines.some(function (l) { return +l.source_deal_id === +d.id; }));
+  }
   function reps() { return S.team.filter(function (t) { return t.team === "sales" && t.active !== false; }).map(function (t) { return t.name; }); }
   function repOptions() {
     var names = reps().slice();
@@ -210,7 +234,8 @@
       freight: row.freight, invoice_sent_date: day(row.invoice_sent_date), paid_date: day(row.paid_date), notes: row.notes || "",
       vendor_po_number: row.vendor_po_number || "", bill_url: row.bill_url || "",
       custom: userCustom(c), status: c._status || "open", won_at: c._won_at || null, lost_reason: c._lost_reason || "",
-      order_lines: c._order_lines || [], quote: c._quote || null
+      order_lines: c._order_lines || [], quote: c._quote || null,
+      on_quote: c._on_quote || null, mass: !!c._mass
     };
     if (d.quote && d.quote.lines && d.quote.lines[0]) {
       var line = d.quote.lines[0];
@@ -234,6 +259,8 @@
     bag._lost_reason = d.lost_reason || "";
     bag._order_lines = d.order_lines || [];
     bag._quote = d.quote || null;
+    bag._on_quote = d.on_quote || null;
+    bag._mass = !!d.mass;
     return bag;
   }
   function mapTask(row) {
@@ -266,6 +293,7 @@
     if (seqRes && seqRes.error) S.sequenceNote = "Sequences did not load: " + CRMDB.explain(seqRes.error);
     else if (!by.crm_sequence_steps.length) S.sequenceNote = "No sequence steps came back. crm_sequence_steps is limited to signed-in @drivensol.com users, so the anon key cannot read the 7 seeded steps until you sign in.";
     S.stages = by.crm_stages.map(function (s) { return { id: s.id, key: s.key, name: s.name, position: s.position, team: s.team, req: s.required_fields || [], active: s.active !== false }; }).filter(function (s) { return s.active; }).sort(function (a, b) { return a.position - b.position; });
+    ensureRejectedStage();
     S.team = by.crm_team.map(function (p) { return { id: p.id, name: p.name, email: p.email || "", team: p.team, via: p.alert_via || "both", active: p.active !== false }; }).sort(function (a, b) { return a.id - b.id; });
     S.rules = by.crm_automation_rules.map(function (r) { return { id: r.id, name: r.name, trigger: r.trigger, stage: r.stage, field: r.date_field, days: r.offset_days || [], list: r.company_list, notify: r.notify_team, via: r.via, msg: r.message, active: r.active !== false }; }).sort(function (a, b) { return a.id - b.id; });
     S.fields = by.crm_custom_fields.map(function (f) { return { id: f.id, entity: f.entity, key: f.key, label: f.label, type: f.type, options: f.options || [], position: f.position || 0, active: f.active !== false }; }).sort(function (a, b) { return a.position - b.position; });
@@ -574,6 +602,38 @@
     var ready = ["vendor_form", "w9"].every(function (k) { return itemDone(c, { key: k, doc: 1 }); });
     c.ready_for_qb = ready && !c.qb_id;
     c.alert_amber = c.ready_for_qb;
+  }
+  async function expireOldQuotes() {
+    ensureRejectedStage();
+    S.expireNote = "";
+    var due = S.deals.filter(function (d) { return Q.quoteExpired(d, TODAY); });
+    var stage = rejectedStage();
+    if (!stage || stage.local || !stage.id) {
+      if (due.length) S.expireNote = due.length + (due.length === 1 ? " quote has" : " quotes have") + " been in Quote sent more than 60 days. Expired / Rejected is on the board. Those deals move there after the stage is added in the database.";
+      return;
+    }
+    var moved = 0;
+    for (var i = 0; i < due.length; i++) {
+      var d = due[i];
+      var prevStage = d.stage;
+      var prevAt = d.stage_changed_at;
+      var prevStatus = d.quote ? d.quote.status : null;
+      d.stage = stage.key;
+      d.stage_changed_at = TODAY;
+      if (d.quote && d.quote.status !== "accepted") d.quote.status = "declined";
+      var ok = await saveDealColumns(d, { stage: d.stage, stage_changed_at: d.stage_changed_at + "T18:00:00.000Z", custom: dealBag(d) }, "deal");
+      if (!ok) {
+        d.stage = prevStage;
+        d.stage_changed_at = prevAt;
+        if (d.quote) d.quote.status = prevStatus;
+        S.expireNote = "Could not move old quotes to Expired / Rejected. Nothing else was changed.";
+        return;
+      }
+      if (d.quote) await saveQuoteDoc(d);
+      await addActivity({ deal_id: d.id, company_id: d.company_id, kind: "move", note: "Moved Quote sent to " + stage.name + ". It was in Quote sent more than 60 days.", by: meName() });
+      moved++;
+    }
+    if (moved) S.expireNote = moved + (moved === 1 ? " quote moved" : " quotes moved") + " to " + stage.name + " after more than 60 days in Quote sent.";
   }
   async function runAutomations() {
     var rules = S.rules.filter(function (r) { return r.active; });
@@ -908,6 +968,13 @@
     h += "<li><b>Move deals on the Pipeline.</b> Drag the card, or use the stage bar in the deal. Fill what the next stage asks for.</li>";
     h += "<li><b>Customer PO?</b> Move the deal to Customer PO the same day. The order lands in Open orders.</li>";
     h += "</ol></div></div></div>";
+    h += "<div class='sect' id='training-quotes' style='margin-top:28px'><h2>Quotes and deals</h2><p class='lead'>These steps match the pipeline buttons. Replay them with Take the tour.</p><div class='panel' style='padding:14px'><ol class='crm-steps'>";
+    h += "<li><b>New deal stays in the form.</b> Tab moves from customer to description to sales rep. It does not leave the form.</li>";
+    h += "<li><b>Add a customer in the form.</b> On New deal and New quote, Add a customer uses the same name, type, and owner as New company. The deal or quote form stays open and the new customer is selected.</li>";
+    h += "<li><b>A quote and its deal share one set of facts.</b> Start a quote from an open deal and it copies the customer, product, quantity, and price. Edit either side and the other updates. The deal value is the total of the quote lines.</li>";
+    h += "<li><b>Mass quote.</b> Pick two or more open opportunities for the same customer. Each opportunity is one product. Mass quote builds one quote with a line for each. The original opportunities stay on the board, and their dollars are counted on the combined quote.</li>";
+    h += "<li><b>Expired / Rejected.</b> A deal that sits in Quote sent for more than 60 days moves to Expired / Rejected. The column is on the pipeline. The stage filter finds it. The clock is the day it entered Quote sent, or the quote sent date if that day is missing.</li>";
+    h += "</ol></div></div>";
     var topics = window.CRMPortalOrders ? CRMPortalOrders.trainingTopics() : [];
     if (topics.length) {
       h += "<div class='sect' style='margin-top:28px'><h2>Portal and the tab bar</h2><div class='grid2'>";
@@ -922,7 +989,11 @@
 
   var TOUR = [
     { title: "Welcome to the Driven CRM", body: "Watch this quick intro first, then click Next for a walk around the screen.", video: true },
-    { title: "Pipeline is home", body: "Deals move left to right through Sales, Operations, and Accounting. Drag a card to the next stage.", sel: ".tab[data-view='pipeline']", view: "pipeline" },
+    { title: "Pipeline is home", body: "Deals move left to right through Sales, Operations, and Accounting. Drag a card to the next stage. Cards are packed a little tighter so more of the board fits on screen.", sel: ".tab[data-view='pipeline']", view: "pipeline" },
+    { title: "New deal", body: "New deal stays open while you tab from customer to description to sales rep. If the customer is not in the list, Add a customer uses the same company form and keeps this deal form open.", sel: "[data-act='new-deal']", view: "pipeline" },
+    { title: "Quotes match the deal", body: "New quote can start from an open deal. Customer, product, quantity, and price are filled in and stay linked. Edit the quote or the deal and the other one updates. The deal value is the sum of the quote lines.", sel: "[data-act='new-quote-pick']", view: "pipeline" },
+    { title: "Mass quote", body: "Mass quote picks several open opportunities for one customer, one product each, and builds one quote with a line per opportunity. The original opportunities stay on the board.", sel: "[data-act='mass-quote']", view: "pipeline" },
+    { title: "Expired quotes", body: "A deal that sits in Quote sent for more than 60 days moves to Expired / Rejected on its own. The column is on the pipeline, and the stage filter finds it.", sel: "[data-rejected='1']", view: "pipeline" },
     { title: "Companies", body: "Every customer and contact. Search before you add anything, so there are no duplicates.", sel: ".tab[data-view='companies']" },
     { title: "Vendors", body: "Opens the vendor portal, with its own intro and training.", sel: ".tab[href='vendors.html']" },
     { title: "Follow-ups", body: "Your to-do list. Work Overdue first, then Today.", sel: ".tab[data-view='tasks']" },
@@ -970,12 +1041,12 @@
     var match = dealMatches;
     var open = S.deals.filter(function (d) { return d.status !== "lost" && match(d); });
     var ym = TODAY.slice(0, 7);
-    var pipe = open.filter(function (d) { return SI(d.stage) < WON(); }).reduce(function (a, d) { return a + val(d); }, 0);
-    var wonM = S.deals.filter(function (d) { return d.won_at && String(d.won_at).slice(0, 7) === ym && d.status !== "lost" && match(d); });
-    var wonCount = S.deals.filter(function (d) { return d.won_at && match(d); }).length;
+    var pipe = open.filter(function (d) { return SI(d.stage) < WON() && d.stage !== rejectedStageKey() && !countedOnHost(d); }).reduce(function (a, d) { return a + val(d); }, 0);
+    var wonM = S.deals.filter(function (d) { return d.won_at && String(d.won_at).slice(0, 7) === ym && d.status !== "lost" && match(d) && !countedOnHost(d); });
+    var wonCount = S.deals.filter(function (d) { return d.won_at && match(d) && !countedOnHost(d); }).length;
     var lostCount = S.deals.filter(function (d) { return d.status === "lost" && match(d); }).length;
     var rate = wonCount + lostCount ? Math.round(wonCount / (wonCount + lostCount) * 100) + "%" : "—";
-    var wonDeals = S.deals.filter(function (d) { return d.won_at && match(d); });
+    var wonDeals = S.deals.filter(function (d) { return d.won_at && match(d) && !countedOnHost(d); });
     var wv = wonDeals.reduce(function (a, d) { return a + val(d); }, 0), wc = wonDeals.reduce(function (a, d) { return a + cost(d); }, 0);
     var quotesOut = open.filter(function (d) { return d.stage === "quote_sent"; }).length;
     var h = introBlock("home") + "<div class='bar'><input type='search' id='q' placeholder='Company or deal' value='" + esc(F.q) + "'><select id='repf'><option value=''>All reps</option>" + reps().map(function (r) { return "<option" + (F.rep === r ? " selected" : "") + ">" + esc(r) + "</option>"; }).join("") + "</select>";
@@ -984,9 +1055,12 @@
     h += "<label class='switch'><input type='checkbox' id='showLost'" + (F.showLost ? " checked" : "") + "> Show lost</label>";
     h += "<select id='presetPick'><option value=''>Presets</option>" + presets.map(function (p, i) { return "<option value='" + i + "'>" + esc(p.name) + "</option>"; }).join("") + "</select>";
     h += "<button class='ghost' data-act='filter-default'>Save as my default</button><button class='ghost' data-act='filter-preset'>Save preset</button><button class='ghost' data-act='filter-clear'>Clear</button>";
-    h += "<div class='spacer'></div><button class='ghost' data-act='new-quote-pick'>New quote</button><button class='primary' data-act='new-deal'>New deal</button></div>";
+    h += "<div class='spacer'></div><button class='ghost' type='button' data-act='new-quote-pick' title='Start a quote. Pick an open deal to copy its customer, product, quantity, and price, and keep them linked.'>New quote</button><button class='ghost' type='button' data-act='mass-quote' title='Select several open opportunities for one customer and build one quote with a line for each.'>Mass quote</button><button class='primary' type='button' data-act='new-deal' title='Create a deal. Tab stays in the form. Add a customer here if they are not in the list.'>New deal</button></div>";
     h += "<p class='log' id='prefsNote'></p>";
     if (F.shipFrom || F.shipTo) h += "<p class='log'>Ship dates hide deals with no estimated ship date.</p>";
+    if (S.expireNote) h += "<p class='banner'>" + esc(S.expireNote) + "</p>";
+    else if (rejectedStage() && rejectedStage().local) h += "<p class='banner'>Expired / Rejected is on the board. Deals can be saved there after that stage is added in the database.</p>";
+    if (open.some(countedOnHost)) h += "<p class='log'>Opportunities on a combined quote stay on the board. Their dollars are counted on that quote, not twice.</p>";
     h += "<div class='stats'><div class='stat'><b>" + money(pipe) + "</b><span>Open pipeline, quoting and quoted</span></div><div class='stat won'><b>" + money(wonM.reduce(function (a, d) { return a + val(d); }, 0)) + "</b><span>Closed won this month (" + wonM.length + ")</span></div><div class='stat'><b>" + rate + "</b><span>Win rate (" + wonCount + " won, " + lostCount + " lost)</span></div><div class='stat'><b>" + (wv ? pct((wv - wc) / wv) : "—") + "</b><span>Margin on won deals</span></div><div class='stat'><b>" + quotesOut + "</b><span>Quotes waiting on the customer</span></div></div>";
     var cols = S.stages.map(function (s) { return colCollapsed(s) ? "92px" : "minmax(220px,1fr)"; }).join(" ");
     h += "<div class='boardwrap'><div class='zones' style='grid-template-columns:" + cols + "'>";
@@ -1003,9 +1077,10 @@
     });
     S.stages.forEach(function (s, i) {
       var ds = open.filter(function (d) { return d.stage === s.key; });
-      var tot = ds.reduce(function (a, d) { return a + val(d); }, 0);
+      var tot = ds.filter(function (d) { return !countedOnHost(d); }).reduce(function (a, d) { return a + val(d); }, 0);
       var collapsed = colCollapsed(s);
-      h += "<section class='col" + (collapsed ? " collapsed" : "") + "' data-stage='" + s.key + "'><div class='colhead' data-act='toggle-col' data-stage='" + s.key + "' role='button' tabindex='0' aria-expanded='" + (!collapsed) + "'><h3>" + esc(s.name) + "<span class='ct'>" + ds.length + "</span></h3><div class='tot'>" + money(tot) + (i === WON() ? " · <span class='wonmark'>Closed won starts here</span>" : "") + "</div></div><div class='cards'>";
+      var stageTip = s.key === rejectedStageKey() ? " title='Quotes that stay in Quote sent more than 60 days move here. Use the stage filter to find them.'" : "";
+      h += "<section class='col" + (collapsed ? " collapsed" : "") + "' data-stage='" + s.key + "'" + (s.key === rejectedStageKey() ? " data-rejected='1'" : "") + "><div class='colhead' data-act='toggle-col' data-stage='" + s.key + "' role='button' tabindex='0' aria-expanded='" + (!collapsed) + "'" + stageTip + "><h3>" + esc(s.name) + "<span class='ct'>" + ds.length + "</span></h3><div class='tot'>" + money(tot) + (i === WON() ? " · <span class='wonmark'>Closed won starts here</span>" : "") + "</div></div><div class='cards'>";
       h += ds.length ? ds.map(cardHtml).join("") : "<div class='empty'>Drag a deal here</div>";
       h += "</div></section>";
     });
@@ -1038,6 +1113,8 @@
     if (d.stage === "driven_po" && d.est_ship_date) due = d.est_ship_date <= TODAY ? "Ships today" : "Ships " + shortDate(d.est_ship_date);
     if (d.stage === "shipped" && d.est_delivery_date) due = d.est_delivery_date <= TODAY ? "Delivers today" : "Delivers " + shortDate(d.est_delivery_date);
     if (d.stage === "quote_sent" && d.quote_sent_date) due = "Quoted " + between(d.quote_sent_date, TODAY) + "d ago";
+    var host = countedOnHost(d) ? dealById(d.on_quote) : null;
+    if (host) due = "On quote " + ((host.quote && host.quote.number) || "combined");
     return "<button class='card" + (isWon(d) ? " won" : "") + "' draggable='true' data-id='" + d.id + "' data-open-deal='" + d.id + "'><div class='co'>" + esc(c.name || "No company") + "</div><div class='desc'>" + esc(d.description || "Untitled deal") + "</div><div class='row'><span class='money'>" + (val(d) ? money(val(d)) : "Needs pricing") + "</span><span class='" + mgClass(m) + "'>" + (m == null ? "" : pct(m) + " margin") + "</span></div><div class='foot'><span>" + esc(d.sales_rep || "No rep") + "</span><span class='" + (due ? "due" : "") + "'>" + (due || (age + "d in stage")) + "</span></div></button>";
   }
   function wireDrag() {
@@ -1066,8 +1143,8 @@
     if (window.CRMSupply) h += CRMSupply.dealBlock(d);
     var dq = qOf(d);
     h += dq
-      ? "<div class='qbox'><div><b>Quote " + esc(dq.number) + "</b> · " + esc(dq.status || "") + " · " + linesOf(d).length + " line" + (linesOf(d).length > 1 ? "s" : "") + " · " + money(val(d)) + "</div><span style='display:flex;gap:8px'><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-act='q-download' data-id='" + d.id + "'>Download customer quote</button><button class='ghost' data-act='open-quote' data-id='" + d.id + "'>Open quote</button></span></div>"
-      : "<div class='qbox'><div>No quote document yet. The customer PDF uses these product lines and leaves out cost and margin.</div><span style='display:flex;gap:8px'><button class='ghost' data-act='q-download' data-id='" + d.id + "'>Download customer quote</button><button class='primary' data-act='new-quote' data-deal='" + d.id + "'>Build quote</button></span></div>";
+      ? "<div class='qbox'><div><b>Quote " + esc(dq.number) + "</b> · " + esc(dq.status || "") + " · " + linesOf(d).length + " line" + (linesOf(d).length > 1 ? "s" : "") + " · " + money(val(d)) + "<div class='log'>This quote uses the deal's customer, product, quantity, and price. Edit either one and the other updates. The value is the line totals.</div></div><span style='display:flex;gap:8px'><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-act='q-download' data-id='" + d.id + "'>Download customer quote</button><button class='ghost' data-act='open-quote' data-id='" + d.id + "'>Open quote</button></span></div>"
+      : "<div class='qbox'><div>No quote document yet. Build quote copies this deal's customer, product, quantity, and price, and keeps them linked. The customer PDF leaves out cost and margin.</div><span style='display:flex;gap:8px'><button class='ghost' data-act='q-download' data-id='" + d.id + "'>Download customer quote</button><button class='primary' data-act='new-quote' data-deal='" + d.id + "' title='Create the quote from this deal and keep the shared fields linked.'>Build quote</button></span></div>";
     ["Quote", "Vendor", "Order", "Billing", "Notes"].forEach(function (g) {
       h += "<fieldset><legend>" + g + "</legend><div class='fields'>" + DEAL_FIELDS.filter(function (f) { return f.g === g; }).map(function (f) {
         return "<div class='f" + (f.wide ? " wide" : "") + (nextMiss.indexOf(f.k) >= 0 ? " missing" : "") + "'><label>" + esc(f.l) + (nextMiss.indexOf(f.k) >= 0 ? " <span class='req'>needed next</span>" : "") + "</label>" + inputFor(f, d[f.k], d, "data-k") + "</div>";
@@ -1093,7 +1170,7 @@
       return "<select " + attr + "><option value=''>Choose…</option>" + list.map(function (o) { return "<option value='" + o.id + "'" + (+v === o.id ? " selected" : "") + ">" + esc(lab(o)) + "</option>"; }).join("") + "</select>";
     }
     var h = "<fieldset><legend>Products</legend>";
-    h += "<p class='log'>Each color or product is its own line. Pick a catalog product, or type a name and a QuickBooks item id when it is not in the catalog. Line sell, cost, and margin are calculated. A blank unit cost stays blank and is not saved as $0. Freight is added once. The customer quote does not include cost or margin.</p>";
+    h += "<p class='log'>Each color or product is its own line, and these lines are the quote. The first line is the deal's product, quantity, and price. The deal value is the total of every line. Pick a catalog product, or type a name and a QuickBooks item id when it is not in the catalog. Line sell, cost, and margin are calculated. A blank unit cost stays blank and is not saved as $0. Freight is added once. The customer quote does not include cost or margin.</p>";
     if (S.productsNote && !S.products.length) h += "<p class='log'>" + esc(S.productsNote) + "</p>";
     h += "<div class='tablewrap'><table class='qlines'><thead><tr><th>Catalog</th><th>Product or QuickBooks item</th><th>QB item id</th><th>Qty</th><th>Unit</th><th>Vendor</th><th>Unit cost</th><th>Unit sell</th><th>Line sell</th><th>Line cost</th><th>Margin</th><th></th></tr></thead><tbody>";
     h += lines.map(function (l, i) {
@@ -1510,7 +1587,7 @@
     }
     var h = "<div class='dhead'><div style='flex:1'><div class='sub'>" + esc(c.name || "No customer") + "</div><h2>Quote " + esc(q.number || "") + "</h2><div class='sub'><span class='chip'>" + esc(q.status || "draft") + "</span></div></div><button class='ghost' data-act='close'>Close</button></div><div class='dbody'>";
     if (S.quotesNote) h += "<p class='banner'>" + esc(S.quotesNote) + "</p>";
-    h += "<p class='log'>Each field you change is copied onto the linked deal and saved on its own. Print and Download leave out vendor cost and margin. Nothing is emailed.</p>";
+    h += "<p class='log'>Customer, product, quantity, price, and value stay in sync with the linked deal. The first line is the deal's product, quantity, and price. The value is the total of every line. A line that came from another opportunity updates that opportunity too. Print and Download leave out vendor cost and margin. Nothing is emailed.</p>";
     h += "<fieldset><legend>Customer</legend><div class='fields'>" +
       "<div class='f'><label>Customer</label>" + sel("data-q='company_id'", S.companies.filter(function (x) { return x.kind !== "vendor"; }), q.company_id, function (o) { return o.name; }) + "</div>" +
       "<div class='f'><label>Attention</label>" + sel("data-q='contact_id'", cons, q.contact_id, function (o) { return o.name; }) + "</div>" +
@@ -1547,6 +1624,7 @@
     $("#scrim").classList.add("open");
   }
   function closeDrawer() {
+    formFocus = null;
     var dr = $("#drawer");
     dr.classList.remove("open");
     dr.setAttribute("aria-hidden", "true");
@@ -1555,12 +1633,45 @@
     dr.dataset.quote = "";
     $("#scrim").classList.remove("open");
   }
-  function openModal(html) { $("#mbox").innerHTML = html; $("#modal").classList.add("open"); }
-  function closeModal() { $("#modal").classList.remove("open"); }
+  var formFocus = null;
+  function focusRestore(root, index) {
+    if (!root || index < 0) return;
+    var items = tabbables(root);
+    var el = items[index] || items[items.length - 1];
+    if (el && el.focus) el.focus();
+  }
+  function restoreFormFocus(which) {
+    if (!formFocus) return;
+    var pending = formFocus;
+    formFocus = null;
+    if (pending.which !== which) return;
+    focusRestore(which === "modal" ? $("#mbox") : $("#drawer"), pending.index);
+  }
+  function tabbables(root) {
+    if (!root || !root.querySelectorAll) return [];
+    var nodes = root.querySelectorAll("a[href], button:not([disabled]), input:not([disabled]):not([type='hidden']), select:not([disabled]), textarea:not([disabled])");
+    var out = [];
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (el.closest("[hidden]")) continue;
+      out.push(el);
+    }
+    return out;
+  }
+  function openModal(html) {
+    formFocus = null;
+    $("#mbox").innerHTML = html;
+    $("#modal").classList.add("open");
+    var first = tabbables($("#mbox"))[0];
+    if (first) setTimeout(function () { first.focus(); }, 0);
+  }
+  function closeModal() { formFocus = null; $("#modal").classList.remove("open"); }
 
   async function moveDeal(id, toKey) {
     var d = dealById(id);
     if (!d || d.stage === toKey) return;
+    var dest = S.stages.find(function (s) { return s.key === toKey; });
+    if (dest && dest.local) { toast("Expired / Rejected is on the board. Deals can be saved there after the stage is added in the database."); return; }
     if (d.status === "lost") { toast("Reopen this deal before moving it."); return; }
     var miss = missingFor(d, toKey);
     if (miss.length) { openGate(d, toKey, miss); return; }
@@ -1631,10 +1742,79 @@
     if (change.part === "head" && change.key === "company_id" && ok) {
       var extra = await saveDealColumns(d, { ship_to_id: d.quote.ship_to_id || null }, "deal");
       if (extra) d.ship_to_id = d.quote.ship_to_id || null;
+      await pushCompanyToSources(d);
     }
+    if (ok && !d._syncing && change.part === "line") {
+      var edited = d.quote.lines[change.index];
+      if (edited && edited.source_deal_id) await pushLineToSource(edited, d);
+    }
+    if (ok && !d._syncing) await refreshMassHost(d);
     render();
     paintLines(d);
+    restoreFormFocus("drawer");
     if (!ok) return;
+  }
+  async function pushLineToSource(line, host) {
+    var src = dealById(line && line.source_deal_id);
+    if (!src || src._syncing) return;
+    src._syncing = true;
+    try {
+      var patch = {};
+      if (line.desc && !/ \+ \d+ more$/.test(line.desc)) { src.description = line.desc; patch.description = line.desc; }
+      if (line.qty != null && line.qty !== "") { src.quantity = line.qty; src.vendor_quantity = line.qty; patch.quantity = line.qty; patch.vendor_quantity = line.qty; }
+      if (line.price != null && line.price !== "") { src.price_per_unit = line.price; patch.price_per_unit = line.price; }
+      if (line.cost != null && line.cost !== "") { src.vendor_price_per_unit = line.cost; patch.vendor_price_per_unit = line.cost; }
+      if (line.vendor_id) { src.vendor_id = line.vendor_id; patch.vendor_id = line.vendor_id; }
+      if (host && host.company_id && src.company_id !== host.company_id) { src.company_id = host.company_id; patch.company_id = host.company_id; }
+      if (Object.keys(patch).length) {
+        var saved = await saveDealColumns(src, patch, "deal");
+        if (!saved) return;
+      }
+      if (src.quote && Q.applyDealOntoQuote(src)) await saveQuoteDoc(src);
+    } finally { src._syncing = false; }
+  }
+  async function pushCompanyToSources(host) {
+    if (!host || !host.quote || !host.mass) return;
+    var lines = host.quote.lines || [];
+    for (var i = 0; i < lines.length; i++) {
+      var src = dealById(lines[i].source_deal_id);
+      if (!src || src._syncing || src.company_id === host.company_id) continue;
+      src._syncing = true;
+      src.company_id = host.company_id;
+      src.ship_to_id = host.ship_to_id || null;
+      var saved = await saveDealColumns(src, { company_id: src.company_id, ship_to_id: src.ship_to_id }, "deal");
+      if (saved && src.quote && Q.applyDealOntoQuote(src)) await saveQuoteDoc(src);
+      src._syncing = false;
+    }
+  }
+  async function refreshMassHost(d) {
+    if (!d || !d.on_quote || d._syncing) return;
+    var host = dealById(d.on_quote);
+    if (!host || !host.quote || !host.quote.lines) return;
+    var idx = -1;
+    host.quote.lines.forEach(function (l, i) { if (+l.source_deal_id === +d.id) idx = i; });
+    if (idx < 0) return;
+    var fresh = Q.lineFromOpportunity(d);
+    var line = host.quote.lines[idx];
+    ["desc", "qty", "unit", "price", "cost", "vendor_id", "product_id", "qb_item_id", "sales_rep", "category"].forEach(function (k) { line[k] = fresh[k]; });
+    host._syncing = true;
+    try {
+      host.description = Q.describe(host.quote) || host.description;
+      var patch = { description: host.description };
+      if (idx === 0) {
+        host.quantity = line.qty;
+        host.vendor_quantity = line.qty;
+        host.price_per_unit = line.price;
+        patch.quantity = line.qty == null || line.qty === "" ? null : line.qty;
+        patch.vendor_quantity = patch.quantity;
+        patch.price_per_unit = line.price == null || line.price === "" ? null : line.price;
+        if (line.cost != null && line.cost !== "") { host.vendor_price_per_unit = line.cost; patch.vendor_price_per_unit = line.cost; }
+        if (line.vendor_id) { host.vendor_id = line.vendor_id; patch.vendor_id = line.vendor_id; }
+      }
+      var saved = await saveDealColumns(host, patch, "deal");
+      if (!saved) return;
+      await saveQuoteDoc(host);
+    } finally { host._syncing = false; }
   }
   function paintLines(d) {
     var dr = $("#drawer");
@@ -1723,11 +1903,20 @@
     if (act === "gate-save") { gateSave(+id, a.dataset.to); return; }
     if (act === "new-deal") { newDealModal(a.dataset.company || ""); return; }
     if (act === "nd-ok") { createDealFromModal(); return; }
-    if (act === "new-company") { openModal("<h2>New company</h2><div class='fields'><div class='f wide'><label>Company name</label><input id='ncoName'></div><div class='f'><label>Type</label><select id='ncoKind'><option value='prospect'>Prospect</option><option value='customer'>Customer</option><option value='vendor'>Vendor</option></select></div><div class='f'><label>Owner</label><select id='ncoOwner'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nco-ok'>Add company</button></div>"); return; }
+    if (act === "new-company") { openModal("<h2>New company</h2><div class='fields'>" + companyFieldsHtml() + "</div><div class='mactions'><button class='ghost' type='button' data-act='mclose'>Cancel</button><button class='primary' type='button' data-act='nco-ok'>Add company</button></div>"); return; }
+    if (act === "inline-co") {
+      var box = document.getElementById(a.dataset.for + "New");
+      if (!box) return;
+      box.hidden = !box.hidden;
+      if (!box.hidden) { var nameInput = box.querySelector("#ncoName"); if (nameInput) nameInput.focus(); }
+      return;
+    }
+    if (act === "inline-co-save") { createCompanyFromModal({ keepOpen: true, select: a.dataset.for }); return; }
     if (act === "nco-ok") { createCompanyFromModal(); return; }
     if (act === "new-quote") { ensureQuote(a.dataset.deal ? +a.dataset.deal : null, a.dataset.company ? +a.dataset.company : null); return; }
-    if (act === "new-quote-pick") { openModal("<h2>New quote</h2><div class='f'><label>Customer</label><select id='nqCo'><option value=''>Choose…</option>" + S.companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) { return "<option value='" + c.id + "'>" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nq-ok'>Start quote</button></div>"); return; }
-    if (act === "nq-ok") { var cid = +$("#nqCo").value; if (!cid) { toast("Pick a customer."); return; } closeModal(); ensureQuote(null, cid); return; }
+    if (act === "new-quote-pick") { newQuoteModal(); return; }
+    if (act === "mass-quote") { massQuoteModal(); return; }
+    if (act === "nq-ok") { startQuoteFromModal(); return; }
     if (act === "open-quote") { openQuote(+id); return; }
     if (act === "q-print") { var pd = dealById(+id); if (pd) printQuote(quoteForPdf(pd)); return; }
     if (act === "q-download") { var dd = dealById(+id); if (dd) downloadQuote(quoteForPdf(dd)); return; }
@@ -1833,8 +2022,55 @@
     closeModal();
     if (await commitMove(d, toKey)) { render(); openDeal(d.id); }
   }
+  function customerOptions(selected) {
+    return "<option value=''>Choose…</option>" + S.companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) {
+      return "<option value='" + c.id + "'" + (+selected === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>";
+    }).join("");
+  }
+  function companyFieldsHtml() {
+    return "<div class='f wide'><label>Company name</label><input id='ncoName' autocomplete='organization'></div><div class='f'><label>Type</label><select id='ncoKind'><option value='prospect'>Prospect</option><option value='customer'>Customer</option><option value='vendor'>Vendor</option></select></div><div class='f'><label>Owner</label><select id='ncoOwner'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div>";
+  }
+  function customerField(id, selected) {
+    return "<div class='f wide'><label>Customer</label><select id='" + id + "'>" + customerOptions(selected) + "</select><p class='log'>Not in the list? <button type='button' class='linkbtn' data-act='inline-co' data-for='" + id + "'>Add a customer</button>. Same name, type, and owner as New company. This form stays open.</p><div id='" + id + "New' hidden class='fields' style='margin-top:8px'>" + companyFieldsHtml() + "<div class='f wide'><button type='button' class='ghost' data-act='inline-co-save' data-for='" + id + "'>Add customer</button></div></div></div>";
+  }
+  function openOpps(companyId) {
+    return S.deals.filter(function (d) {
+      return d.company_id === +companyId && d.status !== "lost" && !d.mass && SI(d.stage) < WON() && d.stage !== rejectedStageKey();
+    });
+  }
   function newDealModal(pre) {
-    openModal("<h2>New deal</h2><div class='fields'><div class='f wide'><label>Customer</label><select id='ndCo'><option value=''>Choose…</option>" + S.companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) { return "<option value='" + c.id + "'" + (+pre === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='f wide'><label>Brief description</label><input id='ndDesc'></div><div class='f'><label>Sales rep</label><select id='ndRep'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nd-ok'>Create deal</button></div>");
+    openModal("<h2>New deal</h2><p>Tab moves from customer to description to sales rep and stays in this form.</p><form id='ndForm'><div class='fields'>" + customerField("ndCo", pre || "") + "<div class='f wide'><label>Brief description</label><input id='ndDesc' placeholder='Annual stretch wrap'></div><div class='f'><label>Sales rep</label><select id='ndRep'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' type='button' data-act='mclose'>Cancel</button><button class='primary' type='submit'>Create deal</button></div></form>");
+  }
+  function newQuoteModal() {
+    openModal("<h2>New quote</h2><p>Start from an open deal to copy its customer, product, quantity, and price. The quote stays linked to that deal. Edit either one and the other updates. The value is the quote line totals. Leave the deal on New deal if there is no opportunity yet.</p><form id='nqForm'><div class='fields'>" + customerField("nqCo", "") + "<div class='f wide'><label>Start from an open deal</label><select id='nqDeal'><option value=''>New deal for this customer</option></select></div></div><div class='mactions'><button class='ghost' type='button' data-act='mclose'>Cancel</button><button class='primary' type='submit'>Start quote</button></div></form>");
+  }
+  function fillQuoteDeals() {
+    var sel = $("#nqDeal");
+    if (!sel) return;
+    var cid = +($("#nqCo") && $("#nqCo").value);
+    var current = sel.value;
+    var deals = cid ? openOpps(cid) : [];
+    sel.innerHTML = "<option value=''>New deal for this customer</option>" + deals.map(function (d) {
+      var note = countedOnHost(d) ? " (on a combined quote)" : "";
+      return "<option value='" + d.id + "'" + (String(current) === String(d.id) ? " selected" : "") + ">" + esc((d.description || "Untitled") + note) + "</option>";
+    }).join("");
+  }
+  function massQuoteModal() {
+    openModal("<h2>Mass quote</h2><p>Pick one customer, then two or more open opportunities. Each opportunity is a different product. This builds one quote with a line per opportunity and keeps each line tied to that opportunity.</p><form id='mqForm'><div class='fields'>" + customerField("mqCo", "") + "</div><div id='mqList'><p class='log'>Choose the customer first. Only that customer's open opportunities are listed.</p></div><div class='mactions'><button class='ghost' type='button' data-act='mclose'>Cancel</button><button class='primary' type='submit'>Build one quote</button></div></form>");
+  }
+  function paintMassList() {
+    var box = $("#mqList");
+    if (!box) return;
+    var cid = +($("#mqCo") && $("#mqCo").value);
+    if (!cid) { box.innerHTML = "<p class='log'>Choose the customer first. Only that customer's open opportunities are listed.</p>"; return; }
+    var deals = openOpps(cid);
+    box.innerHTML = deals.length ? "<p class='log'>Check every product that belongs on this quote.</p>" + deals.map(function (d) {
+      var bits = [];
+      if (d.quantity != null && d.quantity !== "") bits.push(d.quantity + " ×");
+      if (d.price_per_unit != null && d.price_per_unit !== "") bits.push(unit(d.price_per_unit));
+      bits.push(money(val(d)));
+      return "<label class='switch' style='display:flex;align-items:flex-start;margin:6px 0'><input type='checkbox' name='mqDeal' value='" + d.id + "'> <span>" + esc(d.description || "Untitled") + " · " + esc(bits.join(" ")) + (countedOnHost(d) ? " · already on a combined quote" : "") + "</span></label>";
+    }).join("") : "<p class='log'>No open opportunities for this customer.</p>";
   }
   async function createDealFromModal() {
     var cid = +$("#ndCo").value;
@@ -1853,19 +2089,109 @@
     openDeal(d.id);
     toast("Deal created.");
   }
-  async function createCompanyFromModal() {
-    var n = $("#ncoName").value.trim();
-    if (!n) { toast("Add a company name."); return; }
+  async function createCompanyFromModal(opts) {
+    opts = opts || {};
+    var nameEl = $("#ncoName");
+    var n = nameEl ? nameEl.value.trim() : "";
+    if (!n) { toast("Add a company name."); return null; }
     var k = $("#ncoKind").value;
     var saved = await CRMDB.insert("crm_companies", { name: n, kind: k, list: k === "vendor" ? "none" : k === "customer" ? "active" : "potential", owner: k === "vendor" ? null : $("#ncoOwner").value, custom: {} }, "company");
-    if (!saved) return;
+    if (!saved) return null;
     var c = mapCompany(saved);
     S.companies.push(c);
+    if (opts.keepOpen) {
+      if (k === "vendor") await startSetup(c.id, { quiet: true });
+      var sel = document.getElementById(opts.select || "");
+      if (sel && k !== "vendor") {
+        var opt = document.createElement("option");
+        opt.value = String(c.id);
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+        sel.value = String(c.id);
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      var box = document.getElementById((opts.select || "") + "New");
+      if (box) box.hidden = true;
+      if (nameEl) nameEl.value = "";
+      toast(k === "vendor" ? "Vendor added. Open it from Companies. This form stays on the customer." : c.name + " added and selected.");
+      return c;
+    }
     closeModal();
     if (k === "vendor") await startSetup(c.id);
     render();
     openCompany(c.id);
     toast("Company added.");
+    return c;
+  }
+  async function startQuoteFromModal() {
+    var cid = +($("#nqCo") && $("#nqCo").value);
+    if (!cid) { toast("Pick a customer, or add one."); return; }
+    var dealId = $("#nqDeal") && $("#nqDeal").value ? +$("#nqDeal").value : null;
+    if (dealId) {
+      var linked = dealById(dealId);
+      if (!linked || linked.company_id !== cid) { toast("That deal is for a different customer."); return; }
+      closeModal();
+      await ensureQuote(dealId, cid);
+      return;
+    }
+    closeModal();
+    await ensureQuote(null, cid);
+  }
+  async function startMassQuote() {
+    var cid = +($("#mqCo") && $("#mqCo").value);
+    if (!cid) { toast("Pick a customer, or add one."); return; }
+    var ids = [];
+    document.querySelectorAll("#mqList input[name='mqDeal']:checked").forEach(function (el) { ids.push(+el.value); });
+    var deals = ids.map(dealById).filter(function (d) { return d && d.company_id === cid && d.status !== "lost" && !d.mass; });
+    if (deals.length < 2) { toast("Pick at least two opportunities for this customer."); return; }
+    var lines = deals.map(function (d) { return Q.lineFromOpportunity(d); });
+    var ship = S.shipTos.find(function (s) { return s.company_id === cid; });
+    var first = lines[0];
+    var desc = Q.describe({ lines: lines }) || "Combined quote";
+    var saved = await CRMDB.insert("crm_deals", {
+      company_id: cid,
+      ship_to_id: ship ? ship.id : null,
+      description: desc,
+      stage: "working_on_quote",
+      sales_rep: deals[0].sales_rep || meName(),
+      quantity: first.qty == null || first.qty === "" ? null : first.qty,
+      price_per_unit: first.price == null || first.price === "" ? null : first.price,
+      vendor_id: first.vendor_id || null,
+      vendor_price_per_unit: first.cost == null || first.cost === "" ? null : first.cost,
+      vendor_quantity: first.qty == null || first.qty === "" ? null : first.qty,
+      custom: { _status: "open", _won_at: null, _lost_reason: "", _order_lines: [], _quote: null, _mass: true }
+    }, "deal");
+    if (!saved) return;
+    var d = mapDeal(saved);
+    d.mass = true;
+    d.quote = blankQuote(d);
+    d.quote.lines = lines;
+    d.quote.company_id = cid;
+    d.description = desc;
+    S.deals.push(d);
+    var header = {
+      description: desc,
+      quantity: first.qty == null || first.qty === "" ? null : first.qty,
+      vendor_quantity: first.qty == null || first.qty === "" ? null : first.qty,
+      price_per_unit: first.price == null || first.price === "" ? null : first.price
+    };
+    if (first.cost != null && first.cost !== "") header.vendor_price_per_unit = first.cost;
+    if (first.vendor_id) header.vendor_id = first.vendor_id;
+    var wrote = await saveDealColumns(d, header, "deal");
+    if (!wrote) return;
+    var stored = await saveQuoteDoc(d);
+    if (!stored) return;
+    for (var i = 0; i < deals.length; i++) {
+      deals[i].on_quote = d.id;
+      var linkedOk = await saveDealCustom(deals[i]);
+      if (!linkedOk) { toast("The quote was created, but a link back to an opportunity did not save."); break; }
+    }
+    await addActivity({ deal_id: d.id, company_id: cid, kind: "note", note: "Combined " + deals.length + " opportunities into one quote.", by: meName() });
+    closeModal();
+    S.view = "pipeline";
+    render();
+    openQuote(d.id);
+    toast("One quote with " + lines.length + " lines. Each line stays tied to its opportunity.");
   }
   async function ensureQuote(dealId, companyId) {
     var d = dealId ? dealById(dealId) : null;
@@ -1902,6 +2228,13 @@
       if (!gone) { d.quote = prev; return; }
     }
     var ok = await applyQuoteChange(d, prev, { part: "line", index: 0, key: "remove" });
+    if (ok && line && line.source_deal_id) {
+      var src = dealById(line.source_deal_id);
+      if (src && +src.on_quote === +d.id) {
+        src.on_quote = null;
+        await saveDealCustom(src);
+      }
+    }
     if (ok) paintLines(d);
   }
   async function markLost(id) {
@@ -1988,7 +2321,7 @@
     if (companyId) { render(); openCompany(companyId); }
   }
   async function logContact(id) { return quickLog("touch", id); }
-  async function startSetup(id) {
+  async function startSetup(id, opts) {
     var c = co(id);
     c.setup = c.setup || {};
     if (!c.setup_started) c.setup_started = TODAY;
@@ -2001,6 +2334,7 @@
       var who = S.team.find(function (p) { return p.team === (c.kind === "vendor" ? "accounting" : "operations") && p.active !== false; }) || me();
       await addTask({ title: (c.kind === "vendor" ? "Start vendor setup for " : "Start customer setup for ") + c.name, assignee: who.name, company_id: c.id, due: TODAY, dedupe_key: trigger + ":" + c.id });
     }
+    if (opts && opts.quiet) return;
     render();
     openCompany(id);
     toast("Setup started. Nothing was emailed.");
@@ -2197,6 +2531,8 @@
     if (!ok) return;
     await loadPrefs();
     if (gen !== sessionGen) return;
+    await expireOldQuotes();
+    if (gen !== sessionGen) return;
     await runAutomations();
     if (gen !== sessionGen) return;
     if (window.CRMVendors) await CRMVendors.load();
@@ -2256,6 +2592,8 @@
 
   document.addEventListener("change", function (e) {
     var el = e.target;
+    if (el.id === "nqCo") { fillQuoteDeals(); return; }
+    if (el.id === "mqCo") { paintMassList(); return; }
     if (el.dataset && el.dataset.vnd && window.CRMVendors) { CRMVendors.onChange(el); return; }
     if (el.dataset && el.dataset.com && window.CRMCommissions) { CRMCommissions.onChange(el); return; }
     if (el.dataset.act === "rule-on") { saveRule(+el.dataset.id, { active: el.checked }); return; }
@@ -2315,6 +2653,7 @@
   async function saveStage(key, patch) {
     var s = S.stages.find(function (x) { return x.key === key; });
     if (!s) return;
+    if (!s.id) { toast("Expired / Rejected is on the board. The name is saved for everyone after the stage is added in the database."); return; }
     var saved = await CRMDB.update("crm_stages", s.id, patch, "stage");
     if (!saved) return;
     if (patch.name) s.name = patch.name;
@@ -2384,6 +2723,7 @@
     if (f.k === "vendor_id" && (v == null || v === "") && !empty(prev)) {
       render();
       openDeal(d.id);
+      restoreFormFocus("drawer");
       return;
     }
     d[f.k] = v;
@@ -2396,8 +2736,16 @@
     }
     var ok = await saveDealColumns(d, patch, "deal");
     if (!ok) { d[f.k] = prev; }
+    else if (!d._syncing) {
+      if (d.quote && Q.applyDealOntoQuote(d)) await saveQuoteDoc(d);
+      if (f.k === "company_id" || f.k === "ship_to_id") await pushCompanyToSources(d);
+      var line0 = d.quote && d.quote.lines && d.quote.lines[0];
+      if (line0 && line0.source_deal_id && (f.k === "description" || f.k === "quantity" || f.k === "price_per_unit" || f.k === "vendor_id" || f.k === "vendor_price_per_unit")) await pushLineToSource(line0, d);
+      await refreshMassHost(d);
+    }
     render();
     openDeal(d.id);
+    restoreFormFocus("drawer");
   }
   async function saveCompanyField(c, el) {
     if (!c) return;
@@ -2435,8 +2783,35 @@
     if (btn) { btn.textContent = "Sign out"; btn.dataset.act = "signout"; }
   }
 
+  document.addEventListener("mousedown", function () { formFocus = null; });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") { if ($("#modal").classList.contains("open")) closeModal(); else closeDrawer(); }
+    if (e.key === "Escape") { if ($("#modal").classList.contains("open")) closeModal(); else closeDrawer(); return; }
+    if (e.key !== "Tab") return;
+    var modalOpen = $("#modal").classList.contains("open");
+    var drawer = $("#drawer");
+    var drawerOpen = !!(drawer && drawer.classList.contains("open"));
+    if (!modalOpen && !drawerOpen) return;
+    var root = modalOpen ? $("#mbox") : drawer;
+    var items = tabbables(root);
+    if (!items.length) { e.preventDefault(); return; }
+    var index = items.indexOf(document.activeElement);
+    var next = Q.focusStep(items.length, index, e.shiftKey);
+    e.preventDefault();
+    items[next].focus();
+    formFocus = { which: modalOpen ? "modal" : "drawer", index: next };
+  });
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (!form || !form.closest || !form.closest("#modal")) return;
+    e.preventDefault();
+    var openInline = form.querySelector("[id$='New']:not([hidden])");
+    if (openInline && openInline.contains(document.activeElement)) {
+      createCompanyFromModal({ keepOpen: true, select: openInline.id.replace(/New$/, "") });
+      return;
+    }
+    if (form.id === "ndForm") createDealFromModal();
+    else if (form.id === "nqForm") startQuoteFromModal();
+    else if (form.id === "mqForm") startMassQuote();
   });
   $("#modal").addEventListener("click", function (e) { if (e.target.id === "modal") closeModal(); });
   $("#who").addEventListener("change", function () { paintWho(); });
