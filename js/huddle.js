@@ -1,7 +1,10 @@
 /* Morning huddle screen. Numbers come from HuddleScore.
-   After a team sign-in, a touch can be logged, goals can be saved,
-   and open tasks can be checked off or added.
-   Loads per day are one saved snapshot at 10:00 AM CT. This file sends no email or text. */
+   CRM tables are read only after a team sign-in.
+   Loads per day are one saved snapshot at 10:00 AM CT.
+   Tasks are the L10 hub list (driven_tasks): Add task inserts a row,
+   and the Status pill updates done. This file sends no email or text.
+   Quotes stay on the quote record. Log quotes is not a button here,
+   because an activity row would not count and a new quote header would be fake. */
 (function () {
   "use strict";
   var Score = window.HuddleScore;
@@ -22,8 +25,11 @@
     sales_landed: "Sales landed",
     wins: "Wins"
   };
+  var DISPLAY_METRICS = ["calls", "emails", "touches", "quotes_sent", "sales_landed", "wins"];
+  var SALES_ROSTER = ["Rich", "Landon", "Annie", "Patrick"];
+  var LOG_LABEL = { call: "Call", email: "Email", touch: "Touch" };
   var me = null;
-  var taskWrite = false;
+  var pendingNote = "";
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -42,19 +48,55 @@
     var date = new Date(ymd + "T00:00:00Z");
     return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
   }
+  function sameName(a, b) {
+    return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+  }
+  function cellOrBlank(row, metric, period) {
+    var pack = row && row.cells && row.cells[metric];
+    var cell = pack && pack[period];
+    if (!cell) return { actual: 0, goal: null, tone: "" };
+    return cell;
+  }
   function showPair(metric, cell) {
     var actual = metric === "sales_landed" ? money(cell.actual) : String(cell.actual);
-    var goal = cell.goal == null ? "—" : (metric === "sales_landed" ? money(cell.goal) : String(cell.goal));
     var cls = cell.tone ? " " + cell.tone : "";
+    if (cell.goal == null) return "<td class='pair" + cls + "'><b>" + esc(actual) + "</b></td>";
+    var goal = metric === "sales_landed" ? money(cell.goal) : String(cell.goal);
     return "<td class='pair" + cls + "'><b>" + esc(actual) + "</b><span> / " + esc(goal) + "</span></td>";
+  }
+  function blankRow(name) {
+    var cells = {};
+    Score.METRICS.forEach(function (metric) {
+      cells[metric] = {
+        yesterday: { actual: 0, goal: null, tone: "" },
+        week: { actual: 0, goal: null, tone: "" }
+      };
+    });
+    return { name: name, cells: cells };
+  }
+  function salesRows(result) {
+    var rows = [];
+    var seen = {};
+    SALES_ROSTER.forEach(function (name) {
+      var found = (result.reps || []).find(function (row) { return sameName(row.name, name); });
+      rows.push(found || blankRow(name));
+      seen[name.toLowerCase()] = true;
+    });
+    (result.reps || []).forEach(function (row) {
+      var key = String(row.name || "").toLowerCase();
+      if (!seen[key]) rows.push(row);
+    });
+    if (result.team) rows.push(result.team);
+    return rows;
   }
   function rowHtml(row) {
     var cells = "";
-    Score.METRICS.forEach(function (metric) {
-      cells += showPair(metric, row.cells[metric].yesterday);
-      cells += showPair(metric, row.cells[metric].week);
+    DISPLAY_METRICS.forEach(function (metric) {
+      cells += showPair(metric, cellOrBlank(row, metric, "yesterday"));
+      cells += showPair(metric, cellOrBlank(row, metric, "week"));
     });
-    return "<tr><th>" + esc(row.name) + "</th>" + cells + "</tr>";
+    var cls = sameName(row.name, "Team") ? " class='team'" : "";
+    return "<tr" + cls + "><th>" + esc(row.name) + "</th>" + cells + "</tr>";
   }
 
   var shell = document.getElementById("shell");
@@ -157,125 +199,103 @@
     if (signOutBtn) signOutBtn.hidden = false;
   }
 
-  function renderBoard(result, goals, notes, taskSummary, taskNote, scorecard) {
-    var head = Score.METRICS.map(function (metric) {
-      return "<th>" + esc(METRIC_LABEL[metric]) + "<small>Yesterday</small></th><th>" + esc(METRIC_LABEL[metric]) + "<small>Week</small></th>";
+  function salesHtml(result, goals, notes) {
+    var head = DISPLAY_METRICS.map(function (metric) {
+      return "<th>" + esc(METRIC_LABEL[metric]) + "<small>Yest</small></th><th>" + esc(METRIC_LABEL[metric]) + "<small>Week</small></th>";
     }).join("");
     var weekLabel = result.lastWeek ? "Last week" : "Week to date";
-    var html = "<section class='sales' id='huddleSales' aria-label='Sales'>";
-    html += "<h2>Sales</h2>";
-    html += Card.sectionHtml(scorecard);
-    html += "<p class='range'>Yesterday " + esc(pretty(result.yesterday)) + " · " + esc(weekLabel) + " " + esc(pretty(result.weekStart)) + " – " + esc(pretty(result.weekEnd)) + " (" + result.weekDays + " weekday" + (result.weekDays === 1 ? "" : "s") + ")</p>";
-    html += "<div class='scroll'><table><thead><tr><th>Rep</th>" + head + "</tr></thead><tbody>";
-    html += result.reps.map(rowHtml).join("");
-    html += rowHtml(result.team);
+    var html = "<h3 id='sales-rep'>Sales rep</h3>";
+    html += "<div class='scroll'><table class='rep-table'><thead><tr><th>Rep</th>" + head + "</tr></thead><tbody>";
+    html += salesRows(result).map(rowHtml).join("");
     html += "</tbody></table></div>";
-    html += "<div class='logbar'><span>Log for " + esc(me.name) + "</span>";
-    html += "<button type='button' data-kind='call'>Log call</button>";
-    html += "<button type='button' data-kind='email'>Log email</button>";
-    html += "<button type='button' data-kind='touch'>Log touch</button></div>";
-    html += "<p class='fine'>" + esc(notes.join(" ")) + "</p>";
+    html += "<div class='logbar'><span>Log for " + esc(me && me.name) + "</span>";
+    html += "<button type='button' data-kind='call'>Log calls</button>";
+    html += "<button type='button' data-kind='email'>Log emails</button>";
+    html += "<button type='button' data-kind='touch'>Log touches</button></div>";
+    html += "<p class='fine'>Yesterday " + esc(pretty(result.yesterday)) + " · " + esc(weekLabel) + " " + esc(pretty(result.weekStart)) + " – " + esc(pretty(result.weekEnd)) + " (" + result.weekDays + " weekday" + (result.weekDays === 1 ? "" : "s") + "). " + esc(notes.join(" ")) + "</p>";
     html += "<details><summary>Edit goals</summary><form id='goalForm'>";
     (goals || []).filter(function (g) { return g.active !== false; }).forEach(function (g) {
       var who = g.scope === "team" ? "Team" : g.rep;
       html += "<label>" + esc(who + " · " + (METRIC_LABEL[g.metric] || g.metric) + " / " + g.period) + "<input data-goal-id='" + g.id + "' type='number' min='0' step='1' value='" + esc(g.target) + "'></label>";
     });
-    html += "<button type='submit'>Save goals</button></form></details></section>";
-    html += Tasks.sectionHtml(taskSummary, taskNote, {
-      interactive: true,
-      owner: Tasks.rosterName(me && me.name)
-    });
-    board.innerHTML = html;
+    html += "<button type='submit'>Save goals</button></form></details>";
+    return html;
+  }
+  function bindBoard() {
     board.querySelectorAll(".logbar button").forEach(function (btn) {
       btn.addEventListener("click", function () { logKind(btn.getAttribute("data-kind")); });
     });
     var form = document.getElementById("goalForm");
     if (form) form.addEventListener("submit", function (e) { e.preventDefault(); saveGoals(); });
-    board.querySelectorAll("input[data-task-id]").forEach(function (box) {
-      box.addEventListener("change", function () { onTaskCheck(box); });
+    var taskForm = document.getElementById("taskForm");
+    if (taskForm) taskForm.addEventListener("submit", function (e) { e.preventDefault(); addTask(); });
+    board.querySelectorAll("[data-task-id]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        toggleTask(btn.getAttribute("data-task-id"), btn.getAttribute("data-done") === "1");
+      });
     });
-    var taskForm = document.getElementById("huddleTaskForm");
-    if (taskForm) taskForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      onAddTask(taskForm);
-    });
+  }
+  function renderBoard(result, goals, notes, taskRows, taskNote, scorecard) {
+    var html = "<section class='scoreboard' id='huddleSales' aria-label='Sales'>";
+    html += "<h2>Scoreboard</h2>";
+    html += Card.sectionHtml(scorecard);
+    html += salesHtml(result, goals, notes);
+    html += "</section>";
+    html += Tasks.sectionHtml(taskRows, taskNote);
+    board.innerHTML = html;
+    bindBoard();
   }
 
-  function taskMessage(kind) {
-    if (kind === "owner") return "Your name is not on the huddle roster, so the task was not added.";
-    if (kind === "due") return "The due date has to be a calendar day.";
-    return "Type a task first.";
-  }
-  async function onTaskCheck(box) {
-    if (!box.checked) return;
-    if (taskWrite) { box.checked = false; return; }
-    var id = String(box.getAttribute("data-task-id") || "");
-    if (!/^[0-9]+$/.test(id)) {
-      box.checked = false;
-      setStatus("That task could not be updated.", true);
+  async function addTask() {
+    var textEl = document.getElementById("taskText");
+    var ownerEl = document.getElementById("taskOwner");
+    var dueEl = document.getElementById("taskDue");
+    var text = textEl ? textEl.value.trim() : "";
+    var owner = ownerEl ? ownerEl.value.trim() : "";
+    var due = dueEl && dueEl.value ? dueEl.value : null;
+    if (!text || !owner) { setStatus("A task needs a description and an owner.", true); return; }
+    var submit = document.querySelector("#taskForm button[type='submit']");
+    if (submit) submit.disabled = true;
+    setStatus("Saving task…");
+    var res = await CRMDB.db.from("driven_tasks").insert({
+      text: text,
+      owner: owner,
+      category: "General",
+      priority: "Medium",
+      due: due,
+      done: false,
+      attachments: []
+    }).select("id").single();
+    if (res.error || !res.data) {
+      if (submit) submit.disabled = false;
+      setStatus("Could not add that task. " + CRMDB.explain(res.error), true);
       return;
     }
-    taskWrite = true;
-    box.disabled = true;
-    setStatus("Marking that task done…");
-    try {
-      var res = await CRMDB.db.from("driven_tasks").update({
-        done: true,
-        updated_at: new Date().toISOString()
-      }).eq("id", id).select("id,done").single();
-      if (res.error || !res.data || res.data.done !== true) {
-        box.checked = false;
-        box.disabled = false;
-        setStatus("Could not mark that task done. " + CRMDB.explain(res.error), true);
-        return;
-      }
-      await load();
-      if (document.getElementById("taskAccountability")) setStatus("Task marked done.");
-    } catch (e) {
-      box.checked = false;
-      box.disabled = false;
-      setStatus("Could not mark that task done. " + (e && e.message ? e.message : "Try again."), true);
-    } finally {
-      taskWrite = false;
-    }
+    pendingNote = "Task added. It is on this list and on the L10 hub.";
+    await load();
   }
-  async function onAddTask(form) {
-    if (taskWrite) return;
-    var textInput = form.querySelector("[name=text]");
-    var dueInput = form.querySelector("[name=due]");
-    var text = textInput ? textInput.value : "";
-    var due = dueInput ? dueInput.value : "";
-    var built = Tasks.newTaskRow(me && me.name, text, due);
-    if (!built.row) { setStatus(taskMessage(built.error), true); return; }
-    taskWrite = true;
-    var submit = form.querySelector("button[type=submit]");
-    if (submit) submit.disabled = true;
-    if (textInput) textInput.disabled = true;
-    if (dueInput) dueInput.disabled = true;
-    setStatus("Adding that task…");
-    try {
-      var res = await CRMDB.db.from("driven_tasks").insert(built.row).select("id,owner,done").single();
-      if (res.error || !res.data || res.data.owner !== built.row.owner) {
-        if (submit) submit.disabled = false;
-        if (textInput) textInput.disabled = false;
-        if (dueInput) dueInput.disabled = false;
-        setStatus("Could not add that task. " + CRMDB.explain(res.error), true);
-        return;
-      }
-      await load();
-      if (document.getElementById("huddleTaskForm")) setStatus("Task added for " + built.row.owner + ".");
-    } catch (e) {
-      if (submit) submit.disabled = false;
-      if (textInput) textInput.disabled = false;
-      if (dueInput) dueInput.disabled = false;
-      setStatus("Could not add that task. " + (e && e.message ? e.message : "Try again."), true);
-    } finally {
-      taskWrite = false;
+
+  async function toggleTask(id, doneNow) {
+    var key = /^\d+$/.test(String(id)) ? +id : id;
+    var next = !doneNow;
+    setStatus(next ? "Marking done…" : "Reopening…");
+    board.querySelectorAll("[data-task-id]").forEach(function (btn) { btn.disabled = true; });
+    var res = await CRMDB.db.from("driven_tasks").update({
+      done: next,
+      updated_at: new Date().toISOString()
+    }).eq("id", key).select("id,done").single();
+    if (res.error || !res.data || !!res.data.done !== next) {
+      board.querySelectorAll("[data-task-id]").forEach(function (btn) { btn.disabled = false; });
+      var why = res.error ? CRMDB.explain(res.error) : "The row did not come back with the status you clicked.";
+      setStatus("Could not update that task. " + why, true);
+      return;
     }
+    pendingNote = next ? "Marked done." : "Reopened.";
+    await load();
   }
 
   async function logKind(kind) {
-    var label = kind === "call" ? "Call" : kind === "email" ? "Email" : "Touch";
+    var label = LOG_LABEL[kind] || "Activity";
     setStatus("Saving " + label.toLowerCase() + "…");
     var res = await CRMDB.db.from("crm_activity").insert({
       kind: kind,
@@ -287,7 +307,7 @@
       setStatus("Could not log that " + label.toLowerCase() + ". " + CRMDB.explain(res.error), true);
       return;
     }
-    setStatus(label + " logged for " + me.name + " today. It counts on the next huddle, because this board is yesterday. Nothing was emailed or texted.");
+    pendingNote = label + " logged for " + me.name + " today. It counts on the next huddle, because this board is yesterday. Nothing was emailed or texted.";
     await load();
   }
 
@@ -299,11 +319,13 @@
       var res = await CRMDB.db.from("huddle_goals").update({ target: target, updated_at: new Date().toISOString() }).eq("id", +inputs[i].getAttribute("data-goal-id")).select("id").single();
       if (res.error || !res.data) { setStatus("Could not save a goal. " + CRMDB.explain(res.error), true); return; }
     }
-    setStatus("Goals saved.");
+    pendingNote = "Goals saved.";
     await load();
   }
 
   async function load() {
+    var note = pendingNote;
+    pendingNote = "";
     if (window.CRMAuth && CRMAuth.isRecovery()) { showGate(); return; }
     setStatus("Checking sign-in…");
     var sessionRes = await CRMDB.db.auth.getSession();
@@ -372,9 +394,9 @@
     if (results[5].error) taskNote = "Tasks did not load. " + CRMDB.explain(results[5].error);
     else {
       taskRows = results[5].data || [];
-      if (taskRows.length >= 2000) taskNote = "The task list hit 2,000 rows, so some tasks may be missing from these counts.";
+      if (taskRows.length >= 2000) taskNote = "The task list hit 2,000 rows, so some tasks may be missing.";
     }
-    var taskSummary = results[5].error ? null : Tasks.summarize(taskRows, today);
+    var taskBoard = results[5].error ? null : Tasks.list(taskRows, today);
     var result = Score.score({
       today: today,
       goals: goalsRes.data || [],
@@ -384,12 +406,12 @@
       wonStageKeys: wonKeys,
       tally: tally
     });
-    if (result.unmatched) notes.push(result.unmatched + " touch" + (result.unmatched === 1 ? "" : "es") + " had a name that is not Rich or Landon, so they are not in the rep rows.");
-    notes.push("Green is at or above the goal. Red is below. A dash means that column has no goal.");
+    if (result.unmatched) notes.push(result.unmatched + " touch" + (result.unmatched === 1 ? "" : "es") + " had a name with no huddle goal, so that activity is not counted on a rep row.");
+    notes.push("Green is at or above the goal. Red is below. A number with no slash has no goal.");
     var scorecard = await resolveScorecard(result, deals, wonKeys);
-    renderBoard(result, goalsRes.data || [], notes, taskSummary, taskNote, scorecard);
+    renderBoard(result, goalsRes.data || [], notes, taskBoard, taskNote, scorecard);
     armCapture();
-    setStatus("Signed in as " + me.name + " · " + email);
+    setStatus(note || ("Signed in as " + me.name + " · " + email));
   }
 
   document.getElementById("reload").addEventListener("click", function () { load(); });
@@ -402,6 +424,10 @@
     held = false;
     if (window.CRMAuth) CRMAuth.hold(false);
   });
+  window.HuddleView = {
+    setPerson: function (person) { me = person; showShell(); },
+    render: renderBoard
+  };
   if (!window.CRMAuth) {
     showGate();
     board.innerHTML = "<p class='lead'>The sign-in script did not load. Reload the page.</p>";

@@ -1,6 +1,6 @@
-/* Morning huddle task counts and the signed-in check-off list.
-   Dates are America/Chicago calendar days, YYYY-MM-DD.
-   This file does not talk to the database. */
+/* Morning huddle tasks. Dates are America/Chicago calendar days, YYYY-MM-DD.
+   This file builds the task table. It does not talk to the database.
+   Adding a task and marking one done happen in huddle.js, on driven_tasks. */
 (function (root, factory) {
   var api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -26,42 +26,6 @@
     return match ? match[1] : "";
   }
   function isDone(task) { return !!(task && task.done); }
-  function taskId(task) {
-    if (!task || task.id == null || task.id === "") return "";
-    var text = String(task.id).trim();
-    return /^[0-9]+$/.test(text) ? text : "";
-  }
-  function rosterName(name, people) {
-    var roster = people || PEOPLE;
-    var raw = String(name == null ? "" : name).trim();
-    if (!raw) return "";
-    var exact = "";
-    roster.forEach(function (person) {
-      if (person.toLowerCase() === raw.toLowerCase()) exact = person;
-    });
-    if (exact) return exact;
-    var matched = peopleInOwner(raw, roster);
-    return matched.length === 1 ? matched[0] : "";
-  }
-  function newTaskRow(ownerName, text, due) {
-    var owner = rosterName(ownerName);
-    var body = String(text == null ? "" : text).trim();
-    var dueText = String(due == null ? "" : due).trim();
-    if (!owner) return { error: "owner" };
-    if (!body) return { error: "text" };
-    if (dueText && !/^\d{4}-\d{2}-\d{2}$/.test(dueText)) return { error: "due" };
-    return {
-      row: {
-        text: body,
-        owner: owner,
-        category: "General",
-        priority: "Medium",
-        due: dueText || null,
-        done: false,
-        attachments: []
-      }
-    };
-  }
   function splitOwners(owner) {
     return String(owner == null ? "" : owner)
       .split(/\s*(?:,|\+|\/|&|;|\band\b)\s*/i)
@@ -93,7 +57,7 @@
     var horizon = addDays(today, 7);
     var byName = {};
     roster.forEach(function (name) {
-      byName[name] = { name: name, counts: emptyCounts(), callouts: [], open: [] };
+      byName[name] = { name: name, counts: emptyCounts(), callouts: [] };
     });
     (tasks || []).forEach(function (task) {
       if (!task) return;
@@ -109,17 +73,12 @@
           return;
         }
         row.counts.open += 1;
-        var kind = "";
-        if (due && due < today) kind = "overdue";
-        else if (due === today) kind = "today";
-        else if (due) kind = "later";
-        row.open.push({ id: taskId(task), text: text, due: due, kind: kind });
-        if (kind === "overdue") {
+        if (due && due < today) {
           row.counts.overdue += 1;
-          row.callouts.push({ id: taskId(task), text: text, due: due, kind: "overdue" });
-        } else if (kind === "today") {
+          row.callouts.push({ text: text, due: due, kind: "overdue" });
+        } else if (due === today) {
           row.counts.dueToday += 1;
-          row.callouts.push({ id: taskId(task), text: text, due: due, kind: "today" });
+          row.callouts.push({ text: text, due: due, kind: "today" });
         } else if (due && due > today && due <= horizon) {
           row.counts.comingDue += 1;
         }
@@ -133,106 +92,98 @@
         if (a.due > b.due) return 1;
         return 0;
       });
-      row.open.sort(function (a, b) {
-        function rank(item) {
-          if (item.kind === "overdue") return 0;
-          if (item.kind === "today") return 1;
-          if (item.due) return 2;
-          return 3;
-        }
-        var diff = rank(a) - rank(b);
-        if (diff) return diff;
-        if (a.due && b.due && a.due !== b.due) return a.due < b.due ? -1 : 1;
-        return 0;
-      });
       return row;
     });
   }
 
-  function countCell(label, value, tone) {
-    var cls = tone ? " class='" + tone + "'" : "";
-    return "<span" + cls + "><b>" + value + "</b><small>" + esc(label) + "</small></span>";
+  function statusOf(task, today) {
+    if (isDone(task)) return "Done";
+    var due = dueYmd(task);
+    if (due && today && due < today) return "Overdue";
+    return "Open";
   }
-
-  function calloutInner(item) {
-    var overdue = item.kind === "overdue";
-    var html = "<span class='flag " + (overdue ? "overdue" : "today") + "'>" + (overdue ? "Overdue" : "Due today") + "</span>";
-    html += esc(item.text || "(no text)") + " <span class='when'>" + esc(prettyDue(item.due)) + "</span>";
-    return html;
+  function compareRows(a, b) {
+    if (a.due && b.due && a.due !== b.due) return a.due < b.due ? -1 : 1;
+    if (a.due && !b.due) return -1;
+    if (!a.due && b.due) return 1;
+    var at = a.text.toLowerCase();
+    var bt = b.text.toLowerCase();
+    if (at < bt) return -1;
+    if (at > bt) return 1;
+    var ai = a.id == null || a.id === "" || isNaN(+a.id) ? 0 : +a.id;
+    var bi = b.id == null || b.id === "" || isNaN(+b.id) ? 0 : +b.id;
+    return ai - bi;
   }
-  function checkboxHtml(id) {
-    if (!/^[0-9]+$/.test(String(id == null ? "" : id))) return "";
-    return "<input type='checkbox' data-task-id='" + esc(id) + "'>";
-  }
-  function listItem(inner, id, withCheckbox) {
-    var box = withCheckbox ? checkboxHtml(id) : "";
-    if (!box) return "<li>" + inner + "</li>";
-    return "<li><label>" + box + "<span class='task-body'>" + inner + "</span></label></li>";
-  }
-  function addFormHtml(ownerName) {
-    var who = ownerName ? esc(ownerName) : "";
-    var label = who ? "Add a task for " + who : "Add a task";
-    var html = "<form class='task-add' id='huddleTaskForm'>";
-    html += "<label>" + label + "<input name='text' type='text' required placeholder='What needs doing' autocomplete='off'></label>";
-    html += "<label>Due (optional)<input name='due' type='date'></label>";
-    html += "<button type='submit' class='primary'>Add task</button></form>";
-    return html;
-  }
-  function otherOpen(person) {
-    return (person.open || []).filter(function (item) {
-      return item.kind !== "overdue" && item.kind !== "today";
+  function list(tasks, today) {
+    var rank = { Overdue: 0, Open: 1, Done: 2 };
+    var out = [];
+    (tasks || []).forEach(function (task) {
+      if (!task) return;
+      var due = dueYmd(task);
+      var done = isDone(task);
+      out.push({
+        id: task.id,
+        text: task.text == null ? "" : String(task.text),
+        owner: task.owner == null ? "" : String(task.owner),
+        due: due,
+        done: done,
+        status: statusOf(task, today)
+      });
     });
+    out.sort(function (a, b) {
+      if (rank[a.status] !== rank[b.status]) return rank[a.status] - rank[b.status];
+      return compareRows(a, b);
+    });
+    return out;
   }
 
-  function sectionHtml(summary, note, options) {
-    var interactive = !!(options && options.interactive);
-    var ownerName = options && options.owner ? String(options.owner) : "";
-    var html = "<section class='tasks' id='taskAccountability' aria-label='What we need to do'>";
-    html += "<h2>What we need to do</h2>";
-    html += "<p class='fine'>Call these out before the close. Next 7 days is after today, through seven days out. A shared task counts for every person named.</p>";
+  function statusControl(row) {
+    var cls = row.status === "Done" ? "done" : (row.status === "Overdue" ? "overdue" : "open");
+    if (row.id == null || row.id === "") return "<span class='pill " + cls + "'>" + esc(row.status) + "</span>";
+    var verb = row.done ? "Reopen" : "Mark done";
+    return "<button type='button' class='pill " + cls + "' data-task-id='" + esc(row.id) + "' data-done='" + (row.done ? "1" : "0") + "' aria-label='" + esc(verb) + "'>" + esc(row.status) + "</button>";
+  }
+  function formHtml() {
+    var opts = PEOPLE.map(function (name) {
+      return "<option value='" + esc(name) + "'></option>";
+    }).join("");
+    return "<form id='taskForm' class='task-add'>" +
+      "<input id='taskText' name='text' type='text' required placeholder='Task' autocomplete='off'>" +
+      "<input id='taskOwner' name='owner' type='text' list='taskOwners' placeholder='Owner' required autocomplete='off'>" +
+      "<datalist id='taskOwners'>" + opts + "</datalist>" +
+      "<input id='taskDue' name='due' type='date' aria-label='Due date'>" +
+      "<button type='submit'>Add task</button></form>";
+  }
+  function howToHtml() {
+    return "<p class='howto' id='howThisWorks'><b>How this works.</b> This is the weekday sales huddle: one win, the sales scoreboard, then today's work. Add a task with Add task; it is the same list as the L10 hub. Click the Status pill to mark a task done or reopen it. Loads and sales numbers are a 10:00 AM CT snapshot; Refresh reloads that snapshot.</p>";
+  }
+
+  function sectionHtml(rows, note) {
+    var html = "<section class='tasks' id='taskAccountability' aria-label='Tasks'>";
+    html += "<h2>Tasks</h2>";
+    html += howToHtml();
+    html += "<p class='fine'>The first three open rows are the meeting's Top 3. A shared task is one row. This is the same to-do list as the L10 hub.</p>";
     if (note) html += "<p class='fine'>" + esc(note) + "</p>";
-    if (interactive) {
-      html += "<p class='fine'>Check a task to mark it done. A new task is added for the person who is signed in.</p>";
-      html += addFormHtml(ownerName);
-    }
-    if (!summary) {
+    if (!rows) {
+      html += formHtml();
       html += "</section>";
       return html;
     }
-    html += "<div class='task-grid'>";
-    summary.forEach(function (person) {
-      var counts = person.counts;
-      html += "<article class='task-card'><h3>" + esc(person.name) + "</h3><div class='task-counts'>";
-      html += countCell("Open", counts.open, "");
-      html += countCell("Overdue", counts.overdue, counts.overdue ? "bad" : "");
-      html += countCell("Due today", counts.dueToday, counts.dueToday ? "today" : "");
-      html += countCell("Next 7 days", counts.comingDue, "");
-      html += countCell("Done", counts.done, "");
-      html += "</div>";
-      if (!person.callouts.length) {
-        html += "<p class='fine'>Nothing overdue or due today.</p>";
-      } else {
-        html += "<ul class='task-list'>";
-        person.callouts.forEach(function (item) {
-          html += listItem(calloutInner(item), item.id, interactive);
-        });
-        html += "</ul>";
-      }
-      if (interactive) {
-        var rest = otherOpen(person);
-        if (rest.length) {
-          html += "<p class='fine'>Other open</p><ul class='task-list'>";
-          rest.forEach(function (item) {
-            var body = esc(item.text || "(no text)");
-            if (item.due) body += " <span class='when'>" + esc(prettyDue(item.due)) + "</span>";
-            html += listItem(body, item.id, true);
-          });
-          html += "</ul>";
-        }
-      }
-      html += "</article>";
-    });
-    html += "</div></section>";
+    html += "<div class='scroll'><table class='task-table'><thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>";
+    if (!rows.length) {
+      html += "<tr><td colspan='4'>No tasks yet.</td></tr>";
+    } else {
+      var topped = 0;
+      rows.forEach(function (row) {
+        var mark = "";
+        if (row.status !== "Done" && topped < 3) { mark = " class='top'"; topped += 1; }
+        var due = row.due ? prettyDue(row.due) : "—";
+        html += "<tr" + mark + "><td data-label='Task'>" + esc(row.text || "(no text)") + "</td><td data-label='Owner'>" + esc(row.owner) + "</td><td data-label='Due'>" + esc(due) + "</td><td data-label='Status'>" + statusControl(row) + "</td></tr>";
+      });
+    }
+    html += "</tbody></table></div>";
+    html += formHtml();
+    html += "</section>";
     return html;
   }
 
@@ -241,9 +192,9 @@
     addDays: addDays,
     splitOwners: splitOwners,
     peopleInOwner: peopleInOwner,
-    rosterName: rosterName,
-    newTaskRow: newTaskRow,
     summarize: summarize,
+    list: list,
+    formHtml: formHtml,
     sectionHtml: sectionHtml
   };
 });
