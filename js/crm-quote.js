@@ -94,6 +94,97 @@
     return patch;
   }
 
+  function hasValue(v) { return v != null && v !== ""; }
+  function summaryDesc(text) { return / \+ \d+ more$/.test(String(text || "")); }
+  function daysBetween(a, b) {
+    var ms = new Date(String(b).slice(0, 10) + "T00:00:00") - new Date(String(a).slice(0, 10) + "T00:00:00");
+    return Math.round(ms / 864e5);
+  }
+
+  /* Copy the deal's shared fields onto its quote. Line 0 is the deal's
+     product, quantity, and price. A blank deal field does not erase a
+     line value. A "name + 2 more" summary is not a product name. */
+  function applyDealOntoQuote(deal) {
+    var q = deal && deal.quote;
+    if (!q) return false;
+    var changed = false;
+    function set(obj, key, value) {
+      if (obj[key] !== value) { obj[key] = value; changed = true; }
+    }
+    set(q, "company_id", deal.company_id || null);
+    set(q, "ship_to_id", deal.ship_to_id || null);
+    set(q, "rep", deal.sales_rep || "");
+    set(q, "sent_date", deal.quote_sent_date || null);
+    set(q, "po", deal.customer_po_number || "");
+    if ((q.freight == null ? null : q.freight) !== (deal.freight == null ? null : deal.freight)) {
+      q.freight = deal.freight;
+      changed = true;
+    }
+    var line = q.lines && q.lines[0];
+    if (!line) return changed;
+    var desc = deal.description || "";
+    if (desc && desc !== "New quote" && !summaryDesc(desc) && line.desc !== desc) {
+      line.desc = desc;
+      changed = true;
+    }
+    if (hasValue(deal.quantity) && line.qty !== deal.quantity) { line.qty = deal.quantity; changed = true; }
+    if (hasValue(deal.price_per_unit) && line.price !== deal.price_per_unit) { line.price = deal.price_per_unit; changed = true; }
+    if (hasValue(deal.vendor_id) && line.vendor_id !== deal.vendor_id) { line.vendor_id = deal.vendor_id; changed = true; }
+    if (hasValue(deal.vendor_price_per_unit) && line.cost !== deal.vendor_price_per_unit) { line.cost = deal.vendor_price_per_unit; changed = true; }
+    if (hasValue(deal.freight) && line.freight !== deal.freight) { line.freight = deal.freight; changed = true; }
+    if (hasValue(deal.sales_rep) && line.sales_rep !== deal.sales_rep) { line.sales_rep = deal.sales_rep; changed = true; }
+    return changed;
+  }
+
+  /* One opportunity becomes one quote line. The line keeps source_deal_id
+     so later edits can find the opportunity it came from. */
+  function lineFromOpportunity(deal) {
+    var d = deal || {};
+    var existing = d.quote && d.quote.lines && d.quote.lines[0] ? d.quote.lines[0] : {};
+    var desc = existing.desc || "";
+    if (!desc || desc === "New quote" || summaryDesc(desc)) {
+      desc = d.description && d.description !== "New quote" && !summaryDesc(d.description) ? d.description : (existing.desc || "");
+    }
+    function pick(primary, fallback) { return hasValue(primary) ? primary : fallback; }
+    return {
+      desc: desc,
+      qty: pick(existing.qty, d.quantity),
+      unit: existing.unit || "each",
+      vendor_id: pick(existing.vendor_id, d.vendor_id) || null,
+      cost: pick(existing.cost, d.vendor_price_per_unit),
+      price: pick(existing.price, d.price_per_unit),
+      freight: null,
+      category: existing.category || "",
+      invoice_number: "",
+      line_date: d.quote_sent_date || d.stage_changed_at || null,
+      product_id: existing.product_id || null,
+      qb_item_id: existing.qb_item_id || "",
+      sales_rep: d.sales_rep || "",
+      source_deal_id: d.id
+    };
+  }
+
+  /* A quote still in Quote sent moves after this many days in that stage. */
+  var QUOTE_SENT_LIMIT = 60;
+  function quoteAgeBase(deal) {
+    if (!deal) return null;
+    return deal.stage_changed_at || deal.quote_sent_date || null;
+  }
+  function quoteExpired(deal, today) {
+    if (!deal || deal.status === "lost" || deal.stage !== "quote_sent") return false;
+    var base = quoteAgeBase(deal);
+    if (!base || !today) return false;
+    return daysBetween(base, today) > QUOTE_SENT_LIMIT;
+  }
+
+  /* Next index when Tab wraps inside a form. index -1 means focus is outside. */
+  function focusStep(count, index, backwards) {
+    if (count <= 0) return 0;
+    if (index < 0 || index >= count) return backwards ? count - 1 : 0;
+    if (backwards) return index === 0 ? count - 1 : index - 1;
+    return index === count - 1 ? 0 : index + 1;
+  }
+
   function docHtml(m) {
     var lines = m.lines || [];
     var rows = lines.map(function (l) {
@@ -206,6 +297,12 @@
     describe: describe,
     dealPatch: dealPatch,
     headerBackfill: headerBackfill,
+    applyDealOntoQuote: applyDealOntoQuote,
+    lineFromOpportunity: lineFromOpportunity,
+    quoteExpired: quoteExpired,
+    quoteAgeBase: quoteAgeBase,
+    QUOTE_SENT_LIMIT: QUOTE_SENT_LIMIT,
+    focusStep: focusStep,
     docHtml: docHtml,
     download: download
   };

@@ -142,10 +142,12 @@ L.copyHeaderWhenSet(kept, { vendor_price_per_unit: 30, vendor_id: 9 });
 assert.strictEqual(kept.cost, 30);
 assert.strictEqual(kept.vendor_id, 9);
 
-var merged = L.mergeStored({ line_id: 11, cost: null, vendor_id: null, price: 11.5 }, { line_id: 11, cost: 6.5, vendor_id: 164 });
+var merged = L.mergeStored({ line_id: 11, cost: null, vendor_id: null, price: 11.5 }, { line_id: 11, cost: 6.5, vendor_id: 164, source_deal_id: 44 });
 assert.strictEqual(merged.cost, 6.5);
 assert.strictEqual(merged.vendor_id, 164);
 assert.strictEqual(merged.price, 11.5);
+assert.strictEqual(merged.source_deal_id, 44);
+assert.strictEqual(L.mergeStored({ source_deal_id: 5, cost: 1 }, { source_deal_id: 9 }).source_deal_id, 5);
 var keptColumn = L.mergeStored({ cost: 2.87, vendor_id: 337 }, { cost: 1, vendor_id: 1 });
 assert.strictEqual(keptColumn.cost, 2.87);
 assert.strictEqual(keptColumn.vendor_id, 337);

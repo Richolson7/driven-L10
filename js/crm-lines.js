@@ -94,6 +94,7 @@
     if (!backup) return out;
     if (!hasValue(out.cost) && hasValue(backup.cost)) out.cost = backup.cost;
     if (!hasValue(out.vendor_id) && hasValue(backup.vendor_id)) out.vendor_id = backup.vendor_id;
+    if (!hasValue(out.source_deal_id) && hasValue(backup.source_deal_id)) out.source_deal_id = backup.source_deal_id;
     return out;
   }
   /* Columns to write on a line. A blank is omitted so an update does not
