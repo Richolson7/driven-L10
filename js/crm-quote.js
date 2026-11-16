@@ -68,14 +68,29 @@
       patch.quantity = change.value;
       patch.vendor_quantity = change.value;
     }
-    if (change.index === 0 && change.key === "vendor_id") patch.vendor_id = change.value;
-    if (change.index === 0 && change.key === "cost") patch.vendor_price_per_unit = change.value;
+    /* A blank cost or vendor is left off the patch. Saving another field,
+       or an input that never loaded, must not null the deal columns. */
+    if (change.index === 0 && change.key === "vendor_id" && change.value != null && change.value !== "") patch.vendor_id = change.value;
+    if (change.index === 0 && change.key === "cost" && change.value != null && change.value !== "") patch.vendor_price_per_unit = change.value;
     if (change.index === 0 && change.key === "freight") patch.freight = change.value;
     if (change.index === 0 && (change.key === "rep" || change.key === "sales_rep")) patch.sales_rep = change.value || "";
     if (change.index === 0 && change.key === "product_id") {
       patch.description = describe(quote) || "";
       patch.price_per_unit = quote.lines[0].price;
     }
+    return patch;
+  }
+
+  /* When the deal header is blank and line 0 still has a cost or vendor,
+     copy those onto the header. Never replace a header value with a blank. */
+  function headerBackfill(quote, deal) {
+    var patch = {};
+    var line = quote && quote.lines && quote.lines[0];
+    if (!line || !deal) return patch;
+    var headerCost = deal.vendor_price_per_unit;
+    var headerVendor = deal.vendor_id;
+    if ((headerCost == null || headerCost === "") && line.cost != null && line.cost !== "") patch.vendor_price_per_unit = line.cost;
+    if ((headerVendor == null || headerVendor === "") && line.vendor_id != null && line.vendor_id !== "") patch.vendor_id = line.vendor_id;
     return patch;
   }
 
@@ -190,6 +205,7 @@
     total: total,
     describe: describe,
     dealPatch: dealPatch,
+    headerBackfill: headerBackfill,
     docHtml: docHtml,
     download: download
   };

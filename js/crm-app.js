@@ -215,10 +215,7 @@
     if (d.quote && d.quote.lines && d.quote.lines[0]) {
       var line = d.quote.lines[0];
       if (d.description && !/ \+ \d+ more$/.test(d.description)) line.desc = d.description;
-      line.price = d.price_per_unit;
-      line.qty = d.quantity;
-      line.vendor_id = d.vendor_id;
-      line.cost = d.vendor_price_per_unit;
+      CRMLines.copyHeaderWhenSet(line, d);
       if (line.freight == null || line.freight === "") line.freight = d.freight;
       d.quote.freight = line.freight;
       d.quote.sent_date = d.quote_sent_date;
@@ -342,8 +339,15 @@
     Object.keys(byDeal).forEach(function (id) {
       var d = dealById(id);
       if (!d) return;
+      var prior = (d.quote && d.quote.lines) || [];
       if (!d.quote) d.quote = blankQuote(d);
-      d.quote.lines = byDeal[id];
+      d.quote.lines = byDeal[id].map(function (line, i) {
+        var backup = null;
+        for (var p = 0; p < prior.length; p++) {
+          if (prior[p].line_id && line.line_id && String(prior[p].line_id) === String(line.line_id)) backup = prior[p];
+        }
+        return CRMLines.mergeStored(line, backup || prior[i] || null);
+      });
     });
   }
 
@@ -659,7 +663,15 @@
     var q = qOf(d);
     var lines = q && q.lines && q.lines.length ? q.lines : [{ desc: d.description, qty: d.quantity, unit: "", vendor_id: d.vendor_id, cost: d.vendor_price_per_unit, price: d.price_per_unit }];
     d.order_lines = lines.map(function (l) {
-      return { date: d.won_at || TODAY, quote: q ? q.number : "", desc: l.desc, qty: +l.qty || 0, unit: l.unit || "", vendor_id: l.vendor_id, cost: +l.cost || 0, price: +l.price || 0, po: d.customer_po_number || "" };
+      return {
+        date: d.won_at || TODAY, quote: q ? q.number : "", desc: l.desc,
+        qty: l.qty == null || l.qty === "" ? null : +l.qty,
+        unit: l.unit || "",
+        vendor_id: l.vendor_id == null || l.vendor_id === "" ? null : l.vendor_id,
+        cost: l.cost == null || l.cost === "" ? null : +l.cost,
+        price: l.price == null || l.price === "" ? null : +l.price,
+        po: d.customer_po_number || ""
+      };
     });
   }
 
@@ -719,17 +731,19 @@
       var kept = [];
       for (var i = 0; i < d.quote.lines.length; i++) {
         var l = d.quote.lines[i];
+        var moneyCols = CRMLines.lineMoneyColumns(l, d.vendor_id);
         var row = {
           deal_id: d.id, product_id: l.product_id || null, position: i, line_date: l.line_date || null,
           description: l.desc || "", invoice_number: l.invoice_number || null, sales_rep: l.sales_rep || d.quote.rep || null,
-          category: l.category || null, vendor_id: l.vendor_id || d.vendor_id || null,
+          category: l.category || null,
           qb_item_id: l.qb_item_id || null,
           quantity: l.qty == null || l.qty === "" ? null : l.qty, unit: l.unit || null,
-          vendor_price: l.cost == null || l.cost === "" ? null : l.cost,
           freight: l.freight == null || l.freight === "" ? null : l.freight,
           sell_price: l.price == null || l.price === "" ? null : l.price,
           updated_at: new Date().toISOString()
         };
+        if (moneyCols.vendor_id != null && moneyCols.vendor_id !== "") row.vendor_id = moneyCols.vendor_id;
+        if (moneyCols.vendor_price != null && moneyCols.vendor_price !== "") row.vendor_price = moneyCols.vendor_price;
         var ls = l.line_id ? await CRMDB.update("crm_deal_lines", l.line_id, row, "order line", { cols: "id" }) : await CRMDB.insert("crm_deal_lines", row, "order line", { cols: "id" });
         if (!ls) { linesApi = false; S.linesNote = "Order lines could not be saved to crm_deal_lines. They are stored on the deal instead."; break; }
         l.line_id = ls.id;
@@ -747,7 +761,7 @@
     return saveDealCustom(d);
   }
   async function applyQuoteChange(d, prev, change) {
-    var patch = Q.dealPatch(d.quote, change);
+    var patch = Object.assign(Q.headerBackfill(d.quote, d), Q.dealPatch(d.quote, change));
     var keys = Object.keys(patch);
     if (keys.length) {
       var ok = await saveDealColumns(d, patch, "deal");
@@ -1079,7 +1093,7 @@
       return "<select " + attr + "><option value=''>Choose…</option>" + list.map(function (o) { return "<option value='" + o.id + "'" + (+v === o.id ? " selected" : "") + ">" + esc(lab(o)) + "</option>"; }).join("") + "</select>";
     }
     var h = "<fieldset><legend>Products</legend>";
-    h += "<p class='log'>Each color or product is its own line. Pick a catalog product, or type a name and a QuickBooks item id when it is not in the catalog. Line sell, cost, and margin are calculated. A blank unit cost counts as $0. Freight is added once. The customer quote does not include cost or margin.</p>";
+    h += "<p class='log'>Each color or product is its own line. Pick a catalog product, or type a name and a QuickBooks item id when it is not in the catalog. Line sell, cost, and margin are calculated. A blank unit cost stays blank and is not saved as $0. Freight is added once. The customer quote does not include cost or margin.</p>";
     if (S.productsNote && !S.products.length) h += "<p class='log'>" + esc(S.productsNote) + "</p>";
     h += "<div class='tablewrap'><table class='qlines'><thead><tr><th>Catalog</th><th>Product or QuickBooks item</th><th>QB item id</th><th>Qty</th><th>Unit</th><th>Vendor</th><th>Unit cost</th><th>Unit sell</th><th>Line sell</th><th>Line cost</th><th>Margin</th><th></th></tr></thead><tbody>";
     h += lines.map(function (l, i) {
@@ -1088,9 +1102,9 @@
       }).join("") + "</select>";
       var fig = CRMLines.lineFigures(l);
       var marginText = fig.margin == null || CRMLines.num(l.price) == null ? "—" : (money(fig.margin) + (fig.marginPct == null ? "" : " · " + pct(fig.marginPct)));
-      return "<tr><td>" + catalog + "</td><td><input data-dl='" + i + ":desc' list='qbItemNames' value='" + esc(l.desc || "") + "' placeholder='Colored pallet, blue' aria-label='Product'></td><td><input data-dl='" + i + ":qb_item_id' value='" + esc(l.qb_item_id || "") + "' placeholder='Item id' aria-label='QuickBooks item id'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-dl='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + ((l.unit || "each") === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-dl='" + i + ":vendor_id'", vend, l.vendor_id || d.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-dl='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Unit cost'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Unit sell'></td><td class='calc'>" + (fig.sell == null ? "—" : money(fig.sell)) + "</td><td class='calc'>" + (CRMLines.num(l.qty) == null ? "—" : money(fig.cost)) + "</td><td class='calc'>" + marginText + "</td><td>" + (lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
+      return "<tr><td>" + catalog + "</td><td><input data-dl='" + i + ":desc' list='qbItemNames' value='" + esc(l.desc || "") + "' placeholder='Colored pallet, blue' aria-label='Product'></td><td><input data-dl='" + i + ":qb_item_id' value='" + esc(l.qb_item_id || "") + "' placeholder='Item id' aria-label='QuickBooks item id'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-dl='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + ((l.unit || "each") === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-dl='" + i + ":vendor_id'", vend, l.vendor_id || d.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-dl='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Unit cost'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Unit sell'></td><td class='calc'>" + (fig.sell == null ? "—" : money(fig.sell)) + "</td><td class='calc'>" + (CRMLines.num(l.qty) == null || fig.cost == null ? "—" : money(fig.cost)) + "</td><td class='calc'>" + marginText + "</td><td>" + (lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
     }).join("");
-    h += "</tbody><tfoot><tr><td colspan='8'>Deal total" + (math.freight ? " · freight " + money(math.freight) : "") + "</td><td class='calc'>" + money(math.value) + "</td><td class='calc'>" + money(math.cost) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : money(math.grossMargin) + " · " + pct(math.marginPct)) + "</td><td></td></tr></tfoot></table></div>";
+    h += "</tbody><tfoot><tr><td colspan='8'>Deal total" + (math.freight ? " · freight " + money(math.freight) : "") + "</td><td class='calc'>" + money(math.value) + "</td><td class='calc'>" + (math.cost == null ? "—" : money(math.cost)) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : money(math.grossMargin) + " · " + pct(math.marginPct)) + "</td><td></td></tr></tfoot></table></div>";
     h += "<datalist id='qbItemNames'>" + (S.qbItems || []).map(function (item) { return "<option value='" + esc(item.name) + "'>"; }).join("") + "</datalist>";
     h += "<button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> ";
     h += "<button class='ghost' data-act='q-download' data-id='" + d.id + "'>Download customer quote</button>";
@@ -1569,7 +1583,10 @@
       var key = bits[1];
       var line = d.quote.lines[idx];
       if (!line) return;
-      if (key === "qty" || key === "cost" || key === "price" || key === "vendor_id" || key === "freight" || key === "product_id") line[key] = change.value === "" ? null : +change.value;
+      if (key === "cost" || key === "vendor_id") {
+        var nextMoney = change.value === "" ? null : +change.value;
+        line[key] = CRMLines.keepIfSet(nextMoney, line[key]);
+      } else if (key === "qty" || key === "price" || key === "freight" || key === "product_id") line[key] = change.value === "" ? null : +change.value;
       else line[key] = change.value;
       if (key === "product_id" && line.product_id) {
         var prod = S.products.find(function (p) { return p.id === line.product_id; });
@@ -2364,6 +2381,11 @@
     if (!f) return;
     var v = readInput(el, f.t);
     var prev = d[f.k];
+    if (f.k === "vendor_id" && (v == null || v === "") && !empty(prev)) {
+      render();
+      openDeal(d.id);
+      return;
+    }
     d[f.k] = v;
     var patch = {};
     patch[f.k] = DATE_KEYS[f.k] ? (v || null) : v;

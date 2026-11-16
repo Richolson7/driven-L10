@@ -1478,7 +1478,10 @@
     var ok = await CRMDB.update("crm_rfqs", r.id, { status: "awarded", awarded_vendor_company_id: e ? e.companyId : null, awarded_response_id: x.id, awarded_at: new Date().toISOString(), updated_at: new Date().toISOString() }, "quote request");
     if (!ok) return;
     if (r.deal_line_id && e) {
-      await CRMDB.update("crm_deal_lines", r.deal_line_id, { vendor_id: e.companyId, vendor_price: x.unit_cost, freight: x.freight, product_id: r.product_id || undefined, updated_at: new Date().toISOString() }, "order line");
+      var linePatch = { vendor_id: e.companyId, product_id: r.product_id || undefined, updated_at: new Date().toISOString() };
+      if (x.unit_cost != null && x.unit_cost !== "") linePatch.vendor_price = x.unit_cost;
+      if (x.freight != null && x.freight !== "") linePatch.freight = x.freight;
+      await CRMDB.update("crm_deal_lines", r.deal_line_id, linePatch, "order line");
     }
     if (r.product_id && e && e.primary) {
       var link = V.vprod.filter(function (vp) { return String(vp.product_id) === String(r.product_id) && rowIds(e).indexOf(String(vp.vendor_id)) >= 0; })[0];
@@ -1705,7 +1708,11 @@
   }
   async function setLineCost(el) {
     var v = el.value.trim();
-    var saved = await CRMDB.update("crm_deal_lines", +el.dataset.vmCost, { vendor_price: v === "" ? null : +v, updated_at: new Date().toISOString() }, "order line");
+    if (v === "") {
+      CRMHooks.toast("Blank cost was not saved. The cost already on the line stays.");
+      return;
+    }
+    var saved = await CRMDB.update("crm_deal_lines", +el.dataset.vmCost, { vendor_price: +v, updated_at: new Date().toISOString() }, "order line");
     if (!saved) return;
     CRMHooks.toast("Vendor cost saved.");
     await reload(false);
