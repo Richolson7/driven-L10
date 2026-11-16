@@ -1,0 +1,1084 @@
+{
+  "title": "Driven Task-to-Role Map (Dec 1 / Jan 1)",
+  "generated": "2026-11-16",
+  "timezone": "America/Chicago",
+  "columns": [
+    "Position",
+    "Task",
+    "Owner",
+    "Bot/Automation",
+    "Type",
+    "Due",
+    "Rollout week",
+    "Milestone",
+    "Status",
+    "Notes"
+  ],
+  "rollout_weeks": [
+    "2026-11-17",
+    "2026-11-23",
+    "2026-11-30",
+    "2026-12-07",
+    "2026-12-14",
+    "2026-12-21",
+    "2026-12-28"
+  ],
+  "rollout_slots": 14,
+  "rollout_per_week": 2,
+  "overflow_after_jan_1_count": 14,
+  "counts": {
+    "total_tasks": 67,
+    "by_type": {
+      "Relationship": 16,
+      "Operational": 41,
+      "Judgment checkpoint": 10
+    },
+    "checkpoints_by_owner": {
+      "Rich": 6,
+      "Annie": 2,
+      "Landon": 2
+    },
+    "by_rollout_week": {
+      "2026-11-17": 2,
+      "2026-11-23": 2,
+      "2026-11-30": 2,
+      "2026-12-07": 2,
+      "2026-12-14": 2,
+      "2026-12-21": 2,
+      "2026-12-28": 2,
+      "Ongoing": 8,
+      "Current": 15,
+      "Standing": 16,
+      "After Jan 1": 14
+    },
+    "by_position": {
+      "Rich \u2014 Owner": 18,
+      "Amber \u2014 Systems and office": 20,
+      "Dan \u2014 Advisor": 4,
+      "Annie \u2014 Customer service": 10,
+      "Patrick \u2014 In-house delivery": 8,
+      "Landon \u2014 Sales": 7
+    }
+  },
+  "rollout_plan": [
+    {
+      "rollout_week": "2026-11-17",
+      "items": [
+        {
+          "owner": "Rich",
+          "type": "Relationship",
+          "task": "Walk through the VMI portal in person with Matt Scholz and Greta Miller at River Valley Converting",
+          "due": "2026-11-20"
+        },
+        {
+          "owner": "Amber",
+          "type": "Operational",
+          "task": "Turn on the automated vendor-payments-by-PO report so Dan can run the 45-day terms check",
+          "due": "2026-11-20"
+        }
+      ]
+    },
+    {
+      "rollout_week": "2026-11-23",
+      "items": [
+        {
+          "owner": "Amber",
+          "type": "Operational",
+          "task": "Have driven-mkt draft the first Driven Blog post and social blurbs for the December 1 publish",
+          "due": "2026-11-25"
+        },
+        {
+          "owner": "Annie",
+          "type": "Relationship",
+          "task": "Help River Valley Converting users get fully onto the portal and submit the first stock count",
+          "due": "2026-11-25"
+        }
+      ]
+    },
+    {
+      "rollout_week": "2026-11-30",
+      "items": [
+        {
+          "owner": "Rich",
+          "type": "Judgment checkpoint",
+          "task": "Review and approve the December blog post and social blurbs, and publish only after sign-off",
+          "due": "2026-12-01"
+        },
+        {
+          "owner": "Amber",
+          "type": "Operational",
+          "task": "Put bank-reconciliation matching rules in place and include Trailblazers checks and cash in the existing deposit routine",
+          "due": "2026-12-01"
+        }
+      ]
+    },
+    {
+      "rollout_week": "2026-12-07",
+      "items": [
+        {
+          "owner": "Landon",
+          "type": "Relationship",
+          "task": "Work open quotes and deals in the live CRM, using the quote follow-up watch list",
+          "due": "2026-12-11"
+        },
+        {
+          "owner": "Annie",
+          "type": "Judgment checkpoint",
+          "task": "Review invoices flagged by the uninvoiced-shipment check, and any customer or portal email drafts, before they go out",
+          "due": "2026-12-11"
+        }
+      ]
+    },
+    {
+      "rollout_week": "2026-12-14",
+      "items": [
+        {
+          "owner": "Patrick",
+          "type": "Relationship",
+          "task": "Complete Kempf Paper portal onboarding in practice: on-route VMI cadence and first stock count",
+          "due": "2026-12-18"
+        },
+        {
+          "owner": "Annie",
+          "type": "Operational",
+          "task": "Run vendor management end to end: set up vendors the bot finds and start scorecard ratings by product category",
+          "due": "2026-12-18"
+        }
+      ]
+    },
+    {
+      "rollout_week": "2026-12-21",
+      "items": [
+        {
+          "owner": "Amber",
+          "type": "Operational",
+          "task": "Finish the vendor portal so the team can use it daily, with the staff SOP linked from the hub",
+          "due": "2026-12-23"
+        },
+        {
+          "owner": "Landon",
+          "type": "Judgment checkpoint",
+          "task": "Review outbound quotes and lead-gen email drafts before they reach a customer or prospect",
+          "due": "2026-12-23"
+        }
+      ]
+    },
+    {
+      "rollout_week": "2026-12-28",
+      "items": [
+        {
+          "owner": "Amber",
+          "type": "Operational",
+          "task": "Confirm financial automations are running into the new year: margin sync, AP and cash routines, huddle prep, and the commission page with no hand upkeep",
+          "due": "2027-01-01"
+        },
+        {
+          "owner": "Rich",
+          "type": "Judgment checkpoint",
+          "task": "Sign off on any year-end customer-facing drafts still open (quotes, portal messages, marketing) before they go out",
+          "due": "2027-01-01"
+        }
+      ]
+    }
+  ],
+  "meetings_nov_16_30": [
+    {
+      "date": "2026-11-16",
+      "time": "9:30\u201311:00 AM CT",
+      "meeting": "Level 10 (usual Monday slot)",
+      "who": "Team",
+      "notes": "Today is Monday; the upcoming confirmed L10 on the company calendar is Nov 23. Confirm whether Nov 16 already happened this morning."
+    },
+    {
+      "date": "2026-11-16 through 2026-11-25 and 2026-11-30",
+      "time": "10:00 AM CT weekdays",
+      "meeting": "Morning Huddle",
+      "who": "Rich, Landon, Amber, Patrick, Annie",
+      "notes": "From the huddle page (weekdays 10:00 AM CT, 10 minutes). A titled huddle event was not returned on Rich's or the Driven Solutions calendar for Nov 16\u201330 \u2014 confirm the Meet invite is on the company calendar. Skip or shorten if Thanksgiving week is closed."
+    },
+    {
+      "date": "2026-11-17",
+      "time": "10:00\u201310:30 AM CT",
+      "meeting": "Instantly \u2014 Sales CRM 3-month check-in",
+      "who": "Rich, Landon, Amber, Dan",
+      "notes": "On the Driven Solutions calendar. Overlaps the usual 10:00 AM huddle. Landon is filling in whether the tool has helped and whether the cost is worth it."
+    },
+    {
+      "date": "2026-11-17",
+      "time": "All day",
+      "meeting": "Amber: Post Office / AR",
+      "who": "Amber",
+      "notes": "Driven Solutions calendar."
+    },
+    {
+      "date": "2026-11-19 or 2026-11-20",
+      "time": "Morning",
+      "meeting": "RVC portal walkthrough at Prairie Drive",
+      "who": "Rich, Matt Scholz, Greta Miller",
+      "notes": "Confirmed by email today, not yet seen as a calendar event. Put it on the calendar."
+    },
+    {
+      "date": "Weekdays Nov 16\u201320, 23\u201325, 30",
+      "time": "2:00\u20135:00 PM CT",
+      "meeting": "Dan: Driven Hours",
+      "who": "Dan",
+      "notes": "Driven Solutions calendar. Usual window 3\u20136 PM ET / 2\u20135 PM CT."
+    },
+    {
+      "date": "2026-11-23",
+      "time": "9:30\u201311:00 AM CT",
+      "meeting": "Level 10",
+      "who": "Amber (accepted); Rich, Landon, Patrick, Annie (not yet responded); Dan (declined)",
+      "notes": "Confirmed on the Driven Solutions calendar. Hub: https://richolson7.github.io/driven-L10/"
+    },
+    {
+      "date": "2026-11-26",
+      "time": "All day",
+      "meeting": "Thanksgiving",
+      "who": "Company",
+      "notes": "US holiday. Confirm whether Fri Nov 27 is also closed."
+    },
+    {
+      "date": "2026-11-30",
+      "time": "\u2014",
+      "meeting": "Level 10 (if held)",
+      "who": "Team",
+      "notes": "Not found on the Driven Solutions calendar in the Nov 16\u201330 window. Confirm and add if it should happen."
+    },
+    {
+      "date": "2026-11-30",
+      "time": "4:00\u20134:25 PM CT",
+      "meeting": "Driven Check-In: Rich and Dan",
+      "who": "Rich, Dan",
+      "notes": "On Rich's calendar (Zoom)."
+    }
+  ],
+  "pr31_notes": {
+    "pr": "https://github.com/Richolson7/driven-L10/pull/31",
+    "title": "Let the morning huddle add and check off tasks",
+    "state": "open, not merged, mergeable_state dirty as of this read",
+    "live_after_merge": "https://richolson7.github.io/driven-L10/huddle.html",
+    "files": [
+      "huddle.html",
+      "js/huddle.js",
+      "js/huddle-tasks.js",
+      "js/huddle-score.js",
+      "js/huddle-scorecard.js",
+      "tests alongside those JS files"
+    ],
+    "data": "Tasks come from public.driven_tasks (text, owner, category: General on insert, priority: Medium, due, done, attachments). HuddleTasks.list() maps rows to {id, text, owner, due, done, status}. Dates are America/Chicago calendar days, YYYY-MM-DD. Overdue = open and due < today in Chicago. First three non-done rows after sort (Overdue, then Open, then Done; then by due) are the meeting Top 3.",
+    "people_constant": "HuddleTasks.PEOPLE is currently Patrick, Annie, Rich, Landon, Amber. Dan is not in that list, so his tasks would not count in summarize() and would not appear in the Add task datalist. Add Dan before this map is wired in.",
+    "where_to_add": "Add a 'Tasks by role' section immediately after the existing #taskAccountability block that huddle-tasks.js sectionHtml() renders (the Task / Owner / Due / Status table and Add task form live there; renderBoard() in huddle.js injects it after the sales scoreboard). Keep sales first, then today's to-do table, then the role map so missed dates are visible every huddle without replacing Top 3.",
+    "overdue_highlight": "Reuse statusOf() and the existing .pill.overdue / .pair.miss colors (--red #FF6B6B, --miss #3a1212). Highlight any role-map row whose status is Overdue, or whose due date is before today and status is not Done. Optional: filter chips for Rollout week and Type; a Type badge for Judgment checkpoint.",
+    "data_hook": "Do not change driven_tasks shape in this pass. Preferred hook is to load this file (task_role_map.json) or a copy in the repo and render it in a new HuddleRoleTasks helper, or later add type, bot_automation, rollout_week, and milestone columns to driven_tasks if the team wants check-off on these rows. This map was not written to the repo or the PR."
+  },
+  "privacy": "No pay or commission figures, no performance or attitude notes, no DISC, no seat-replacement or exit language, no family items.",
+  "tasks": [
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Walk through the VMI portal in person with Matt Scholz and Greta Miller at River Valley Converting",
+      "owner": "Rich",
+      "bot_automation": "none",
+      "type": "Relationship",
+      "due": "2026-11-20",
+      "rollout_week": "2026-11-17",
+      "milestone": "Dec 1",
+      "status": "Scheduled",
+      "notes": "Matt confirmed today (Mon Nov 16) that Thursday or Friday morning this week works, and Greta will sit in as backup. Offer was Thu Nov 19 or Fri Nov 20 AM. Put the visit on the calendar if it is not there yet."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Turn on the automated vendor-payments-by-PO report so Dan can run the 45-day terms check",
+      "owner": "Amber",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "2026-11-20",
+      "rollout_week": "2026-11-17",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "L10 task 143 (original due Nov 6). Scheduled report by PO; nobody builds it by hand. Dan uses it for payables within terms."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Have driven-mkt draft the first Driven Blog post and social blurbs for the December 1 publish",
+      "owner": "Amber",
+      "bot_automation": "driven-mkt",
+      "type": "Operational",
+      "due": "2026-11-25",
+      "rollout_week": "2026-11-23",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "Monthly cadence starts here. Draft only; nothing goes live until Rich reviews it (checkpoint in the week of Nov 30)."
+    },
+    {
+      "position": "Annie \u2014 Customer service",
+      "task": "Help River Valley Converting users get fully onto the portal and submit the first stock count",
+      "owner": "Annie",
+      "bot_automation": "daily VMI stock report; driven-care",
+      "type": "Relationship",
+      "due": "2026-11-25",
+      "rollout_week": "2026-11-23",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "Greta wrote Nov 13 that she was in but did not have a password. Depends on the in-flight password-reset fix. As of the Nov 16 daily stock report, none of the three portal customers have submitted a count, and there are no open portal orders."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Review and approve the December blog post and social blurbs, and publish only after sign-off",
+      "owner": "Rich",
+      "bot_automation": "driven-mkt",
+      "type": "Judgment checkpoint",
+      "due": "2026-12-01",
+      "rollout_week": "2026-11-30",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "First post is due Dec 1 on drivensol.com/blog. driven-mkt drafts; Rich OKs before anything is live. Then monthly."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Put bank-reconciliation matching rules in place and include Trailblazers checks and cash in the existing deposit routine",
+      "owner": "Amber",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "2026-12-01",
+      "rollout_week": "2026-11-30",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "Hard Dec 1 date. Combines L10 tasks 142 and 149. Exception review stays with Amber; matching rules should let a bot reconcile the routine items."
+    },
+    {
+      "position": "Annie \u2014 Customer service",
+      "task": "Review invoices flagged by the uninvoiced-shipment check, and any customer or portal email drafts, before they go out",
+      "owner": "Annie",
+      "bot_automation": "uninvoiced shipment check; driven-ops; driven-care",
+      "type": "Judgment checkpoint",
+      "due": "2026-12-11",
+      "rollout_week": "2026-12-07",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Stands up the daily cadence: bot or routine flags or drafts; Annie is the human eye for existing-customer invoices and messages. After this week, treat as daily."
+    },
+    {
+      "position": "Landon \u2014 Sales",
+      "task": "Work open quotes and deals in the live CRM, using the quote follow-up watch list",
+      "owner": "Landon",
+      "bot_automation": "quote follow-up watch",
+      "type": "Relationship",
+      "due": "2026-12-11",
+      "rollout_week": "2026-12-07",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Depends on Rich approving CRM PR #34 (current item). New tools include creating a customer from New Quote or New Deal, quote-deal sync, mass quote, and the Expired / Rejected column for quotes sitting in Quote Sent more than 60 days."
+    },
+    {
+      "position": "Annie \u2014 Customer service",
+      "task": "Run vendor management end to end: set up vendors the bot finds and start scorecard ratings by product category",
+      "owner": "Annie",
+      "bot_automation": "driven-supply",
+      "type": "Operational",
+      "due": "2026-12-18",
+      "rollout_week": "2026-12-14",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "L10 task 148 plus the still-blank category ratings on the Supplier Map. Bot finds vendors; Annie sets them up and rates. Staff vendor portal finish is the week of Dec 21."
+    },
+    {
+      "position": "Patrick \u2014 In-house delivery",
+      "task": "Complete Kempf Paper portal onboarding in practice: on-route VMI cadence and first stock count",
+      "owner": "Patrick",
+      "bot_automation": "daily VMI stock report",
+      "type": "Relationship",
+      "due": "2026-12-18",
+      "rollout_week": "2026-12-14",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Welcome email already went to Jim Pappas, Todd Nerbonne, and Laird Strand on Nov 13. As of Nov 16 they still have never been counted. Patrick already has a Kempf VMI every-two-weeks cadence on the roles map."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Finish the vendor portal so the team can use it daily, with the staff SOP linked from the hub",
+      "owner": "Amber",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2026-12-23",
+      "rollout_week": "2026-12-21",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Vendor Management is already live in the CRM. This week closes remaining portal settings, SOP placement, and team use. Training videos can wait until after Jan 1."
+    },
+    {
+      "position": "Landon \u2014 Sales",
+      "task": "Review outbound quotes and lead-gen email drafts before they reach a customer or prospect",
+      "owner": "Landon",
+      "bot_automation": "landon-lead; driven-lead; quote follow-up watch",
+      "type": "Judgment checkpoint",
+      "due": "2026-12-23",
+      "rollout_week": "2026-12-21",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Stands up Landon's checkpoint cadence for his book. After this week, review before each send."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Sign off on any year-end customer-facing drafts still open (quotes, portal messages, marketing) before they go out",
+      "owner": "Rich",
+      "bot_automation": "driven-mkt; driven-care; CRM quotes",
+      "type": "Judgment checkpoint",
+      "due": "2027-01-01",
+      "rollout_week": "2026-12-28",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Catch-all checkpoint for anything that would reach a customer around the holiday close. Relationship owners still review their own items first."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Confirm financial automations are running into the new year: margin sync, AP and cash routines, huddle prep, and the commission page with no hand upkeep",
+      "owner": "Amber",
+      "bot_automation": "driven-fin; QB-to-CRM margin sync; huddle scoreboard text",
+      "type": "Operational",
+      "due": "2027-01-01",
+      "rollout_week": "2026-12-28",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Year-end systems check. Commission page stays automated (L10 task 147). Does not change any rates or figures."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Finish publishing Services and About with the shared header and footer sync, and complete the homepage photo fix",
+      "owner": "Rich",
+      "bot_automation": "driven-mkt",
+      "type": "Operational",
+      "due": "2026-11-18",
+      "rollout_week": "Ongoing",
+      "milestone": "Dec 1",
+      "status": "In progress",
+      "notes": "Rich OK'd the Services and About publish with sync today. /products photo fix is already live (whole photo, smaller; tall photos may show side bars). Homepage photo fix was not done yet."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Review website photo, copy, and nav changes before they go live",
+      "owner": "Rich",
+      "bot_automation": "driven-mkt",
+      "type": "Judgment checkpoint",
+      "due": "2026-11-18",
+      "rollout_week": "Ongoing",
+      "milestone": "Dec 1",
+      "status": "In progress",
+      "notes": "In-flight website work. driven-mkt drafts only; Rich signs off before publish."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Finish the Google sign-in redirect fix so portal sign-in no longer bounces to the operations hub, and approve it before it goes live",
+      "owner": "Rich",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2026-11-21",
+      "rollout_week": "Ongoing",
+      "milestone": "Dec 1",
+      "status": "In progress",
+      "notes": "Restarted today. Comes back as a pull request; nothing goes live until Rich OKs it. Staff can still use the email sign-in link in the meantime."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Fix the mobile menu numbering on drivensol.com",
+      "owner": "Rich",
+      "bot_automation": "driven-mkt",
+      "type": "Operational",
+      "due": "2026-11-21",
+      "rollout_week": "Ongoing",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "Cosmetic. Correct order: About 01, Markets 02, Products 03, Blog 04, Contact 05, Join Us 06, Customer Portal 07. The menu currently has two 03s. /blog has its own header/footer copy, so nav changes must be made there too."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Fix VMI portal password-reset email so the reset link actually sends",
+      "owner": "Amber",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2026-11-18",
+      "rollout_week": "Ongoing",
+      "milestone": "Dec 1",
+      "status": "In progress",
+      "notes": "Greta at RVC asked for her password on Nov 13 after the welcome email. Investigation was restarted today after usage was topped up. Amber owns the system; Frank is doing the technical work."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Keep the QB-to-CRM margin sync running (Zapier path while the native connector is down)",
+      "owner": "Amber",
+      "bot_automation": "QB-to-CRM margin sync; driven-fin",
+      "type": "Operational",
+      "due": "2026-11-21",
+      "rollout_week": "Ongoing",
+      "milestone": "Dec 1",
+      "status": "In progress",
+      "notes": "Hourly margin sync is the piece tied to the native connector. Zapier QBO connection 027b01f4 is what the weekly reports use."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Reconnect the CCF bank feed in QuickBooks so cash shows the real bank balance",
+      "owner": "Amber",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "2026-11-21",
+      "rollout_week": "Ongoing",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "L10 task 96 (feed expired Oct 24). Related to the QuickBooks reconnect work."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Reconnect the native QuickBooks connector (blocked by the current admin sign-in slot)",
+      "owner": "Amber",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "2026-11-21",
+      "rollout_week": "Ongoing",
+      "milestone": "Dec 1",
+      "status": "Blocked",
+      "notes": "The reconnect card is waiting. It says one admin at a time because the existing sign-in holds the slot. Disconnect the Merge/Grok connector app in QBO (Apps > My Apps) or complete the connection from that admin session. Weekly Command Center reports already use the Zapier QBO connection, so they do not need re-pointing. Only the hourly margin sync and cash fallback use the native connector."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Approve CRM PR #34 (quotes and deals) and the database change, then tell the team when it is live",
+      "owner": "Rich",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2026-11-20",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "https://github.com/Richolson7/driven-L10/pull/34 \u2014 open, not merged, no migrations applied. Training is under Training > Quotes and deals. Say merge to proceed. Landon starts using it in the week of Dec 7."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Approve the vendor pay-date plan Dan proposes",
+      "owner": "Rich",
+      "bot_automation": "driven-fin",
+      "type": "Judgment checkpoint",
+      "due": "2026-11-21",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "Human sign-off before vendor payments go out. Internal vendors, not customers, but it is a money decision that should not auto-send."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Get a first meeting on the books with Brooke and Jennifer at Anchor Paper",
+      "owner": "Rich",
+      "bot_automation": "none",
+      "type": "Relationship",
+      "due": "2026-11-25",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "L10 task 55, original due Oct 13. Jennifer Burt is also a River Valley / Anchor purchasing contact already on the VMI portal welcome."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Publish and run the meeting line-up for Nov 16\u201330 (Level 10, huddles, and the Instantly check-in)",
+      "owner": "Amber",
+      "bot_automation": "L10 agenda email; huddle scoreboard text",
+      "type": "Operational",
+      "due": "2026-11-17",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "Confirmed: Level 10 Mon Nov 23, 9:30\u201311:00 AM CT (Amber accepted; Dan declined; Rich, Landon, Patrick, Annie not yet responded). Instantly Sales CRM 3-month check-in Tue Nov 17, 10:00\u201310:30 AM CT (Rich, Landon, Amber, Dan) \u2014 this overlaps the usual 10:00 AM huddle. Amber Post Office/AR is on the company calendar Tue Nov 17. Driven Check-In with Dan is Mon Nov 30, 4:00\u20134:25 PM CT. Dan's Driven Hours are weekdays 2:00\u20135:00 PM CT. A titled Morning Huddle event was not returned on Rich's or the Driven Solutions calendar for this window; the huddle page still lists weekdays 10:00 AM CT. A Nov 30 Level 10 was not on the company calendar in this window \u2014 confirm whether it should be added. Thanksgiving is Thu Nov 26."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Get the F-450 back using the US Bank card so it can be used",
+      "owner": "Amber",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2026-11-18",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "L10 task 152, original due Nov 10."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Sign in to Grok Bot with the work Google account if not already done",
+      "owner": "Amber",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "2026-11-20",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "L10 task 116, original due Nov 2. Skip if already signed in."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Finish open QuickBooks AP cleanup (bill dates, payment accounts, and recently scheduled vendor ACH confirmation)",
+      "owner": "Amber",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "2026-11-21",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "L10 tasks 157\u2013160 from the Nov 9 AP pass. Keep dollar amounts on the AP snapshot, not on this map."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Complete this week's SBA file items: agreements into the file and payoff-letter requests once the bank list is confirmed",
+      "owner": "Amber",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2026-11-25",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "L10 tasks 166\u2013168, due Nov 21\u201325. Coordinated with Dan's package work. No figures on this row."
+    },
+    {
+      "position": "Dan \u2014 Advisor",
+      "task": "Confirm payroll-tax status for the SBA file with Amber",
+      "owner": "Dan",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2026-11-17",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "L10 task 162, due Nov 17. Details stay on the SBA tracker, not on this map."
+    },
+    {
+      "position": "Dan \u2014 Advisor",
+      "task": "Complete this week's SBA package follow-ups: current stage and close date, milestone list, and financials ready for the file",
+      "owner": "Dan",
+      "bot_automation": "none",
+      "type": "Relationship",
+      "due": "2026-11-20",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Open",
+      "notes": "L10 tasks 161\u2013165, due Nov 17\u201320. Tracker is the existing SBA sheet. No figures on this row. Amber has the related file items due Nov 21\u201325."
+    },
+    {
+      "position": "Dan \u2014 Advisor",
+      "task": "Propose pay dates for vendors past 45-day terms, for Rich to approve",
+      "owner": "Dan",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "2026-11-20",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "Standing weekly AP check. Uses the vendor-payments-by-PO report once Amber turns it on (week of Nov 17). Rich approves the plan; amounts stay on the AP snapshot, not on this huddle map."
+    },
+    {
+      "position": "Annie \u2014 Customer service",
+      "task": "Clean up the Driven order log and KPI tabs so the weekly numbers agree",
+      "owner": "Annie",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2026-11-21",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "L10 task 7 (original due Oct 2). Review of KPI v9 on Nov 16 found November totals that do not match, a possible duplicate order, a stale forecast, and weekly sales that do not match the Order Log."
+    },
+    {
+      "position": "Patrick \u2014 In-house delivery",
+      "task": "Finish prep of the F-350 and 4300 (and trailers) so they can move",
+      "owner": "Patrick",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2026-11-21",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "L10 task 150, original due Nov 13."
+    },
+    {
+      "position": "Patrick \u2014 In-house delivery",
+      "task": "Fix the International equipment that failed inspection",
+      "owner": "Patrick",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2026-11-21",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "L10 task 130, no original due date. Needed for in-house delivery reliability."
+    },
+    {
+      "position": "Landon \u2014 Sales",
+      "task": "Sign in to Grok Bot with the work Google account if not already done, so landon-lead can be used",
+      "owner": "Landon",
+      "bot_automation": "landon-lead",
+      "type": "Operational",
+      "due": "2026-11-20",
+      "rollout_week": "Current",
+      "milestone": "Dec 1",
+      "status": "Overdue",
+      "notes": "L10 task 113, original due Nov 2. Skip if already signed in."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Keep Q4 rocks pointed at Jan 1: CRM fully live, build the pipeline, lift weekly revenue, and financials in order",
+      "owner": "Rich",
+      "bot_automation": "none",
+      "type": "Relationship",
+      "due": "2027-01-01",
+      "rollout_week": "Standing",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "driven_rocks 11\u201314, all due Dec 31. CRM fully live and financials in order are marked on track; pipeline and weekly revenue are not. These are outcomes, not weekly bot rollouts."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Own hard calls, escalations, vendor terms pushback, credit-memo judgment, and exception decisions",
+      "owner": "Rich",
+      "bot_automation": "none",
+      "type": "Judgment checkpoint",
+      "due": "Weekly",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "L10 task 131. Amber maintains systems; she is not the decision-maker. Credit memos that reach a customer get Rich's judgment first; Amber then enters them."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Run vision and revenue-producing sales (selling mid-week; Monday and Friday admin review)",
+      "owner": "Rich",
+      "bot_automation": "driven-lead; driven-coach",
+      "type": "Relationship",
+      "due": "Weekly",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "Roles after automation: Rich stays on sales and hard calls. Tuesday\u2013Thursday are sales days."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Run the daily morning huddle, with Annie as backup, using the scoreboard and this task map",
+      "owner": "Amber",
+      "bot_automation": "huddle scoreboard text",
+      "type": "Relationship",
+      "due": "Daily",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "L10 task 139. Weekdays 10:00 AM CT, 10 minutes. PR #31 adds add-and-check-off tasks on the huddle page once merged."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Confirm weekly AR, the payment-run exception review, mail run, payroll-hours glance, and meeting prep",
+      "owner": "Amber",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "Weekly",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "L10 tasks 133\u2013135, 137, 140, 141, 146. Recurring office and finance cadence, not a new bot rollout."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Keep systems, automations, bots, routines, AP/cash routines, and huddle prep running and improving",
+      "owner": "Amber",
+      "bot_automation": "Frank; driven-fin; huddle scoreboard text; L10 agenda email",
+      "type": "Operational",
+      "due": "Weekly",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "L10 tasks 132 and 154. Systems owner and maintainer at 25 hours a week."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Process customer and vendor credit memos after Rich makes the judgment call",
+      "owner": "Amber",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "Weekly",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "L10 task 136. Prep and entry only; judgment stays with Rich."
+    },
+    {
+      "position": "Dan \u2014 Advisor",
+      "task": "Hold the weekly accounting review of automated reports and advise on terms and the books",
+      "owner": "Dan",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "Weekly",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "Driven Check-In with Rich is on the calendar Mon Nov 30, 4:00\u20134:25 PM CT. Dan's Driven Hours are weekdays 2:00\u20135:00 PM CT."
+    },
+    {
+      "position": "Annie \u2014 Customer service",
+      "task": "Handle customer service: orders, onboarding, collections, and 10 existing-customer calls each workday",
+      "owner": "Annie",
+      "bot_automation": "driven-care; driven-ops",
+      "type": "Relationship",
+      "due": "Daily",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "Roles after automation. driven-care can draft; Annie still makes the calls and owns the relationship."
+    },
+    {
+      "position": "Annie \u2014 Customer service",
+      "task": "Put ship-via, tracking (or delivery date / load number for own truck), and ship date on every QuickBooks invoice",
+      "owner": "Annie",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "Daily",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "Required so portal and CRM shipping info can sync. Real-time QuickBooks shipping sync is built but not live yet (pending Rich's OK). Patrick helps on own-truck loads."
+    },
+    {
+      "position": "Annie \u2014 Customer service",
+      "task": "Review all pending orders daily",
+      "owner": "Annie",
+      "bot_automation": "driven-ops",
+      "type": "Operational",
+      "due": "Daily",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "L10 task 24."
+    },
+    {
+      "position": "Annie \u2014 Customer service",
+      "task": "Review driven-care or ops drafts of customer emails and portal messages before they are sent (daily cadence)",
+      "owner": "Annie",
+      "bot_automation": "driven-care; driven-ops",
+      "type": "Judgment checkpoint",
+      "due": "Daily",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "Pairs with the week-of-Dec 7 rollout. Existing-customer relationship sits with Annie."
+    },
+    {
+      "position": "Patrick \u2014 In-house delivery",
+      "task": "Run in-house deliveries and set meetings between stops (Rich attends the meetings)",
+      "owner": "Patrick",
+      "bot_automation": "none",
+      "type": "Relationship",
+      "due": "Daily",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "Roles after automation. Target is filling the truck; sales calls sit between stops."
+    },
+    {
+      "position": "Patrick \u2014 In-house delivery",
+      "task": "Keep the River Valley and Kempf on-route VMI cadence (SV Labs weekly; Kempf every two weeks)",
+      "owner": "Patrick",
+      "bot_automation": "daily VMI stock report",
+      "type": "Relationship",
+      "due": "Weekly",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "Daily stock report already emails orders@ and logistics@. First counts are still outstanding."
+    },
+    {
+      "position": "Landon \u2014 Sales",
+      "task": "Review his quote PDFs and outbound emails before they reach a customer or prospect (daily cadence)",
+      "owner": "Landon",
+      "bot_automation": "landon-lead; quote follow-up watch",
+      "type": "Judgment checkpoint",
+      "due": "Daily",
+      "rollout_week": "Standing",
+      "milestone": "Jan 1",
+      "status": "Recurring",
+      "notes": "Pairs with the week-of-Dec 21 rollout."
+    },
+    {
+      "position": "Landon \u2014 Sales",
+      "task": "Run daily sales activity and follow up his quotes and accounts",
+      "owner": "Landon",
+      "bot_automation": "landon-lead; driven-coach; quote follow-up watch",
+      "type": "Relationship",
+      "due": "Daily",
+      "rollout_week": "Standing",
+      "milestone": "Dec 1",
+      "status": "Recurring",
+      "notes": "Roles after automation. Quotes he sends still go through his checkpoint before they reach a customer."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Hold any leftover Q4 playbook review that is still open on the L10 list",
+      "owner": "Rich",
+      "bot_automation": "none",
+      "type": "Relationship",
+      "due": "2027-01-15",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "L10 task 45, original due Oct 13. Re-schedule only if the team still needs it after Roles after automation is in use."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Send the truck-wrap file back to the designer: fix the side strips and replace placeholder QR codes",
+      "owner": "Rich",
+      "bot_automation": "driven-mkt",
+      "type": "Judgment checkpoint",
+      "due": "2027-01-15",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Back door copy is already fixed. Side strips still say Flexible Pallets. Suggested QR targets: side codes to /products, back door to /contact. Rich signs off before the wrap is printed."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Build the call playbook and role-play scoring module, then add it to the L10 hub",
+      "owner": "Rich",
+      "bot_automation": "driven-coach",
+      "type": "Operational",
+      "due": "2027-01-30",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Content, SOP, and scripts first; then a hub page; then videos."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Finish the customer-avatar stress test and lock the dialed-in avatar in the Brain",
+      "owner": "Rich",
+      "bot_automation": "driven-intel",
+      "type": "Operational",
+      "due": "2027-01-30",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "In progress. Marketing and lead work should use the locked avatar once it is done."
+    },
+    {
+      "position": "Rich \u2014 Owner",
+      "task": "Sell surplus equipment that is no longer needed for delivery",
+      "owner": "Rich",
+      "bot_automation": "none",
+      "type": "Relationship",
+      "due": "2027-01-30",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "L10 task 129, no original due date."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Finish the keep/cut pass on the Driven Spend Review, with Dan filling his column",
+      "owner": "Amber",
+      "bot_automation": "driven-fin",
+      "type": "Operational",
+      "due": "2027-01-15",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "L10 tasks 121 and 123, original due Nov 4. Details stay on the spend-review sheet."
+    },
+    {
+      "position": "Amber \u2014 Systems and office",
+      "task": "Record and publish the CRM SOP training videos, and add the hub link",
+      "owner": "Amber",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2027-01-30",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Scripts are in progress. Videos come after the CRM quotes/deals work is live."
+    },
+    {
+      "position": "Annie \u2014 Customer service",
+      "task": "Finish customer-onboarding training and document it",
+      "owner": "Annie",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2027-01-15",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "L10 task 22."
+    },
+    {
+      "position": "Annie \u2014 Customer service",
+      "task": "Record vendor-system SOP training videos after the team is using the vendor portal daily",
+      "owner": "Annie",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2027-01-30",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Follows the week-of-Dec 21 vendor portal finish."
+    },
+    {
+      "position": "Patrick \u2014 In-house delivery",
+      "task": "Restart the outreach tab daily call-and-email cadence with Annie once portal and delivery work is stable",
+      "owner": "Patrick",
+      "bot_automation": "driven-lead",
+      "type": "Relationship",
+      "due": "2027-01-15",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "L10 task 56, original due Oct 20."
+    },
+    {
+      "position": "Patrick \u2014 In-house delivery",
+      "task": "Write the customer-onboarding SOP, including the personal thank-you step",
+      "owner": "Patrick",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2027-01-15",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "L10 task 20."
+    },
+    {
+      "position": "Patrick \u2014 In-house delivery",
+      "task": "Register Driven in SAM, confirm small-business status, and continue DIBBS / MIL-STD follow-up once a CAGE code exists",
+      "owner": "Patrick",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2027-01-30",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "L10 tasks 92\u201395, originally due late October / early November."
+    },
+    {
+      "position": "Landon \u2014 Sales",
+      "task": "Close out superseded Apex and ClickUp CRM tasks now that the Driven CRM is the system of record",
+      "owner": "Landon",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2027-01-15",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "Open L10 tasks 11\u201316, 25, and 26 still mention Apex, Colton, or ClickUp. Mark done or archive once the team is fully on the Driven CRM."
+    },
+    {
+      "position": "Landon \u2014 Sales",
+      "task": "Finish leftover seat-document reading and acknowledgements, and send any RPA 1-3-1 updates",
+      "owner": "Landon",
+      "bot_automation": "none",
+      "type": "Operational",
+      "due": "2027-01-15",
+      "rollout_week": "After Jan 1",
+      "milestone": "Jan 1",
+      "status": "Open",
+      "notes": "L10 tasks 28\u201330, originally due Oct 8."
+    }
+  ],
+  "spreadsheet_url": "https://docs.google.com/spreadsheets/d/15Aa01czXaohnSCbFRmeeCjwArTLbPy0BqKtEO5DppDE/edit",
+  "spreadsheet_id": "15Aa01czXaohnSCbFRmeeCjwArTLbPy0BqKtEO5DppDE"
+}

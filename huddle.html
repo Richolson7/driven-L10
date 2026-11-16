@@ -60,7 +60,7 @@ details{margin-top:12px}
 #status{min-height:1.2em;margin-top:8px}
 #status.bad{color:var(--red)}
 .scoreboard{margin:0 0 8px}
-.scoreboard h2,.tasks h2{margin:0;font-family:"Bebas Neue",sans-serif;font-size:2.6rem;letter-spacing:2px;color:var(--g);font-weight:400}
+.scoreboard h2,.tasks h2,.role-map h2{margin:0;font-family:"Bebas Neue",sans-serif;font-size:2.6rem;letter-spacing:2px;color:var(--g);font-weight:400}
 .scoreboard h3{margin:18px 0 10px;font-family:"Barlow Condensed",sans-serif;font-size:15px;letter-spacing:1.6px;text-transform:uppercase;color:var(--g);font-weight:700}
 .tasks{margin-top:26px}
 .tasks h2{margin:8px 0 4px;font-size:2rem}
@@ -79,11 +79,36 @@ details{margin-top:12px}
 .load-people small{display:block;margin-top:2px;color:var(--td);font-size:11px;letter-spacing:.3px;text-transform:uppercase}
 .task-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0 0}
 .task-add input[type="text"]{min-width:12rem;flex:1}
-button.pill{font:11px/1.2 Barlow,sans-serif;font-weight:700;letter-spacing:.4px;text-transform:uppercase;background:transparent;border-radius:999px;padding:3px 10px;cursor:pointer}
-button.pill.open{border:1px solid #e07a3a;color:#e07a3a}
-button.pill.overdue{border:1px solid var(--red);color:var(--red)}
-button.pill.done{border:1px solid var(--g);color:var(--g)}
+button.pill,span.pill{display:inline-block;font:11px/1.2 Barlow,sans-serif;font-weight:700;letter-spacing:.4px;text-transform:uppercase;background:transparent;border-radius:999px;padding:3px 10px;border:1px solid transparent}
+button.pill{cursor:pointer}
+button.pill.open,span.pill.open{border-color:#e07a3a;color:#e07a3a}
+button.pill.overdue,span.pill.overdue{border-color:var(--red);color:var(--red)}
+button.pill.done,span.pill.done{border-color:var(--g);color:var(--g)}
 button.pill:hover{filter:brightness(1.15)}
+.role-map{margin-top:28px}
+.role-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+.role-map h2{margin:8px 0 4px;font-size:2rem}
+.role-filters{display:flex;flex-wrap:wrap;gap:10px 12px;margin:12px 0}
+.role-filters label{display:flex;flex-direction:column;gap:4px;color:var(--td);font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.role-filters select{background:var(--s2);color:var(--tx);border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:8px 10px;font:15px/1.3 Barlow,sans-serif;text-transform:none;letter-spacing:0;font-weight:400;min-width:11rem;color-scheme:dark}
+.role-filters select:focus{outline:none;border-color:var(--g)}
+.week-strip{background:linear-gradient(160deg,#071207,#102410);border:2px solid var(--g);border-radius:12px;padding:12px 14px;margin:12px 0}
+.week-strip h3,.role-person{margin:0 0 6px;font-family:"Bebas Neue",sans-serif;font-size:1.7rem;letter-spacing:1px;color:var(--g);font-weight:400}
+.role-person{margin:18px 0 8px;font-family:"Barlow Condensed",sans-serif;font-size:16px;letter-spacing:1.2px;text-transform:uppercase}
+.week-strip ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.week-strip li{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;background:rgba(0,0,0,.28);border:1px solid var(--br);border-radius:8px;padding:8px 10px}
+.week-strip li.miss{background:var(--miss);border-color:rgba(255,107,107,.45);color:#ffd0d0}
+.week-strip li span:nth-child(3){flex:1;min-width:12rem}
+.overdue-count{margin-left:8px;color:var(--td);font:12px/1 Barlow,sans-serif;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.role-person .pill{margin-left:8px;vertical-align:middle}
+.role-table{min-width:920px}
+.role-table td{white-space:normal}
+.role-table td:nth-child(n+5),.role-table th:nth-child(n+5){white-space:nowrap}
+.role-table tr.miss{background:var(--miss);color:#ffd0d0}
+.type-badge{display:inline-block;font:11px/1.2 Barlow,sans-serif;font-weight:700;letter-spacing:.3px;border-radius:999px;padding:3px 8px;border:1px solid transparent;white-space:nowrap}
+.type-badge.relationship{color:#9fd0ff;background:rgba(74,158,255,.16);border-color:rgba(74,158,255,.55)}
+.type-badge.operational{color:#c8f5a0;background:rgba(57,255,20,.12);border-color:rgba(57,255,20,.45)}
+.type-badge.judgment{color:#1a1200;background:#FFB800;border-color:#FFB800}
 button.pill:disabled{opacity:.55;cursor:wait}
 #authGate{max-width:440px;margin:8px 0 24px}
 .gate-card{background:var(--s);border:1px solid var(--br);border-radius:12px;padding:22px 20px}
@@ -106,6 +131,11 @@ button.pill:disabled{opacity:.55;cursor:wait}
   .task-table td::before{content:attr(data-label);display:block;color:var(--g);font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
   .task-table td:first-child{min-width:0;font-weight:700}
   .task-add input[type="text"],.task-add input[type="date"],.task-add button{width:100%}
+  .role-table{min-width:0}
+  .role-table tr{border-bottom:1px solid rgba(255,255,255,.1);padding:10px 0 12px}
+  .role-filters,.role-filters label,.role-filters select{width:100%}
+  .week-strip li{align-items:flex-start}
+  .role-person .pill,.overdue-count{display:inline-block;margin:6px 0 0}
 }
 </style>
 </head>
@@ -166,6 +196,7 @@ button.pill:disabled{opacity:.55;cursor:wait}
 <script src="js/huddle-score.js"></script>
 <script src="js/huddle-scorecard.js"></script>
 <script src="js/huddle-tasks.js"></script>
+<script src="js/huddle-role-map.js"></script>
 <script src="js/huddle.js"></script>
 </body>
 </html>

@@ -14,7 +14,8 @@ assert.deepStrictEqual(Tasks.peopleInOwner("RICH, ANNIE, LANDON, PATRICK, AMBER"
 assert.deepStrictEqual(Tasks.peopleInOwner("Annie, Annie"), ["Annie"]);
 assert.deepStrictEqual(Tasks.peopleInOwner("Rich Olson"), ["Rich"]);
 assert.deepStrictEqual(Tasks.peopleInOwner("Customer Service"), []);
-assert.deepStrictEqual(Tasks.peopleInOwner("Dan"), []);
+assert.deepStrictEqual(Tasks.PEOPLE, ["Patrick", "Annie", "Rich", "Landon", "Amber", "Dan"]);
+assert.deepStrictEqual(Tasks.peopleInOwner("Dan"), ["Dan"]);
 assert.deepStrictEqual(Tasks.peopleInOwner(""), []);
 assert.deepStrictEqual(Tasks.peopleInOwner(null), []);
 
@@ -87,6 +88,14 @@ assert.strictEqual(amber.counts.comingDue, 2);
 assert.strictEqual(amber.counts.done, 1);
 assert.strictEqual(amber.callouts.length, 0);
 
+var dan = person("Dan");
+assert.strictEqual(dan.counts.open, 1);
+assert.strictEqual(dan.counts.overdue, 1);
+assert.strictEqual(dan.counts.dueToday, 0);
+assert.strictEqual(dan.counts.comingDue, 0);
+assert.strictEqual(dan.counts.done, 0);
+assert.deepStrictEqual(dan.callouts.map(function (item) { return item.text; }), ["Not on this huddle"]);
+
 summary.forEach(function (row) {
   var counts = row.counts;
   assert.ok(counts.open >= counts.overdue + counts.dueToday + counts.comingDue);
@@ -121,6 +130,7 @@ assert.ok(html.indexOf("Shared quote follow-up") > 0);
 assert.ok(html.indexOf("Not on this huddle") > 0);
 assert.ok(html.indexOf("Service desk") > 0);
 assert.ok(html.indexOf("value='Amber'") > 0);
+assert.ok(html.indexOf("value='Dan'") > 0);
 assert.ok(html.indexOf("&lt;script&gt;") > 0);
 assert.strictEqual((html.match(/class='top'/g) || []).length, 3);
 assert.ok(html.indexOf("class='top'") < html.indexOf("Not on this huddle"));
