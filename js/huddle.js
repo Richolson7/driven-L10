@@ -1,5 +1,6 @@
 /* Morning huddle screen. Numbers come from HuddleScore.
-   CRM tables are read only after a team sign-in.
+   After a team sign-in, a touch can be logged, goals can be saved,
+   and open tasks can be checked off or added.
    Loads per day are one saved snapshot at 10:00 AM CT. This file sends no email or text. */
 (function () {
   "use strict";
@@ -22,6 +23,7 @@
     wins: "Wins"
   };
   var me = null;
+  var taskWrite = false;
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -179,13 +181,97 @@
       html += "<label>" + esc(who + " · " + (METRIC_LABEL[g.metric] || g.metric) + " / " + g.period) + "<input data-goal-id='" + g.id + "' type='number' min='0' step='1' value='" + esc(g.target) + "'></label>";
     });
     html += "<button type='submit'>Save goals</button></form></details></section>";
-    html += Tasks.sectionHtml(taskSummary, taskNote);
+    html += Tasks.sectionHtml(taskSummary, taskNote, {
+      interactive: true,
+      owner: Tasks.rosterName(me && me.name)
+    });
     board.innerHTML = html;
     board.querySelectorAll(".logbar button").forEach(function (btn) {
       btn.addEventListener("click", function () { logKind(btn.getAttribute("data-kind")); });
     });
     var form = document.getElementById("goalForm");
     if (form) form.addEventListener("submit", function (e) { e.preventDefault(); saveGoals(); });
+    board.querySelectorAll("input[data-task-id]").forEach(function (box) {
+      box.addEventListener("change", function () { onTaskCheck(box); });
+    });
+    var taskForm = document.getElementById("huddleTaskForm");
+    if (taskForm) taskForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      onAddTask(taskForm);
+    });
+  }
+
+  function taskMessage(kind) {
+    if (kind === "owner") return "Your name is not on the huddle roster, so the task was not added.";
+    if (kind === "due") return "The due date has to be a calendar day.";
+    return "Type a task first.";
+  }
+  async function onTaskCheck(box) {
+    if (!box.checked) return;
+    if (taskWrite) { box.checked = false; return; }
+    var id = String(box.getAttribute("data-task-id") || "");
+    if (!/^[0-9]+$/.test(id)) {
+      box.checked = false;
+      setStatus("That task could not be updated.", true);
+      return;
+    }
+    taskWrite = true;
+    box.disabled = true;
+    setStatus("Marking that task done…");
+    try {
+      var res = await CRMDB.db.from("driven_tasks").update({
+        done: true,
+        updated_at: new Date().toISOString()
+      }).eq("id", id).select("id,done").single();
+      if (res.error || !res.data || res.data.done !== true) {
+        box.checked = false;
+        box.disabled = false;
+        setStatus("Could not mark that task done. " + CRMDB.explain(res.error), true);
+        return;
+      }
+      await load();
+      if (document.getElementById("taskAccountability")) setStatus("Task marked done.");
+    } catch (e) {
+      box.checked = false;
+      box.disabled = false;
+      setStatus("Could not mark that task done. " + (e && e.message ? e.message : "Try again."), true);
+    } finally {
+      taskWrite = false;
+    }
+  }
+  async function onAddTask(form) {
+    if (taskWrite) return;
+    var textInput = form.querySelector("[name=text]");
+    var dueInput = form.querySelector("[name=due]");
+    var text = textInput ? textInput.value : "";
+    var due = dueInput ? dueInput.value : "";
+    var built = Tasks.newTaskRow(me && me.name, text, due);
+    if (!built.row) { setStatus(taskMessage(built.error), true); return; }
+    taskWrite = true;
+    var submit = form.querySelector("button[type=submit]");
+    if (submit) submit.disabled = true;
+    if (textInput) textInput.disabled = true;
+    if (dueInput) dueInput.disabled = true;
+    setStatus("Adding that task…");
+    try {
+      var res = await CRMDB.db.from("driven_tasks").insert(built.row).select("id,owner,done").single();
+      if (res.error || !res.data || res.data.owner !== built.row.owner) {
+        if (submit) submit.disabled = false;
+        if (textInput) textInput.disabled = false;
+        if (dueInput) dueInput.disabled = false;
+        setStatus("Could not add that task. " + CRMDB.explain(res.error), true);
+        return;
+      }
+      await load();
+      if (document.getElementById("huddleTaskForm")) setStatus("Task added for " + built.row.owner + ".");
+    } catch (e) {
+      if (submit) submit.disabled = false;
+      if (textInput) textInput.disabled = false;
+      if (dueInput) dueInput.disabled = false;
+      setStatus("Could not add that task. " + (e && e.message ? e.message : "Try again."), true);
+    } finally {
+      taskWrite = false;
+    }
   }
 
   async function logKind(kind) {
