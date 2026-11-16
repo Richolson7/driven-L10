@@ -113,9 +113,100 @@ var blank = Tasks.summarize([], TODAY);
 blank.forEach(function (row) {
   assert.deepStrictEqual(row.counts, { open: 0, overdue: 0, dueToday: 0, comingDue: 0, done: 0 });
   assert.strictEqual(row.callouts.length, 0);
+  assert.strictEqual(row.open.length, 0);
 });
 
 assert.strictEqual(Tasks.addDays("2026-10-29", 7), "2026-11-05");
 assert.strictEqual(Tasks.sectionHtml(null, "").indexOf("task-grid"), -1);
+assert.strictEqual(Tasks.sectionHtml(null, "").indexOf("<input"), -1);
+
+assert.strictEqual(Tasks.rosterName("Amber"), "Amber");
+assert.strictEqual(Tasks.rosterName(" amber "), "Amber");
+assert.strictEqual(Tasks.rosterName("Rich Olson"), "Rich");
+assert.strictEqual(Tasks.rosterName("Patrick, Annie"), "");
+assert.strictEqual(Tasks.rosterName("Dan"), "");
+assert.strictEqual(Tasks.rosterName(""), "");
+assert.strictEqual(Tasks.rosterName(null), "");
+
+var added = Tasks.newTaskRow("amber", "  Call the yard  ", "");
+assert.deepStrictEqual(added.row, {
+  text: "Call the yard",
+  owner: "Amber",
+  category: "General",
+  priority: "Medium",
+  due: null,
+  done: false,
+  attachments: []
+});
+assert.strictEqual(Tasks.newTaskRow("Amber", "Send it", "2026-11-16").row.due, "2026-11-16");
+assert.strictEqual(Tasks.newTaskRow("Rich Olson", "File it", null).row.owner, "Rich");
+assert.strictEqual(Tasks.newTaskRow("Dan", "Nope", "").error, "owner");
+assert.strictEqual(Tasks.newTaskRow("Amber", "  ", "2026-11-16").error, "text");
+assert.strictEqual(Tasks.newTaskRow("Amber", "X", "11/16/2026").error, "due");
+assert.strictEqual(Object.prototype.hasOwnProperty.call(added.row, "updated_at"), false);
+assert.strictEqual(Object.prototype.hasOwnProperty.call(added.row, "id"), false);
+
+var tagged = rows.map(function (row, i) {
+  var copy = {};
+  Object.keys(row).forEach(function (key) { copy[key] = row[key]; });
+  copy.id = i + 1;
+  return copy;
+});
+var taggedSummary = Tasks.summarize(tagged, TODAY);
+var readonlyTagged = Tasks.sectionHtml(taggedSummary, "");
+assert.strictEqual(readonlyTagged.indexOf("data-task-id"), -1);
+assert.strictEqual(readonlyTagged.indexOf("Other open"), -1);
+assert.strictEqual(readonlyTagged.indexOf("<input"), -1);
+assert.ok(readonlyTagged.indexOf("Send the packing list") < 0);
+assert.ok(readonlyTagged.indexOf("No date yet") < 0);
+
+var live = Tasks.sectionHtml(taggedSummary, "Tasks did not load. <script>", { interactive: true, owner: "Amber" });
+assert.ok(live.indexOf("id='huddleTaskForm'") > 0);
+assert.ok(live.indexOf("Add a task for Amber<input") > 0);
+assert.ok(live.indexOf("name='text'") > 0);
+assert.ok(live.indexOf("type='date'") > 0);
+assert.ok(live.indexOf("required") > 0);
+assert.strictEqual(live.indexOf("type='date' required"), -1);
+assert.strictEqual(live.indexOf("name='owner'"), -1);
+assert.strictEqual(live.indexOf("<select"), -1);
+assert.ok(live.indexOf(">Add task</button>") > 0);
+assert.ok(live.indexOf("checked") < 0);
+assert.ok(live.indexOf("&lt;script&gt;") > 0);
+assert.ok(live.indexOf("Already filed") < 0);
+assert.ok(live.indexOf("Finished today") < 0);
+assert.ok(live.indexOf("Not on this huddle") < 0);
+
+function card(html, name) {
+  var start = html.indexOf("<h3>" + name + "</h3>");
+  var end = html.indexOf("</article>", start);
+  return html.slice(start, end);
+}
+var amberCard = card(live, "Amber");
+assert.ok(amberCard.indexOf("Nothing overdue or due today.") > 0);
+assert.ok(amberCard.indexOf("Other open") > 0);
+assert.ok(amberCard.indexOf("data-task-id='9'") < amberCard.indexOf("data-task-id='4'"));
+assert.ok(amberCard.indexOf("Send the packing list") > 0);
+var patrickCard = card(live, "Patrick");
+assert.ok(patrickCard.indexOf("data-task-id='12'") < patrickCard.indexOf("data-task-id='1'>"));
+assert.ok(patrickCard.indexOf("data-task-id='1'>") < patrickCard.indexOf("data-task-id='3'>"));
+assert.ok(patrickCard.indexOf("type='checkbox'") > 0);
+var richCard = card(live, "Rich");
+assert.ok(richCard.indexOf("data-task-id='2'") > 0);
+assert.ok(richCard.indexOf("data-task-id='2'") < richCard.indexOf("Other open"));
+assert.ok(richCard.indexOf("Other open") < richCard.indexOf("data-task-id='6'"));
+
+var noOwner = Tasks.sectionHtml(summary, "", { interactive: true, owner: "" });
+assert.ok(noOwner.indexOf(">Add a task<input") > 0);
+assert.strictEqual(noOwner.indexOf("Add a task for"), -1);
+
+var nasty = Tasks.summarize([{ id: 5, text: "<script>", owner: "Amber", due: null, done: false }], TODAY);
+var nastyHtml = Tasks.sectionHtml(nasty, "", { interactive: true, owner: "Amber <img>" });
+assert.ok(nastyHtml.indexOf("&lt;script&gt;") > 0);
+assert.ok(nastyHtml.indexOf("Amber &lt;img&gt;") > 0);
+assert.strictEqual(nastyHtml.indexOf("<script>"), -1);
+assert.strictEqual(nastyHtml.indexOf("<img"), -1);
+assert.ok(nastyHtml.indexOf("data-task-id='5'") > 0);
+assert.strictEqual(Tasks.sectionHtml(null, "", { interactive: true, owner: "Amber" }).indexOf("task-grid"), -1);
+assert.ok(Tasks.sectionHtml(null, "", { interactive: true, owner: "Amber" }).indexOf("id='huddleTaskForm'") > 0);
 
 console.log("huddle-tasks tests passed");
