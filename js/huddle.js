@@ -10,9 +10,10 @@
   var Score = window.HuddleScore;
   var Card = window.HuddleScorecard;
   var Tasks = window.HuddleTasks;
+  var RoleMap = window.HuddleRoleMap;
   var board = document.getElementById("board");
   var statusEl = document.getElementById("status");
-  if (!Score || !Card || !Tasks || !window.CRMDB || !board) {
+  if (!Score || !Card || !Tasks || !RoleMap || !window.CRMDB || !board) {
     if (board) board.textContent = "The huddle scripts did not load. Reload the page.";
     return;
   }
@@ -30,6 +31,8 @@
   var LOG_LABEL = { call: "Call", email: "Email", touch: "Touch" };
   var me = null;
   var pendingNote = "";
+  var roleState = { map: null, note: "", today: "" };
+  var roleFilters = { person: "", type: "", milestone: "" };
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -229,6 +232,7 @@
     if (form) form.addEventListener("submit", function (e) { e.preventDefault(); saveGoals(); });
     var taskForm = document.getElementById("taskForm");
     if (taskForm) taskForm.addEventListener("submit", function (e) { e.preventDefault(); addTask(); });
+    bindRoleFilters();
     board.querySelectorAll("[data-task-id]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         toggleTask(btn.getAttribute("data-task-id"), btn.getAttribute("data-done") === "1");
@@ -242,8 +246,34 @@
     html += salesHtml(result, goals, notes);
     html += "</section>";
     html += Tasks.sectionHtml(taskRows, taskNote);
+    html += RoleMap.sectionHtml(roleState.map, {
+      today: roleState.today || Score.chicagoToday(new Date()),
+      note: roleState.note,
+      person: roleFilters.person,
+      type: roleFilters.type,
+      milestone: roleFilters.milestone
+    });
     board.innerHTML = html;
     bindBoard();
+  }
+  function bindRoleFilters() {
+    board.querySelectorAll("[data-role-filter]").forEach(function (sel) {
+      sel.addEventListener("change", function () {
+        var key = sel.getAttribute("data-role-filter");
+        if (!roleFilters.hasOwnProperty(key)) return;
+        roleFilters[key] = sel.value;
+        var current = document.getElementById("tasksByRole");
+        if (!current) return;
+        current.outerHTML = RoleMap.sectionHtml(roleState.map, {
+          today: roleState.today || Score.chicagoToday(new Date()),
+          note: roleState.note,
+          person: roleFilters.person,
+          type: roleFilters.type,
+          milestone: roleFilters.milestone
+        });
+        bindRoleFilters();
+      });
+    });
   }
 
   async function addTask() {
@@ -363,6 +393,7 @@
     var since = new Date();
     since.setDate(since.getDate() - 21);
     var today = Score.chicagoToday(new Date());
+    var rolePromise = RoleMap.load("data/task_role_map.json");
     var results = await Promise.all([
       CRMDB.db.from("crm_activity").select("kind,by_user,at").gte("at", since.toISOString()).limit(2000),
       CRMDB.db.from("crm_quotes").select("id,deal_id,rep,sent_date").not("sent_date", "is", null).limit(2000),
@@ -397,6 +428,14 @@
       if (taskRows.length >= 2000) taskNote = "The task list hit 2,000 rows, so some tasks may be missing.";
     }
     var taskBoard = results[5].error ? null : Tasks.list(taskRows, today);
+    try {
+      roleState.map = await rolePromise;
+      roleState.note = "";
+    } catch (e) {
+      roleState.map = null;
+      roleState.note = "The role map did not load. Today's to-do list above is unchanged.";
+    }
+    roleState.today = today;
     var result = Score.score({
       today: today,
       goals: goalsRes.data || [],

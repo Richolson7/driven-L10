@@ -917,6 +917,15 @@
       });
       h += "</div></div>";
     }
+    var roleTopics = window.HuddleRoleMap ? HuddleRoleMap.trainingTopics() : [];
+    if (roleTopics.length) {
+      h += "<div class='sect' style='margin-top:28px'><h2>Morning huddle</h2><div class='grid2'>";
+      roleTopics.forEach(function (topic) {
+        h += "<div class='panel' style='padding:14px'><h3 class='cond' style='font-size:20px'>" + esc(topic.title) + "</h3><p>" + esc(topic.body) + "</p>";
+        h += "<p style='margin:8px 0 0'><a class='ghost' href='" + esc(topic.href) + "' style='text-decoration:none'>" + esc(topic.link) + "</a></p></div>";
+      });
+      h += "</div></div>";
+    }
     $("#view").innerHTML = h;
   }
 
@@ -929,6 +938,7 @@
     { title: "Log it the same day", body: "Log call, Log email, and Log touch save your work under your name for the huddle.", sel: "[data-act='quick-log'][data-kind='call']" },
     { title: "Tools up top", body: "The route planner and the packaging calculator are one click away.", sel: "#calcBtn" },
     { title: "Orders", body: "When a deal reaches Customer PO it lands in Open orders. Delivery dates live on the Order calendar.", sel: ".tab[data-view='orders']" },
+    { title: "Tasks by role", body: "Open Huddle for the morning meeting. Under today's to-dos, Tasks by role groups the work by person. Relationship is work with a person, Operational is a system or a routine, and a gold Judgment checkpoint has to be approved before it goes out. Two items roll out each week. Red means the date was missed, or the sheet already marks the item overdue.", sel: ".app-switch a[href='huddle.html']" },
     { title: "Training", body: "The intro and these steps live here. Replay this tour any time with Take the tour.", sel: ".tab[data-view='training']" }
   ];
   var tourStep = 0;

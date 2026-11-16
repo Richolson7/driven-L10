@@ -6,7 +6,7 @@
   if (typeof module === "object" && module.exports) module.exports = api;
   root.HuddleTasks = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
-  var PEOPLE = ["Patrick", "Annie", "Rich", "Landon", "Amber"];
+  var PEOPLE = ["Patrick", "Annie", "Rich", "Landon", "Amber", "Dan"];
 
   function pad(n) { return String(n).padStart(2, "0"); }
   function addDays(ymd, n) {
