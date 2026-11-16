@@ -92,22 +92,47 @@ summary.forEach(function (row) {
   assert.ok(counts.open >= counts.overdue + counts.dueToday + counts.comingDue);
 });
 
-var html = Tasks.sectionHtml(summary, "Tasks did not load. <script>");
-assert.ok(html.indexOf("<h2>What we need to do</h2>") > 0);
-assert.ok(html.indexOf("<h2>Tasks</h2>") < 0);
-assert.ok(html.indexOf("<h3>Patrick</h3>") < html.indexOf("<h3>Annie</h3>"));
-assert.ok(html.indexOf("<h3>Annie</h3>") < html.indexOf("<h3>Rich</h3>"));
-assert.ok(html.indexOf("<h3>Rich</h3>") < html.indexOf("<h3>Landon</h3>"));
-assert.ok(html.indexOf("<h3>Landon</h3>") < html.indexOf("<h3>Amber</h3>"));
+var listed = Tasks.list(rows.map(function (row, i) { return Object.assign({ id: i + 1 }, row); }), TODAY);
+assert.deepStrictEqual(listed.map(function (row) { return row.status + ":" + row.text; }), [
+  "Overdue:Not on this huddle",
+  "Overdue:Older Patrick item",
+  "Overdue:Shared quote follow-up",
+  "Overdue:Call the yard",
+  "Open:Review the price sheet",
+  "Open:Service desk",
+  "Open:Whole team check",
+  "Open:Send the packing list",
+  "Open:Later rock",
+  "Open:No date yet",
+  "Done:Already filed",
+  "Done:Finished today"
+]);
+assert.strictEqual(listed[0].owner, "Dan");
+assert.ok(listed.some(function (row) { return row.owner === "Amber" && row.text === "Send the packing list"; }));
+
+var html = Tasks.sectionHtml(listed, "Tasks did not load. <script>");
+assert.ok(html.indexOf("<h2>Tasks</h2>") > 0);
+assert.ok(html.indexOf("What we need to do") < 0);
+assert.ok(html.indexOf("How this works") > 0);
+assert.ok(html.indexOf("Add task") > 0);
+assert.ok(html.indexOf("Click the Status pill") > 0);
+assert.ok(html.indexOf("<th>Task</th><th>Owner</th><th>Due</th><th>Status</th>") > 0);
 assert.ok(html.indexOf("Shared quote follow-up") > 0);
-assert.ok(html.indexOf("Review the price sheet") > 0);
-assert.ok(html.indexOf("Nothing overdue or due today.") > 0);
+assert.ok(html.indexOf("Not on this huddle") > 0);
+assert.ok(html.indexOf("Service desk") > 0);
+assert.ok(html.indexOf("value='Amber'") > 0);
 assert.ok(html.indexOf("&lt;script&gt;") > 0);
-assert.strictEqual(html.indexOf("<button"), -1);
-assert.strictEqual(html.indexOf("<input"), -1);
-assert.strictEqual(html.indexOf("checkbox"), -1);
-assert.ok(html.indexOf("Not on this huddle") < 0);
-assert.ok(html.indexOf("Service desk") < 0);
+assert.strictEqual((html.match(/class='top'/g) || []).length, 3);
+assert.ok(html.indexOf("class='top'") < html.indexOf("Not on this huddle"));
+assert.ok(html.indexOf("data-task-id='1'") > 0);
+assert.ok(html.indexOf("class='pill overdue'") > 0);
+assert.ok(html.indexOf("class='pill open'") > 0);
+assert.ok(html.indexOf("class='pill done'") > 0);
+assert.ok(html.indexOf("aria-label='Mark done'") > 0);
+assert.ok(html.indexOf("aria-label='Reopen'") > 0);
+assert.ok(html.indexOf("Cash on hand") < 0);
+assert.ok(html.indexOf("Command center") < 0);
+assert.ok(html.slice(html.indexOf("Already filed") - 120, html.indexOf("Already filed")).indexOf("class='top'") < 0);
 
 var blank = Tasks.summarize([], TODAY);
 blank.forEach(function (row) {
@@ -116,6 +141,10 @@ blank.forEach(function (row) {
 });
 
 assert.strictEqual(Tasks.addDays("2026-10-29", 7), "2026-11-05");
-assert.strictEqual(Tasks.sectionHtml(null, "").indexOf("task-grid"), -1);
+var empty = Tasks.sectionHtml(null, "");
+assert.strictEqual(empty.indexOf("task-grid"), -1);
+assert.ok(empty.indexOf("Add task") > 0);
+assert.ok(empty.indexOf("How this works") > 0);
+assert.strictEqual(Tasks.sectionHtml([], "").indexOf("No tasks yet.") > 0, true);
 
 console.log("huddle-tasks tests passed");

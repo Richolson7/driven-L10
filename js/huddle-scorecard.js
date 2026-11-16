@@ -240,24 +240,23 @@
   function sectionHtml(view) {
     var snapshot = view && view.snapshot;
     var note = view && view.note || "";
-    var html = "<section class='scorecard' id='huddleLoads' aria-label='Loads per day'>";
-    html += "<div class='loads-hero'><p class='kicker'>Loads per day</p>";
-    html += "<p class='fine'>In-house truck. Goal is 2 deliveries a day. Patrick owns this number.</p>";
+    var html = "<div class='loads-block' id='huddleLoads' aria-label='In-house loads'>";
     if (snapshot) {
-      var weekWord = snapshot.lastWeek ? "Last week" : "Week to date";
-      html += "<p class='frozen'>Frozen at 10:00 AM CT · " + esc(pretty(snapshot.huddleDay)) + " · " + esc(weekWord) + " " + esc(pretty(snapshot.weekStart)) + " – " + esc(pretty(snapshot.weekEnd)) + "</p>";
+      html += "<p class='frozen'>Snapshot at 10:00 AM CT · " + esc(pretty(snapshot.huddleDay)) + "</p>";
     } else {
       html += "<p class='frozen'>Snapshot at 10:00 AM CT · " + esc(pretty(view && view.huddleDay)) + " · not captured</p>";
     }
     if (note) html += "<p class='fine'>" + esc(note) + "</p>";
+    html += "<div class='loads-hero'><div><p class='kicker'>Logistics: in-house loads delivered</p>";
+    html += "<p class='fine'>In-house truck · Goal 2/day. Patrick owns this number.</p></div>";
     html += "<div class='loads-figs'>";
     if (!snapshot) html += blankLoads();
     else {
       var loads = snapshot.loads;
-      html += loadFig("Team · yesterday", loads.yesterday, loads.noneLogged && loads.yesterday.actual === 0);
-      html += loadFig(snapshot.lastWeek ? "Team · last week" : "Team · week to date", loads.week, loads.noneLogged && loads.week.actual === 0);
+      html += loadFig("Yesterday", loads.yesterday, loads.noneLogged && loads.yesterday.actual === 0);
+      html += loadFig("Week", loads.week, loads.noneLogged && loads.week.actual === 0);
     }
-    html += "</div>";
+    html += "</div></div>";
     if (snapshot && snapshot.loads.people.length) {
       html += "<div class='load-people'>";
       snapshot.loads.people.forEach(function (person) {
@@ -270,7 +269,7 @@
     }
     if (snapshot && snapshot.loads.capped) html += "<p class='fine'>The deal list hit 2,000 rows, so some deliveries may be missing from this snapshot.</p>";
     if (snapshot) html += "<p class='fine'>Loads come from CRM orders at Customer PO or later, using the delivery date, or the ship date when delivery is blank. Refresh reloads the snapshot. It does not recompute these numbers.</p>";
-    html += "</div></section>";
+    html += "</div>";
     return html;
   }
 

@@ -160,7 +160,11 @@ assert.strictEqual(snap.loads.yesterday.actual, 1);
 assert.strictEqual(snap.loads.people[0].name, "Patrick");
 
 var html = Card.sectionHtml({ snapshot: snap, note: "" });
-assert.ok(html.indexOf("Loads per day") > -1);
+assert.ok(html.indexOf("Logistics: in-house loads delivered") > -1);
+assert.ok(html.indexOf("In-house truck") > -1);
+assert.ok(html.indexOf("Goal 2/day") > -1);
+assert.ok(html.indexOf("Patrick owns this number") > -1);
+assert.ok(html.indexOf("Loads per day") < 0);
 assert.ok(html.indexOf("Order fulfillment") < 0);
 assert.ok(html.indexOf("Vendor performance") < 0);
 assert.ok(html.indexOf("On time delivery") < 0);
@@ -187,7 +191,8 @@ assert.ok(html.indexOf("freight brokerage") < 0);
 
 var blank = Card.sectionHtml({ snapshot: null, huddleDay: "2026-11-05", note: "No snapshot was saved at 10:00 AM CT for this huddle." });
 assert.ok(blank.indexOf("not captured") > -1);
-assert.ok(blank.indexOf("Loads per day") > -1);
+assert.ok(blank.indexOf("Logistics: in-house loads delivered") > -1);
+assert.ok(blank.indexOf("Loads per day") < 0);
 assert.ok(blank.indexOf("Order fulfillment") < 0);
 assert.ok(blank.indexOf("Net profit") < 0);
 assert.ok(blank.indexOf("Labor % of sales") < 0);
