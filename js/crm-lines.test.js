@@ -121,4 +121,54 @@ assert.strictEqual(patch.price_per_unit, undefined);
 var first = Q.dealPatch({ lines: river }, { part: "line", index: 0, key: "price", value: 14.5 });
 assert.strictEqual(first.price_per_unit, 14.5);
 
+var blankCost = L.lineFigures({ qty: 10, price: 5, cost: null });
+assert.strictEqual(blankCost.sell, 50);
+assert.strictEqual(blankCost.cost, null);
+assert.strictEqual(blankCost.margin, null);
+var blankDeal = L.dealTotals([{ qty: 10, price: 5, cost: "" }], null);
+assert.strictEqual(blankDeal.value, 50);
+assert.strictEqual(blankDeal.cost, null);
+assert.strictEqual(blankDeal.marginPct, null);
+var zeroCost = L.lineFigures({ qty: 4, price: 10, cost: 0 });
+assert.strictEqual(zeroCost.cost, 0);
+
+var kept = { desc: "Machine wrap", cost: 34.5, vendor_id: 151, price: 47 };
+var header = { vendor_price_per_unit: null, vendor_id: null, price_per_unit: 47, quantity: null };
+L.copyHeaderWhenSet(kept, header);
+assert.strictEqual(kept.cost, 34.5);
+assert.strictEqual(kept.vendor_id, 151);
+assert.strictEqual(kept.price, 47);
+L.copyHeaderWhenSet(kept, { vendor_price_per_unit: 30, vendor_id: 9 });
+assert.strictEqual(kept.cost, 30);
+assert.strictEqual(kept.vendor_id, 9);
+
+var merged = L.mergeStored({ line_id: 11, cost: null, vendor_id: null, price: 11.5 }, { line_id: 11, cost: 6.5, vendor_id: 164 });
+assert.strictEqual(merged.cost, 6.5);
+assert.strictEqual(merged.vendor_id, 164);
+assert.strictEqual(merged.price, 11.5);
+var keptColumn = L.mergeStored({ cost: 2.87, vendor_id: 337 }, { cost: 1, vendor_id: 1 });
+assert.strictEqual(keptColumn.cost, 2.87);
+assert.strictEqual(keptColumn.vendor_id, 337);
+
+var cols = L.lineMoneyColumns({ cost: "", vendor_id: null }, null);
+assert.deepStrictEqual(cols, {});
+var filled = L.lineMoneyColumns({ cost: 85, vendor_id: "" }, 159);
+assert.strictEqual(filled.vendor_price, 85);
+assert.strictEqual(filled.vendor_id, 159);
+assert.strictEqual(L.keepIfSet(null, 66.48), 66.48);
+assert.strictEqual(L.keepIfSet(70, 66.48), 70);
+assert.strictEqual(L.keepIfSet(0, 66.48), 0);
+
+var cleared = Q.dealPatch({ lines: [{ cost: null, vendor_id: null, price: 11.5 }] }, { part: "line", index: 0, key: "cost", value: null });
+assert.strictEqual(cleared.vendor_price_per_unit, undefined);
+var clearedVendor = Q.dealPatch({ lines: [{ vendor_id: "" }] }, { part: "line", index: 0, key: "vendor_id", value: "" });
+assert.strictEqual(clearedVendor.vendor_id, undefined);
+var setCost = Q.dealPatch({ lines: river }, { part: "line", index: 0, key: "cost", value: 9.25 });
+assert.strictEqual(setCost.vendor_price_per_unit, 9.25);
+var backfill = Q.headerBackfill({ lines: [{ cost: 85, vendor_id: 159 }] }, { vendor_price_per_unit: null, vendor_id: null });
+assert.strictEqual(backfill.vendor_price_per_unit, 85);
+assert.strictEqual(backfill.vendor_id, 159);
+var noBackfill = Q.headerBackfill({ lines: [{ cost: null, vendor_id: null }] }, { vendor_price_per_unit: 12, vendor_id: 4 });
+assert.deepStrictEqual(noBackfill, {});
+
 console.log("crm-lines tests ok");
