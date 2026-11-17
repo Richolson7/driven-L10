@@ -113,6 +113,8 @@
   var orderF = { q: "", customer: "", rep: "", category: "", vendor: "", scope: "open", sort: "lineDate", dir: 1 };
   var coQ = "";
   var coFilter = "all";
+  var contactEditId = null;
+  var contactSaving = false;
   var taskWho = "";
   var calMonth = null;
   var openSeq = {};
@@ -1155,6 +1157,10 @@
   }
   function openCompany(id) {
     var c = co(id); if (!c) return;
+    if (contactEditId) {
+      var editing = S.contacts.find(function (x) { return x.id === contactEditId; });
+      if (!editing || editing.company_id !== c.id) contactEditId = null;
+    }
     syncReadyFlags(c);
     function f(k, l, t) {
       if (t === "kind") return "<div class='f'><label>" + l + "</label><select data-k='kind'>" + [["customer", "Customer"], ["prospect", "Prospect"], ["vendor", "Vendor"]].map(function (o) { return "<option value='" + o[0] + "'" + (c.kind === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></div>";
@@ -1181,7 +1187,7 @@
     h += (c.ready_for_qb ? "<span class='chip active'>Ready for QuickBooks</span> " : "") + (c.qb_id ? "<span class='chip active'>Marked in QuickBooks (" + esc(c.qb_id) + ")</span>" : "<button class='ghost' data-act='qb-mark' data-id='" + c.id + "'>Mark ready / set up in QuickBooks</button>");
     h += "<p class='log'>Checklist ticks save on this company. QuickBooks itself is not updated.</p></fieldset>";
     h += "<fieldset><legend>Ship-to addresses</legend><ul class='mini'>" + (ships.length ? ships.map(function (s) { return "<li><b>" + esc(s.label) + "</b> · " + esc(s.address) + " <button class='linkbtn' data-act='del-ship' data-id='" + s.id + "'>Remove</button></li>"; }).join("") : "<li class='log'>None yet.</li>") + "</ul><div class='addrow' style='grid-template-columns:1fr 2fr auto'><input id='nsLabel' placeholder='Label'><input id='nsAddr' placeholder='Full address'><button class='ghost' data-act='add-ship' data-id='" + c.id + "'>Add</button></div></fieldset>";
-    h += "<fieldset><legend>Contacts</legend><ul class='mini'>" + (cons.length ? cons.map(function (x) { return "<li><b>" + esc(x.name) + "</b> · " + esc(x.role) + "<br><span class='log'>" + esc(x.email) + (x.phone ? " · " + esc(x.phone) : "") + "</span> <label class='switch' style='display:inline-flex'><input type='checkbox' data-textok='" + x.id + "'" + (c.textOk[x.id] ? " checked" : "") + "> OK to text</label> <button class='linkbtn' data-act='del-contact' data-id='" + x.id + "'>Remove</button></li>"; }).join("") : "<li class='log'>No contacts yet.</li>") + "</ul><div class='addrow'><input id='ncRole' placeholder='Role'><input id='ncName' placeholder='Name'><input id='ncEmail' placeholder='Email'><input id='ncPhone' placeholder='Phone'><button class='ghost' data-act='add-contact' data-id='" + c.id + "'>Add</button></div></fieldset>";
+    h += "<fieldset><legend>Contacts</legend><ul class='mini'>" + (cons.length ? cons.map(function (x) { return CRMContactEdit.row(x, { editing: contactEditId === x.id, textOk: !!c.textOk[x.id] }); }).join("") : "<li class='log'>No contacts yet.</li>") + "</ul><div class='addrow'><input id='ncRole' placeholder='Role'><input id='ncName' placeholder='Name'><input id='ncEmail' placeholder='Email'><input id='ncPhone' placeholder='Phone'><button class='ghost' data-act='add-contact' data-id='" + c.id + "'>Add</button></div></fieldset>";
     if (c.kind !== "vendor") {
       var sqs = sequences();
       var ens = c.enrollments || [];
@@ -1553,6 +1559,7 @@
     dr.dataset.deal = "";
     dr.dataset.company = "";
     dr.dataset.quote = "";
+    contactEditId = null;
     $("#scrim").classList.remove("open");
   }
   function openModal(html) { $("#mbox").innerHTML = html; $("#modal").classList.add("open"); }
@@ -1774,6 +1781,22 @@
     if (act === "add-ship") { addShip(+id); return; }
     if (act === "del-ship") { delShip(+id); return; }
     if (act === "add-contact") { addContact(+id); return; }
+    if (act === "edit-contact") {
+      contactEditId = +id;
+      var editingContact = S.contacts.find(function (y) { return y.id === contactEditId; });
+      if (editingContact) openCompany(editingContact.company_id);
+      var nameInput = $("#ecName");
+      if (nameInput) nameInput.focus();
+      return;
+    }
+    if (act === "cancel-contact") {
+      var cancelId = contactEditId || +id;
+      contactEditId = null;
+      var cancelContact = S.contacts.find(function (y) { return y.id === cancelId; });
+      if (cancelContact) openCompany(cancelContact.company_id);
+      return;
+    }
+    if (act === "save-contact") { saveContact(+id); return; }
     if (act === "del-contact") { delContact(+id); return; }
     if (act === "log-contact") { quickLog("touch", +id); return; }
     if (act === "quick-log") { quickLog(a.dataset.kind || "touch", id ? +id : null); return; }
@@ -1962,12 +1985,46 @@
     var saved = await CRMDB.insert("crm_contacts", { company_id: companyId, role: $("#ncRole").value.trim() || null, name: name, email: $("#ncEmail").value.trim() || null, phone: $("#ncPhone").value.trim() || null }, "contact");
     if (!saved) return;
     S.contacts.push({ id: saved.id, company_id: companyId, role: saved.role || "", name: saved.name, email: saved.email || "", phone: saved.phone || "" });
+    contactEditId = null;
     openCompany(companyId);
+  }
+  async function saveContact(id) {
+    if (contactSaving) return;
+    var x = S.contacts.find(function (y) { return y.id === id; });
+    if (!x || !window.CRMContactEdit) return;
+    var next = {
+      name: $("#ecName") ? $("#ecName").value : "",
+      role: $("#ecRole") ? $("#ecRole").value : "",
+      email: $("#ecEmail") ? $("#ecEmail").value : "",
+      phone: $("#ecPhone") ? $("#ecPhone").value : ""
+    };
+    var patch = CRMContactEdit.patch(x, next);
+    if (!Object.keys(patch).length) {
+      toast(CRMContactEdit.omittedBlank(x, next) ? "Empty fields were left as they are." : "Nothing changed.");
+      return;
+    }
+    var keptBlank = CRMContactEdit.omittedBlank(x, next);
+    contactSaving = true;
+    var saved = null;
+    try {
+      saved = await CRMDB.update("crm_contacts", id, patch, "contact");
+    } finally {
+      contactSaving = false;
+    }
+    if (!saved) return;
+    x.name = saved.name || x.name;
+    x.role = saved.role || "";
+    x.email = saved.email || "";
+    x.phone = saved.phone || "";
+    contactEditId = null;
+    openCompany(x.company_id);
+    if (keptBlank) toast("Empty fields were left as they are.");
   }
   async function delContact(id) {
     var x = S.contacts.find(function (y) { return y.id === id; });
     var gone = await CRMDB.remove("crm_contacts", id, "contact");
     if (!gone) return;
+    if (contactEditId === id) contactEditId = null;
     S.contacts = S.contacts.filter(function (y) { return y.id !== id; });
     if (x) openCompany(x.company_id);
   }
