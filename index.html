@@ -213,6 +213,7 @@ a.tab.tab-link:hover .tab-sub{color:var(--td)}
 .status-btn.solved{background:rgba(92,184,0,.15);color:#5CB800}
 .add-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
 .add-row input{flex:1;min-width:160px}
+.issue-owner-inp{max-width:160px;flex:0 1 160px}
 
 @media (max-width:900px){
   .header{padding:14px 12px 10px}
@@ -233,13 +234,18 @@ a.tab.tab-link:hover .tab-sub{color:var(--td)}
   .meeting-main{padding:16px 12px 28px;overflow:visible}
   .segue-grid{grid-template-columns:1fr}
   .meeting-main .add-row{flex-direction:column;align-items:stretch}
-  .meeting-main .add-row input,.meeting-main .add-row .tbtn,.meeting-main .add-row .mic-btn,.meeting-main .add-row .tsel{width:100%;max-width:none;min-width:0;min-height:44px}
+  .meeting-main .add-row input,.meeting-main .add-row .tbtn,.meeting-main .add-row .tsel{width:100%;max-width:none;min-width:0;min-height:44px}
+  .meeting-main .add-row .mic-btn{align-self:flex-start;width:44px;min-width:44px;min-height:44px}
+  .meeting-main .ids-add-row{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center}
+  .meeting-main .ids-add-row .issue-owner-inp,.meeting-main .ids-add-row .tbtn{grid-column:1 / -1}
   .meeting-main .tinp,.meeting-main .tsel,.meeting-main textarea{font-size:16px}
   .issue-notes{min-height:88px}
   .ids-task-launch{flex-direction:column}
   .ids-task-grid{grid-template-columns:minmax(0,1fr)}
-  .ids-add-task,.ids-save,.ids-cancel,.status-btn{min-height:44px}
+  .ids-add-task,.ids-save,.ids-cancel{min-height:44px}
   .ids-add-task,.ids-save{width:100%}
+  .status-btn{min-height:36px;padding:0 12px}
+  #ids-task-text{min-height:96px}
   .ids-task-actions{flex-direction:column}
   .trow-del{min-width:44px;min-height:44px}
 }
@@ -1263,7 +1269,9 @@ function openIdsTask(id){
   renderIssues();
   const el = document.getElementById('ids-task-text');
   if (el){
-    el.focus();
+    const save = document.querySelector('.ids-save');
+    if (save && save.scrollIntoView) save.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    el.focus({ preventScroll: true });
     const len = el.value.length;
     if (el.setSelectionRange) el.setSelectionRange(len, len);
   }
@@ -1686,10 +1694,10 @@ function renderStepMain(){
     main.innerHTML = `
       <div class="step-title">IDS — IDENTIFY, DISCUSS, SOLVE — 55 min</div>
       <div class="step-sub">Tap a status to move it: Identified → Discussing → Solved. On an issue, Add to-do files a task without leaving IDS. The title starts from the issue and the notes, the owner is filled in, and the due date starts 7 days out. Save puts it on the To-Do list and the Task Tracker.</div>
-      <div class="add-row">
+      <div class="add-row ids-add-row">
         <input class="tinp" id="new-issue-text" placeholder="Issue...">
         <button class="mic-btn" onclick="startVoiceInto('new-issue-text', this)">🎤</button>
-        <input class="tinp" id="new-issue-owner" placeholder="Owner" style="max-width:130px">
+        <input class="tinp issue-owner-inp" id="new-issue-owner" placeholder="Owner">
         <button class="tbtn green" onclick="addIssue()">+ Add Issue</button>
       </div>
       <div id="step-issues-list"></div>`;
