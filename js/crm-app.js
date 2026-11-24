@@ -913,6 +913,7 @@
     h += "<li><b>Prefill the link.</b> Add the invoice and amount, like <span class='log'>pay.html?invoice=20539&amp;amount=1964.80</span>. The customer sees those values filled in. Copy customer link on that page copies the same kind of link.</li>";
     h += "<li><b>They finish on PayTrace.</b> Continue to secure payment opens the PayTrace hosted page. The PayTrace link inside pay.html is the source. Driven never sees the card number.</li>";
     h += "</ol><p class='log'>Customer questions: 612-802-3187 or orders@drivensol.com.</p></div></div>";
+    h += deletingTraining();
     var topics = window.CRMPortalOrders ? CRMPortalOrders.trainingTopics() : [];
     if (topics.length) {
       h += "<div class='sect' style='margin-top:28px'><h2>Portal and the tab bar</h2><div class='grid2'>";
@@ -923,6 +924,16 @@
       h += "</div></div>";
     }
     $("#view").innerHTML = h;
+  }
+
+  function deletingTraining() {
+    var h = "<div class='sect' style='margin-top:28px'><h2>Deleting test quotes and deals</h2><div class='panel' style='padding:14px'><ol class='crm-steps'>";
+    h += "<li><b>Delete a test deal.</b> Open the deal and choose Delete deal. On the Pipeline, Show lost adds Delete on each lost row. That button does not open the deal. Clicking the rest of the row still does.</li>";
+    h += "<li><b>Confirm it.</b> The prompt says the deal, quote, lines, follow-ups, and history are removed and cannot be undone. Cancel leaves it. Delete removes it. The company keeps a note with the description, value, and who deleted it.</li>";
+    h += "<li><b>Delete a quote only.</b> In the quote editor, Delete quote removes that quote and its lines. The deal stays.</li>";
+    h += "<li><b>What stays.</b> A deal is kept when it is linked to QuickBooks, has an invoice, a payment, or an uninvoiced flag, or when it is in Shipped, Delivered, Invoice Sent, or Paid. Working on quote, Quote sent, lost, Customer PO, and Driven PO can be deleted when none of those apply.</li>";
+    h += "</ol><p style='margin:8px 0 0'><button class='ghost' type='button' data-act='go-view' data-view='pipeline'>Open the pipeline</button></p></div></div>";
+    return h;
   }
 
   var TOUR = [
@@ -1017,7 +1028,7 @@
     h += "</div></div>";
     if (F.showLost) {
       var lost = S.deals.filter(function (d) { return d.status === "lost" && match(d); });
-      h += "<div class='sect' style='margin-top:18px'><h2>Lost deals</h2><div class='panel tablewrap'><table><thead><tr><th>Deal</th><th>Company</th><th>Value</th><th>Stage</th><th>Reason</th></tr></thead><tbody>" + (lost.length ? lost.map(function (d) { return "<tr class='click' data-open-deal='" + d.id + "'><td>" + esc(d.description) + "</td><td>" + esc((co(d.company_id) || {}).name || "") + "</td><td>" + money(val(d)) + "</td><td>" + esc(stageName(d.stage)) + "</td><td>" + esc(d.lost_reason) + "</td></tr>"; }).join("") : "<tr><td colspan='5' class='empty'>No lost deals.</td></tr>") + "</tbody></table></div></div>";
+      h += "<div class='sect' style='margin-top:18px'><h2>Lost deals</h2><div class='panel tablewrap'><table><thead><tr><th>Deal</th><th>Company</th><th>Value</th><th>Stage</th><th>Reason</th><th></th></tr></thead><tbody>" + (lost.length ? lost.map(lostDealRow).join("") : "<tr><td colspan='6' class='empty'>No lost deals.</td></tr>") + "</tbody></table></div></div>";
     }
     $("#view").innerHTML = h;
     updatePrefsNote();
@@ -1034,6 +1045,9 @@
       vPipeline();
     });
     wireDrag();
+  }
+  function lostDealRow(d) {
+    return "<tr class='click' data-open-deal='" + d.id + "'><td>" + esc(d.description) + "</td><td>" + esc((co(d.company_id) || {}).name || "") + "</td><td>" + money(val(d)) + "</td><td>" + esc(stageName(d.stage)) + "</td><td>" + esc(d.lost_reason) + "</td><td><button type='button' class='danger' data-act='delete-deal' data-id='" + d.id + "'>Delete</button></td></tr>";
   }
   function cardHtml(d) {
     var c = co(d.company_id) || {};
@@ -1085,7 +1099,7 @@
     h += notesHtml(d.company_id, d.id);
     var act = S.activity.filter(function (a) { return a.deal_id === d.id && a.kind !== "draft"; });
     h += "<fieldset><legend>History</legend><ul class='log'>" + (act.length ? act.map(function (a) { return "<li>" + shortDate(a.at) + " · " + esc(a.note) + "</li>"; }).join("") : "<li>Created.</li>") + "</ul>" + messageList(d.id, null) + "</fieldset></div>";
-    h += "<div class='dfoot'>" + (si < S.stages.length - 1 && d.status !== "lost" ? "<button class='primary' data-act='move' data-id='" + d.id + "' data-to='" + S.stages[si + 1].key + "'>Move to " + esc(S.stages[si + 1].name) + "</button>" : "") + (d.status === "lost" ? "<button class='ghost' data-act='reopen' data-id='" + d.id + "'>Reopen deal</button>" : (!isWon(d) ? "<button class='danger' data-act='lose' data-id='" + d.id + "'>Mark lost</button>" : "")) + "<div class='spacer'></div><button class='ghost' data-act='open-company' data-id='" + (d.company_id || "") + "'>Open company</button></div>";
+    h += "<div class='dfoot'>" + (si < S.stages.length - 1 && d.status !== "lost" ? "<button class='primary' data-act='move' data-id='" + d.id + "' data-to='" + S.stages[si + 1].key + "'>Move to " + esc(S.stages[si + 1].name) + "</button>" : "") + (d.status === "lost" ? "<button class='ghost' data-act='reopen' data-id='" + d.id + "'>Reopen deal</button>" : (!isWon(d) ? "<button class='danger' data-act='lose' data-id='" + d.id + "'>Mark lost</button>" : "")) + "<button class='danger' data-act='delete-deal' data-id='" + d.id + "'>Delete deal</button><div class='spacer'></div><button class='ghost' data-act='open-company' data-id='" + (d.company_id || "") + "'>Open company</button></div>";
     openDrawer(h, true);
     $("#drawer").dataset.deal = d.id;
     $("#drawer").dataset.quote = "";
@@ -1537,7 +1551,7 @@
         return "<tr><td>" + catalog + "</td><td><input data-ql='" + i + ":desc' value='" + esc(l.desc || "") + "' aria-label='Product'></td><td><select data-ql='" + i + ":category'><option value=''>Choose…</option>" + Orders.CATEGORIES.map(function (c) { return "<option" + (l.category === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select></td><td><input data-ql='" + i + ":invoice_number' value='" + esc(l.invoice_number || "") + "' aria-label='Invoice number'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-ql='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + (l.unit === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-ql='" + i + ":vendor_id'", vend, l.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-ql='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Vendor cost'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Sell price'></td><td class='calc'>" + (fig.sell == null ? "—" : Orders.money(fig.sell)) + "</td><td class='calc'>" + (fig.marginPct == null ? "—" : pct(fig.marginPct)) + "</td><td>" + (q.lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
       }).join("") + "</tbody></table></div><button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> <button class='ghost' data-act='usual-order' data-id='" + d.id + "'>Use usual order</button><p class='log'>Every line is included in the deal total. The first line still fills the deal's unit price, quantity, and vendor so older screens keep a product on the deal. Vendor cost and margin stay off the customer PDF. Pick a catalog product, or type a QuickBooks item name when it is not in the catalog.</p></fieldset>";
     h += "<fieldset><legend>Terms on the quote</legend><div class='f'><textarea data-q='terms'>" + esc(q.terms || "") + "</textarea></div></fieldset></div>";
-    h += "<div class='dfoot'><button class='primary' data-act='q-download' data-id='" + d.id + "'>Download PDF</button><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-open-deal='" + d.id + "'>Open deal</button></div>";
+    h += "<div class='dfoot'><button class='primary' data-act='q-download' data-id='" + d.id + "'>Download PDF</button><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-open-deal='" + d.id + "'>Open deal</button><button class='danger' data-act='delete-quote' data-id='" + d.id + "'>Delete quote</button></div>";
     openDrawer(h, true);
     $("#drawer").dataset.quote = d.id;
     $("#drawer").dataset.deal = "";
@@ -1774,6 +1788,10 @@
     if (act === "lose") { openModal("<h2>Mark this deal lost?</h2><div class='f'><label>Why?</label><input id='lostWhy'></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='danger' data-act='lose-ok' data-id='" + id + "'>Mark lost</button></div>"); return; }
     if (act === "lose-ok") { markLost(+id); return; }
     if (act === "reopen") { reopenDeal(+id); return; }
+    if (act === "delete-deal") { askDeleteDeal(+id); return; }
+    if (act === "delete-deal-ok") { deleteDeal(+id); return; }
+    if (act === "delete-quote") { askDeleteQuote(+id); return; }
+    if (act === "delete-quote-ok") { deleteQuoteOnly(+id); return; }
     if (act === "toggle-task") { toggleTask(+id, a.checked); return; }
     if (act === "add-task") { addTaskFromForm(); return; }
     if (act === "add-ship") { addShip(+id); return; }
@@ -1929,6 +1947,140 @@
     if (!ok) return;
     render();
     openDeal(id);
+  }
+  var deleting = false;
+  function askDeleteDeal(id) {
+    var d = dealById(id);
+    if (!d) return;
+    openModal("<h2>Delete this deal?</h2><p>Delete this deal and its quote permanently? This also removes its tasks, activity, quote and lines. This can't be undone.</p><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='danger' data-act='delete-deal-ok' data-id='" + d.id + "'>Delete</button></div>");
+  }
+  function askDeleteQuote(id) {
+    var d = dealById(id);
+    if (!d) return;
+    openModal("<h2>Delete this quote?</h2><p>Delete this quote permanently? The deal stays. This removes the quote and its lines. This can't be undone.</p><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='danger' data-act='delete-quote-ok' data-id='" + d.id + "'>Delete</button></div>");
+  }
+  async function commissionRole() {
+    var email = (S.authEmail || "").trim();
+    if (!email) return { role: "", error: "Sign in before deleting." };
+    var acc = await CRMDB.db.from("crm_commission_access").select("email,role,active").ilike("email", email.replace(/[%_]/g, ""));
+    if (acc.error) return { role: "", error: "Could not check who can see invoices. " + CRMDB.explain(acc.error) };
+    var mine = (acc.data || []).filter(function (a) {
+      return String(a.email || "").toLowerCase() === email.toLowerCase() && a.active !== false;
+    })[0];
+    return { role: mine ? mine.role : "" };
+  }
+  async function rowsFor(table, column, id) {
+    var res = await CRMDB.db.from(table).select("id").eq(column, id).limit(1);
+    if (res.error) return { error: res.error };
+    return { n: (res.data || []).length };
+  }
+  async function deleteBlock(d) {
+    if (!window.CRMDelete) return "Delete checks did not load. Reload the page.";
+    var fresh = await CRMDB.db.from("crm_deals").select("id,stage,qbo_doc_id,qbo_doc_type,qbo_customer_id,qbo_synced_at").eq("id", d.id).limit(1);
+    if (fresh.error) return "Could not re-check this deal. " + CRMDB.explain(fresh.error);
+    var row = (fresh.data || [])[0];
+    if (!row) return "This deal is already gone.";
+    var role = await commissionRole();
+    if (role.error) return role.error + " Nothing was deleted.";
+    if (role.role !== "full") return "This was not deleted. QuickBooks invoices and uninvoiced flags are only visible to a full commission user, so this account cannot confirm the deal is safe to remove.";
+    var invoices = await rowsFor("crm_qb_invoices", "deal_id", d.id);
+    if (invoices.error) return "Could not check QuickBooks invoices. " + CRMDB.explain(invoices.error) + " Nothing was deleted.";
+    var payments = await rowsFor("crm_order_payments", "deal_id", d.id);
+    if (payments.error) return "Could not check payments. " + CRMDB.explain(payments.error) + " Nothing was deleted.";
+    var flags = await rowsFor("crm_uninvoiced_flags", "deal_id", d.id);
+    if (flags.error) return "Could not check uninvoiced flags. " + CRMDB.explain(flags.error) + " Nothing was deleted.";
+    var lines = await CRMDB.db.from("crm_deal_lines").select("id,qb_invoice_id").eq("deal_id", d.id);
+    if (lines.error) return "Could not check product lines. " + CRMDB.explain(lines.error) + " Nothing was deleted.";
+    var lineInvoices = (lines.data || []).filter(function (l) { return l.qb_invoice_id != null && String(l.qb_invoice_id).trim() !== ""; }).length;
+    var why = CRMDelete.reasons({
+      stage: row.stage,
+      stageName: stageName(row.stage),
+      stages: S.stages,
+      qbo: row,
+      invoiceCount: invoices.n,
+      paymentCount: payments.n,
+      flagCount: flags.n,
+      lineInvoiceCount: lineInvoices
+    });
+    if (why.length) return "This was not deleted. " + why.join(" ");
+    return { ok: true, stage: row.stage };
+  }
+  function forgetDeal(id) {
+    S.deals = S.deals.filter(function (x) { return x.id !== id; });
+    S.tasks = S.tasks.filter(function (x) { return x.deal_id !== id; });
+    S.activity = S.activity.filter(function (x) { return x.deal_id !== id; });
+    S.messages = (S.messages || []).filter(function (x) { return x.deal_id !== id; });
+  }
+  async function deleteDeal(id) {
+    if (deleting) return;
+    var d = dealById(id);
+    if (!d) return;
+    deleting = true;
+    closeModal();
+    try {
+      var block = await deleteBlock(d);
+      if (!block || block.ok !== true) { toast(typeof block === "string" ? block : "This was not deleted.", "bad"); return; }
+      var desc = d.description || "Untitled deal";
+      var worth = money(val(d));
+      var companyId = d.company_id;
+      var who = meName();
+      var q = CRMDB.db.from("crm_deals").delete().eq("id", d.id);
+      if (block.stage) q = q.eq("stage", block.stage);
+      var res = await q.select("id");
+      if (res.error) { toast("Could not delete this deal. " + CRMDB.explain(res.error), "bad"); return; }
+      if (!res.data || !res.data.length) { toast("This deal was not deleted. Its stage changed, or the database kept the row.", "bad"); return; }
+      forgetDeal(d.id);
+      closeDrawer();
+      if (companyId) await addActivity({ company_id: companyId, deal_id: null, kind: "note", note: "Deleted deal: " + desc + " (" + worth + ") by " + who, by: who });
+      render();
+      toast("Deleted.");
+    } finally {
+      deleting = false;
+    }
+  }
+  async function deleteQuoteOnly(id) {
+    if (deleting) return;
+    var d = dealById(id);
+    if (!d) return;
+    deleting = true;
+    closeModal();
+    try {
+      var block = await deleteBlock(d);
+      if (!block || block.ok !== true) { toast(typeof block === "string" ? block : "This was not deleted.", "bad"); return; }
+      var quote = d.quote;
+      var label = (quote && quote.number) || d.description || "Quote";
+      var worth = money(val(d));
+      var who = meName();
+      if (quotesApi) {
+        var headers = await CRMDB.db.from("crm_quotes").select("id").eq("deal_id", d.id);
+        if (headers.error) { toast("Could not check the quote. " + CRMDB.explain(headers.error) + " Nothing was deleted.", "bad"); return; }
+        for (var i = 0; i < (headers.data || []).length; i++) {
+          var gone = await CRMDB.db.from("crm_quotes").delete().eq("id", headers.data[i].id).eq("deal_id", d.id).select("id");
+          if (gone.error || !gone.data || !gone.data.length) {
+            toast("Could not delete the quote. " + (gone.error ? CRMDB.explain(gone.error) : "No quote row was removed.") + " The deal was kept.", "bad");
+            return;
+          }
+        }
+      }
+      if (linesApi) {
+        var lines = await CRMDB.db.from("crm_deal_lines").select("id").eq("deal_id", d.id);
+        if (lines.error) { toast("Could not check product lines. " + CRMDB.explain(lines.error) + " The deal was kept.", "bad"); return; }
+        for (var n = 0; n < (lines.data || []).length; n++) {
+          var lineGone = await CRMDB.remove("crm_deal_lines", lines.data[n].id, "order line");
+          if (!lineGone) return;
+        }
+      }
+      var prevQuote = d.quote;
+      d.quote = null;
+      var saved = await saveDealCustom(d);
+      if (!saved) { d.quote = prevQuote; return; }
+      await addActivity({ deal_id: d.id, company_id: d.company_id, kind: "note", note: "Deleted quote: " + label + " (" + worth + ") by " + who + ". The deal was kept.", by: who });
+      render();
+      openDeal(d.id);
+      toast("Deleted.");
+    } finally {
+      deleting = false;
+    }
   }
   async function toggleTask(id, done) {
     var t = S.tasks.find(function (x) { return x.id === id; });
