@@ -87,10 +87,13 @@
     var blob = words(parts.join(" "));
     return q.split(/\s+/).every(function (w) { return blob.indexOf(w) >= 0; });
   }
+  function cmpName(a, b) {
+    return String(a == null ? "" : a).localeCompare(String(b == null ? "" : b), undefined, { numeric: true, sensitivity: "base" });
+  }
   function opts(list) {
     var seen = {};
     list.forEach(function (x) { if (x) seen[x] = 1; });
-    return Object.keys(seen).sort();
+    return Object.keys(seen).sort(cmpName);
   }
   function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; }
   function stageName(k) { for (var i = 0; i < STAGES.length; i++) if (STAGES[i][0] === k) return STAGES[i][1]; return k; }
@@ -455,7 +458,7 @@
     return h + "</div></div>";
   }
   function cardSort(a, b) {
-    return String(b.s.last_order_date || "").localeCompare(String(a.s.last_order_date || "")) || a.name.localeCompare(b.name);
+    return String(b.s.last_order_date || "").localeCompare(String(a.s.last_order_date || "")) || cmpName(a.name, b.name);
   }
   function colTotal(list, stage) {
     if (stage !== "active" && stage !== "approved") return list.filter(function (e) { return e.companyId; }).length + " in the CRM";
@@ -485,7 +488,7 @@
       if (V.listShow === "crm" && !e.companyId) return false;
       if (V.listShow === "buying" && e.stage !== "active") return false;
       return entMatch(e);
-    }).sort(cardSort);
+    }).sort(function (a, b) { return cmpName(a.name, b.name); });
     var cost = canCost();
     var h = filterBar(true);
     h += "<div class='panel tablewrap'><table><thead><tr><th>Vendor</th><th>Stage</th><th>Category</th><th>Last order</th><th>Last touch</th><th>Next follow-up</th><th class='vm-num'>Contacts</th>" +
@@ -578,7 +581,7 @@
     if (!e.companyId) return needCrm(e, "log calls and emails");
     var list = V.activity.filter(function (a) { return String(a.company_id) === String(e.companyId); });
     var h = "<div class='fields'><div class='f'><label>Type</label><select id='vaKind'><option value='call'>Call</option><option value='email'>Email</option><option value='visit'>Visit</option><option value='meeting'>Meeting</option><option value='note'>Note</option></select></div>" +
-      "<div class='f'><label>Who</label><select id='vaWho'><option value=''>No contact</option>" + V.contacts.filter(function (c) { return String(c.company_id) === String(e.companyId); }).map(function (c) { return "<option>" + esc(c.name) + "</option>"; }).join("") + "</select></div>" +
+      "<div class='f'><label>Who</label><select id='vaWho'><option value=''>No contact</option>" + V.contacts.filter(function (c) { return String(c.company_id) === String(e.companyId); }).slice().sort(function (a, b) { return cmpName(a.name, b.name); }).map(function (c) { return "<option>" + esc(c.name) + "</option>"; }).join("") + "</select></div>" +
       "<div class='f wide'><label>What happened</label><textarea id='vaNote' placeholder='Asked for 6 mil shrink pricing, quote by Friday'></textarea></div>" +
       "<div class='f'><label>Follow up</label><input id='vaDue' type='date'></div><div class='f'><label>Follow-up for</label>" + teamSelect("vaAssign") + "</div></div>" +
       "<div class='mactions' style='margin-top:8px'><button class='primary' data-vm='log' data-k='" + e.key + "'>Log it</button></div>";
@@ -587,7 +590,7 @@
   }
   function teamSelect(id) {
     var mine = me();
-    return "<select id='" + id + "'>" + V.team.map(function (t) { return "<option" + (t.name === mine ? " selected" : "") + ">" + esc(t.name) + "</option>"; }).join("") + "</select>";
+    return "<select id='" + id + "'>" + V.team.slice().sort(function (a, b) { return cmpName(a.name, b.name); }).map(function (t) { return "<option" + (t.name === mine ? " selected" : "") + ">" + esc(t.name) + "</option>"; }).join("") + "</select>";
   }
   function taskList(tasks) {
     if (!tasks.length) return "<p class='log'>No open follow-ups.</p>";
@@ -603,7 +606,7 @@
 
   function contactsBlock(e) {
     if (!e.companyId) return needCrm(e, "save contacts") + ((e.primary && e.primary.contact) ? "<p class='log' style='margin-top:10px'>On the supplier map: " + esc(e.primary.contact) + "</p>" : "");
-    var list = V.contacts.filter(function (c) { return String(c.company_id) === String(e.companyId); });
+    var list = V.contacts.filter(function (c) { return String(c.company_id) === String(e.companyId); }).slice().sort(function (a, b) { return cmpName(a.name, b.name); });
     var h = "<ul class='mini'>" + (list.map(function (c) {
       return "<li><b>" + esc(c.name) + "</b>" + (c.role ? ", " + esc(c.role) : "") + "<div class='vm-dim'>" +
         [c.email ? "<a href='mailto:" + esc(c.email) + "'>" + esc(c.email) + "</a>" : "", c.phone ? "<a href='tel:" + esc(c.phone) + "'>" + esc(c.phone) + "</a>" : ""].filter(Boolean).join(", ") + "</div></li>";
@@ -640,7 +643,7 @@
   function productsBlock(e) {
     if (!e.primary) return needProfile(e, "list what they make");
     var ids = rowIds(e), cost = canCost();
-    var rows = V.vprod.filter(function (p) { return ids.indexOf(String(p.vendor_id)) >= 0 && !junkProduct(p); });
+    var rows = V.vprod.filter(function (p) { return ids.indexOf(String(p.vendor_id)) >= 0 && !junkProduct(p); }).slice().sort(function (a, b) { return cmpName(a.product || a.category, b.product || b.category); });
     var h = "<div class='panel tablewrap'><table><thead><tr><th>Product</th><th>Specs</th><th>MOQ</th><th>Lead time</th>" + (cost ? "<th>Last price</th>" : "") + "<th></th></tr></thead><tbody>" +
       (rows.map(function (p) {
         return "<tr><td>" + esc(p.product || p.category || "") + "</td><td class='vm-wrap'>" + esc(p.specs || "") + "</td><td>" + esc(p.moq || "") + "</td><td>" + esc(p.lead_time || "") + "</td>" +
@@ -658,16 +661,16 @@
       a.lines++;
       if (String(x.bought_on) > String(a.last)) a.last = x.bought_on;
     });
-    var list = Object.keys(agg).map(function (k) { return agg[k]; });
+    var list = Object.keys(agg).map(function (k) { return agg[k]; }).sort(function (a, b) { return cmpName(a.name, b.name); });
     var h = list.length ? "<ul class='mini'>" + list.map(function (c) { return "<li><b>" + esc(c.name) + "</b>, " + c.lines + " line" + (c.lines === 1 ? "" : "s") + ", last " + day(c.last) + "</li>"; }).join("") + "</ul>"
       : "<p class='log'>No orders tie this vendor to a customer yet.</p>";
     var ids = rowIds(e);
     var linked = V.vcust.filter(function (p) { return ids.indexOf(String(p.vendor_id)) >= 0; });
-    if (linked.length) h += "<div class='vm-h3'>Linked by hand</div><ul class='mini'>" + linked.map(function (p) {
+    if (linked.length) h += "<div class='vm-h3'>Linked by hand</div><ul class='mini'>" + linked.slice().sort(function (a, b) { return cmpName(a.customer_name, b.customer_name); }).map(function (p) {
       return "<li><b>" + esc(p.customer_name) + "</b>" + (p.feeds ? ": " + esc(p.feeds) : "") + " <button class='linkbtn' data-vm='del-vcust' data-id='" + p.id + "'>Remove</button></li>";
     }).join("") + "</ul>";
     if (e.primary) {
-      var cos = CRMHooks.companies().filter(function (c) { return c.kind !== "vendor"; });
+      var cos = CRMHooks.companies().filter(function (c) { return c.kind !== "vendor"; }).slice().sort(function (a, b) { return cmpName(a.name, b.name); });
       h += "<div class='addrow' style='grid-template-columns:2fr 2fr auto'><select id='vcCo'><option value=''>Customer…</option>" + cos.map(function (c) { return "<option value='" + c.id + "'>" + esc(c.name) + "</option>"; }).join("") +
         "</select><input id='vcFeeds' placeholder='What the buy feeds'><button class='ghost' data-vm='add-vcust' data-k='" + e.key + "'>Link</button></div>";
     }
@@ -823,7 +826,7 @@
       if (V.ordVendor && String(h.vendor_company_id) !== V.ordVendor) return false;
       return matches(V.ordQ, [h.item, h.vendor_name, h.customer_name, h.category, h.po_number, h.invoice_number]);
     });
-    var vendCos = V.ents.filter(function (e) { return e.companyId; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var vendCos = V.ents.filter(function (e) { return e.companyId; }).sort(function (a, b) { return cmpName(a.name, b.name); });
     var cost = canCost();
     var h = c.miss ? "<p class='banner'>" + c.miss + " order line" + (c.miss === 1 ? " has" : "s have") + " no vendor of its own. Pick it in the table so the line shows up on that vendor.</p>" : "";
     h += "<div class='bar'><input type='search' id='vmOrdQ' placeholder='Search item, vendor, customer, PO' value='" + esc(V.ordQ) + "'>" +
@@ -854,7 +857,7 @@
   function catalogHtml() {
     var pills = "<div class='filters' style='margin-bottom:12px'><button data-vm='prod-show' data-v='products' aria-pressed='" + (V.prodShow !== "types") + "'>Products</button><button data-vm='prod-show' data-v='types' aria-pressed='" + (V.prodShow === "types") + "'>Product lines</button></div>";
     if (V.prodShow === "types") return pills + categoriesHtml();
-    var rows = V.catalog.filter(productMatch);
+    var rows = V.catalog.filter(productMatch).slice().sort(function (a, b) { return cmpName(a.name, b.name); });
     var unsaved = quoteLinesWithoutProduct();
     var cost = canCost();
     var h = pills + "<div class='vm-ask'><label for='vmProdQ'>Find a product</label><input id='vmProdQ' type='search' autocomplete='off' placeholder='Size, material, vendor or QuickBooks item: 48x60, corner, stretch, Versa-Pak' value='" + esc(V.prodQ) + "'></div>";
@@ -882,7 +885,7 @@
   }
   /* ---------- QuickBooks ---------- */
   function qbHtml() {
-    var buying = V.ents.filter(function (e) { return e.stage === "active" || e.stage === "approved"; }).sort(function (a, b) { return (a.qb ? 1 : 0) - (b.qb ? 1 : 0) || a.name.localeCompare(b.name); });
+    var buying = V.ents.filter(function (e) { return e.stage === "active" || e.stage === "approved"; }).sort(function (a, b) { return (a.qb ? 1 : 0) - (b.qb ? 1 : 0) || cmpName(a.name, b.name); });
     var h = "<div class='stats'><div class='stat'><b>" + buying.filter(function (e) { return e.qb; }).length + " of " + buying.length + "</b><span>Approved and active vendors linked</span></div>" +
       "<div class='stat'><b>" + V.catalog.filter(function (p) { return p.qbo_item_id; }).length + " of " + V.catalog.length + "</b><span>Products linked to items</span></div>" +
       "<div class='stat'><b>" + V.history.filter(function (x) { return x.qb_invoice_id; }).length + " of " + V.history.length + "</b><span>Order lines tied to an invoice</span></div></div>";
@@ -947,7 +950,7 @@
     h += "<div class='vm-h3'>All approved and active vendors</div><p class='log'>Rated by Rich, Amber and Annie after any order problem, and a full pass every quarter at the L10. Setters see the badge only.</p>";
     return h + "<div class='panel tablewrap'><table><thead><tr><th>Vendor</th><th>Type</th><th class='vm-num'>Values</th><th class='vm-num'>Speed</th><th class='vm-num'>Comm</th><th>Badge</th><th>Last rated</th></tr></thead><tbody>" +
       V.ents.filter(function (e) { return !e.overhead && (e.stage === "active" || e.stage === "approved"); })
-        .sort(function (a, b) { var o = { Replace: 0, "Not rated": 1, Watch: 2, Utilize: 3 }; return o[a.use] - o[b.use] || a.name.localeCompare(b.name); })
+        .sort(function (a, b) { var o = { Replace: 0, "Not rated": 1, Watch: 2, Utilize: 3 }; return o[a.use] - o[b.use] || cmpName(a.name, b.name); })
         .map(function (e) {
           var s = e.score;
           function n(v) { return v == null ? "—" : v; }
@@ -989,26 +992,26 @@
   function typeOptions(selected, withNew) {
     var h = "<option value=''>Pick a type</option>";
     CRM_CATS.forEach(function (c) {
-      var list = typesUnder(c).filter(function (t) { return t.active !== false || String(t.id) === String(selected); });
+      var list = typesUnder(c).filter(function (t) { return t.active !== false || String(t.id) === String(selected); }).slice().sort(function (a, b) { return cmpName(a.name, b.name); });
       if (!list.length) return;
       h += "<optgroup label='" + esc(c) + "'>" + list.map(function (t) { return "<option value='" + t.id + "'" + (String(t.id) === String(selected) ? " selected" : "") + ">" + esc(t.name) + "</option>"; }).join("") + "</optgroup>";
     });
     if (withNew) h += "<option value='new'>+ Add a new type</option>";
     return h;
   }
-  function crmCatOptions(sel) { return CRM_CATS.map(function (c) { return "<option" + (c === sel ? " selected" : "") + ">" + esc(c) + "</option>"; }).join(""); }
+  function crmCatOptions(sel) { return CRM_CATS.slice().sort(cmpName).map(function (c) { return "<option" + (c === sel ? " selected" : "") + ">" + esc(c) + "</option>"; }).join(""); }
   function vendorsForType(t) {
     if (!t) return [];
     var names = [t.name].concat(t.aliases || []).map(function (a) { return words(a).trim(); });
     return V.ents.filter(function (e) { return !e.overhead && e.stage !== "do_not_use" && e.rows.some(function (r) { return names.indexOf(words(r.category).trim()) >= 0; }); })
-      .sort(function (a, b) { return (RANK[b.stage] || 0) - (RANK[a.stage] || 0) || a.name.localeCompare(b.name); });
+      .sort(function (a, b) { return (RANK[b.stage] || 0) - (RANK[a.stage] || 0) || cmpName(a.name, b.name); });
   }
   function productType(p) { return p.category_id ? typeById(p.category_id) : null; }
 
   function categoriesHtml() {
     var h = "<div class='bar'><span class='vm-dim'>" + V.types.filter(function (t) { return t.active !== false; }).length + " product lines under the CRM’s " + CRM_CATS.length + " categories. Add a line, then link the products and vendors that belong on it.</span><div class='spacer'></div><button class='primary' data-vm='type-new'>Add a product line</button></div>";
     CRM_CATS.forEach(function (c) {
-      var list = typesUnder(c);
+      var list = typesUnder(c).slice().sort(function (a, b) { return cmpName(a.name, b.name); });
       h += "<div class='vm-h3'>" + esc(c) + " <span class='vm-dim'>" + list.length + "</span></div>";
       h += list.length ? "<div class='panel tablewrap'><table class='vm-types'><colgroup><col style='width:28%'><col style='width:40%'><col style='width:10%'><col style='width:10%'><col style='width:12%'></colgroup><thead><tr><th>Product line</th><th>Also called</th><th class='vm-num'>Products</th><th class='vm-num'>Vendors</th><th></th></tr></thead><tbody>" + list.map(function (t) {
         var np = V.catalog.filter(function (p) { return String(p.category_id) === String(t.id); }).length;
@@ -1307,7 +1310,7 @@
       if (!e.companyId) warn.push("Not in the CRM yet");
       out.push({ e: e, score: score, why: why, warn: warn, email: vendorEmail(e), last: lc });
     });
-    out.sort(function (a, b) { return b.score - a.score || a.e.name.localeCompare(b.e.name); });
+    out.sort(function (a, b) { return b.score - a.score || cmpName(a.e.name, b.e.name); });
     return out;
   }
   function lineById(id) { return V.history.filter(function (h) { return h.source === "order_line" && String(h.source_id) === String(id); })[0] || null; }
@@ -1500,7 +1503,7 @@
     var r = V.rfqs.filter(function (z) { return String(z.id) === String(id); })[0];
     var have = rfqVendors(id).map(function (x) { return String(x.vendor_company_id || "r" + x.vendor_row_id); });
     var list = suggest(r.item, r.product_id, r.category).filter(function (x) { return have.indexOf(String(x.e.companyId || "r" + (x.e.primary || {}).id)) < 0; });
-    var all = V.ents.filter(function (e) { return !e.overhead && e.stage !== "do_not_use"; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var all = V.ents.filter(function (e) { return !e.overhead && e.stage !== "do_not_use"; }).sort(function (a, b) { return cmpName(a.name, b.name); });
     CRMHooks.openModal("<h2>Add a vendor to this request</h2><div class='fields'><div class='f wide'><label>Vendor</label><select id='rfAdd'>" +
       (list.length ? "<optgroup label='Best fits'>" + list.slice(0, 8).map(function (x) { return "<option value='" + x.e.key + "'>" + esc(x.e.name) + "</option>"; }).join("") + "</optgroup>" : "") +
       "<optgroup label='Everyone'>" + all.map(function (e) { return "<option value='" + e.key + "'>" + esc(e.name) + "</option>"; }).join("") + "</optgroup></select></div></div>" +
@@ -1582,7 +1585,7 @@
       return "<li><button class='linkbtn' data-vm='open' data-k='" + e.key + "'>" + esc(e.name) + "</button>" + (link.preferred ? " <span class='chip active'>Preferred</span>" : "") +
         (link.moq ? ", MOQ " + esc(link.moq) : "") + (link.lead_time ? ", lead " + esc(link.lead_time) : "") + " <button class='linkbtn' data-vm='unlink-vp' data-id='" + link.id + "'>Unlink</button></li>";
     }).join("") + "</ul>" : "<p class='log'>No vendors linked yet.</p>");
-    var others = V.ents.filter(function (e) { return e.primary && ents.indexOf(e) < 0 && !e.overhead; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var others = V.ents.filter(function (e) { return e.primary && ents.indexOf(e) < 0 && !e.overhead; }).sort(function (a, b) { return cmpName(a.name, b.name); });
     h += "<div class='addrow' style='grid-template-columns:1fr auto;margin-top:6px'><select id='lvSel'><option value=''>Link a vendor…</option>" + others.map(function (e) { return "<option value='" + e.key + "'>" + esc(e.name) + "</option>"; }).join("") + "</select><button class='ghost' data-vm='link-vp-any' data-id='" + p.id + "'>Link</button></div>";
     var sug = suggest(p.name, p.id, p.category).filter(function (x) { return ents.indexOf(x.e) < 0; }).slice(0, 5);
     if (sug.length) h += "<div class='vm-h3'>Could also make it</div><ul class='mini'>" + sug.map(function (x) {
@@ -2054,7 +2057,7 @@
     live("vmQ", "q"); live("vmOrdQ", "ordQ"); live("vmCatQ", "catQ");
     live("vmProdQ", "prodQ", function () {
       var b = document.getElementById("vmProdResults");
-      if (b) b.innerHTML = productRows(V.catalog.filter(productMatch), canCost());
+      if (b) b.innerHTML = productRows(V.catalog.filter(productMatch).slice().sort(function (a, b) { return cmpName(a.name, b.name); }), canCost());
     });
     [["vmCat", "category"], ["vmShow", "listShow"], ["vmOrdV", "ordVendor"], ["vmProdType", "prodType"]].forEach(function (p) {
       var el = document.getElementById(p[0]);

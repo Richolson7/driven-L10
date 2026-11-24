@@ -278,9 +278,9 @@
   function compareRows(a, b) {
     var d = rankOf(a.status) - rankOf(b.status);
     if (d) return d;
-    d = String(a.location).localeCompare(String(b.location));
+    d = String(a.location).localeCompare(String(b.location), undefined, { numeric: true, sensitivity: "base" });
     if (d) return d;
-    return String(a.partNo).localeCompare(String(b.partNo));
+    return String(a.partNo).localeCompare(String(b.partNo), undefined, { numeric: true, sensitivity: "base" });
   }
   function worst(rows) {
     var rank = 9;
@@ -319,7 +319,7 @@
     var choices = accounts.map(function (a) {
       var meta = accountMeta(a, companies);
       return { id: meta.accountId, label: meta.label };
-    }).sort(function (a, b) { return a.label.localeCompare(b.label); });
+    }).sort(function (a, b) { return a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: "base" }); });
     var scoped = accounts.filter(function (a) {
       return customerFilter === "all" || String(a.company_id) === customerFilter;
     });
@@ -345,7 +345,7 @@
     groups.sort(function (a, b) {
       var d = worst(a.rows) - worst(b.rows);
       if (d) return d;
-      return a.meta.label.localeCompare(b.meta.label);
+      return a.meta.label.localeCompare(b.meta.label, undefined, { numeric: true, sensitivity: "base" });
     });
     var flat = [];
     groups.forEach(function (g) { g.rows.forEach(function (r) { flat.push(r); }); });
@@ -507,7 +507,7 @@
       }
       var users = (data.users || []).filter(function (u) { return String(u.company_id) === String(account.company_id); });
       users.sort(function (a, b) {
-        return contactName(data.contacts, a.contact_id).localeCompare(contactName(data.contacts, b.contact_id));
+        return contactName(data.contacts, a.contact_id).localeCompare(contactName(data.contacts, b.contact_id), undefined, { numeric: true, sensitivity: "base" });
       });
       h += "<h3 class='cond' style='font-size:18px;margin:14px 0 6px'>Portal access</h3>";
       h += "<div class='tablewrap'><table><thead><tr><th>Name</th><th>Role</th><th>Access</th><th>Invited</th><th>Last sign-in</th></tr></thead><tbody>";

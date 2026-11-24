@@ -139,7 +139,7 @@
       var company = companies[account.company_id] || {};
       var billed = companies[account.billed_company_id] || {};
       var users = (usersBy[account.company_id] || []).slice().sort(function (a, b) {
-        return String(a.name).localeCompare(String(b.name)) || String(a.email).localeCompare(String(b.email));
+        return String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: "base" }) || String(a.email).localeCompare(String(b.email), undefined, { numeric: true, sensitivity: "base" });
       });
       var row = {
         company_id: account.company_id,
@@ -154,7 +154,7 @@
       row.title = accountTitle(row);
       row.meta = accountMeta(row);
       return row;
-    }).sort(function (a, b) { return String(a.title).localeCompare(String(b.title)); });
+    }).sort(function (a, b) { return String(a.title).localeCompare(String(b.title), undefined, { numeric: true, sensitivity: "base" }); });
   }
   function staffLoginNote(error) {
     var message = (error && (error.message || error.details || "")) || "";

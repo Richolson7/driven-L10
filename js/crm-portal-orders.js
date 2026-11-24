@@ -195,7 +195,7 @@
       seen[String(extra.id)] = 1;
       list.push({ id: String(extra.id), label: extra.label });
     });
-    list.sort(function (a, b) { return a.label.localeCompare(b.label, undefined, { sensitivity: "base" }); });
+    list.sort(function (a, b) { return a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: "base" }); });
     return list;
   }
   function inRange(row, from, to) {
@@ -241,7 +241,7 @@
     });
     return Object.keys(accounts).map(function (id) { return accounts[id]; }).filter(function (row) {
       return row.out || row.below || row.ok;
-    }).sort(function (a, b) { return a.customer.localeCompare(b.customer, undefined, { sensitivity: "base" }); });
+    }).sort(function (a, b) { return a.customer.localeCompare(b.customer, undefined, { numeric: true, sensitivity: "base" }); });
   }
   function customersQuiet(data, today, customer) {
     var from = addDays(today, -30);
