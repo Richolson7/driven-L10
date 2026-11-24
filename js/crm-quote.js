@@ -27,8 +27,27 @@
     if (l.price == null || l.price === "" || l.qty == null || l.qty === "") return 0;
     return (+l.qty || 0) * (+l.price || 0);
   }
-  function total(lines) {
+  function counts(l) {
+    if (!l || !l.optional) return true;
+    return l.included === true || l.included === 1 || l.included === "1" || l.included === "true";
+  }
+  function lineSum(lines) {
     return (lines || []).reduce(function (a, l) { return a + lineTotal(l); }, 0);
+  }
+  /* Quote total is required lines plus optional lines the buyer included. */
+  function total(lines) {
+    return lineSum((lines || []).filter(counts));
+  }
+  function splitLines(lines) {
+    var included = [];
+    var excluded = [];
+    (lines || []).forEach(function (l) { (counts(l) ? included : excluded).push(l); });
+    return { included: included, excluded: excluded, total: lineSum(included), optionalExcluded: lineSum(excluded) };
+  }
+  function itemName(l) {
+    var name = (l && l.desc) || "";
+    if (!l || !l.optional) return name;
+    return name + (counts(l) ? " (Optional, included)" : " (Optional)");
   }
   function describe(quote) {
     var lines = (quote && quote.lines) || [];
@@ -94,16 +113,25 @@
     return patch;
   }
 
+  function itemRow(l, cls) {
+    return "<tr" + (cls ? " class='" + cls + "'" : "") + "><td>" + esc(itemName(l)) + "</td><td class='r'>" + esc(qtyText(l.qty)) + "</td><td>" + esc(l.unit || "") + "</td><td class='r'>" + esc(money(l.price)) + "</td><td class='r'>" + esc(money(lineTotal(l))) + "</td></tr>";
+  }
   function docHtml(m) {
-    var lines = m.lines || [];
-    var rows = lines.map(function (l) {
-      return "<tr><td>" + esc(l.desc || "") + "</td><td class='r'>" + esc(qtyText(l.qty)) + "</td><td>" + esc(l.unit || "") + "</td><td class='r'>" + esc(money(l.price)) + "</td><td class='r'>" + esc(money(lineTotal(l))) + "</td></tr>";
-    }).join("");
+    var parts = splitLines(m.lines);
+    var rows = parts.included.map(function (l) { return itemRow(l, ""); }).join("");
+    var opt = "";
+    if (parts.excluded.length) {
+      opt = "<tr class='qd-opthead'><td colspan='5'>Optional add-ons</td></tr>" +
+        parts.excluded.map(function (l) { return itemRow(l, "qd-opt"); }).join("") +
+        "<tr class='qd-optnote'><td colspan='4'>Optional add-ons: " + esc(money(parts.optionalExcluded)) + " not included</td><td class='r'>" + esc(money(parts.optionalExcluded)) + "</td></tr>";
+    }
     var valid = m.date ? longDate(addDays(m.date, +m.valid || 30)) : "";
+    var choose = parts.excluded.length ? "<p class=\"qd-terms\">Optional items are listed with their price and are not in the total. Tell your Driven contact which optional items you want.</p>" : "";
     return '<div class="qdoc"><div class="qd-head"><div class="qd-brand"><div><div class="qd-name">Driven Solutions</div><div class="qd-web">265 Mound View Rd, Ste 2, River Falls, WI 54022<br>612-394-2973 · www.drivensol.com</div></div></div><div><div class="qd-title">Quote</div><table class="qd-meta"><tr><td>Quote #</td><td>' + esc(m.number || "") + "</td></tr><tr><td>Date</td><td>" + esc(longDate(m.date)) + "</td></tr><tr><td>Valid until</td><td>" + esc(valid) + "</td></tr></table></div></div>" +
       '<div class="qd-body"><div class="qd-parties"><div><h4>Prepared for</h4><b>' + esc(m.companyName || "") + "</b>" + (m.contactName ? "<br>Attn: " + esc(m.contactName) : "") + (m.contactEmail ? "<br>" + esc(m.contactEmail) : "") + (m.contactPhone ? "<br>" + esc(m.contactPhone) : "") + "</div><div><h4>Ship to</h4>" + esc(m.ship || m.billing || "") + "</div><div><h4>Your Driven contact</h4><b>" + esc(m.repName || "") + "</b>" + (m.repEmail ? "<br>" + esc(m.repEmail) : "") + "</div></div>" +
       '<table class="qd-items"><thead><tr><th>Item</th><th class="r">Qty</th><th>Unit</th><th class="r">Unit price</th><th class="r">Total</th></tr></thead><tbody>' + rows +
-      '<tr class="qd-total"><td colspan="3"></td><td class="r">Total</td><td class="r">' + esc(money(total(lines))) + "</td></tr></tbody></table>" +
+      '<tr class="qd-total"><td colspan="3"></td><td class="r">Total</td><td class="r">' + esc(money(parts.total)) + "</td></tr>" + opt + "</tbody></table>" +
+      choose +
       '<div class="qd-terms">' + esc(m.terms || TERMS).replace(/\n/g, "<br>") + "</div><p class=\"qd-terms\">To order, email your PO to orders@drivensol.com and include quote number " + esc(m.number || "") + ".</p>" +
       '<div class="qd-accept"><div>Accepted by</div><div>PO #</div><div>Date</div></div></div></div>';
   }
@@ -170,8 +198,9 @@
     y += 32;
     doc.setTextColor(43, 43, 45);
     doc.setFont("helvetica", "normal");
-    (m.lines || []).forEach(function (l) {
-      var wrapped = doc.splitTextToSize(l.desc || "Item", 250);
+    var parts = splitLines(m.lines);
+    function paintLine(l) {
+      var wrapped = doc.splitTextToSize(itemName(l) || "Item", 250);
       need(wrapped.length * 13 + 8);
       doc.text(wrapped, 48, y);
       doc.text(qtyText(l.qty), 330, y, { align: "right" });
@@ -179,12 +208,34 @@
       doc.text(money(l.price), 470, y, { align: "right" });
       doc.text(money(lineTotal(l)), pageW - 48, y, { align: "right" });
       y += wrapped.length * 13 + 8;
-    });
+    }
+    parts.included.forEach(paintLine);
     need(28);
     doc.setFont("helvetica", "bold");
     doc.text("Total", 470, y, { align: "right" });
-    doc.text(money(total(m.lines)), pageW - 48, y, { align: "right" });
-    y += 28;
+    doc.text(money(parts.total), pageW - 48, y, { align: "right" });
+    y += 22;
+    if (parts.excluded.length) {
+      need(36);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("Optional add-ons", 48, y);
+      y += 16;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      parts.excluded.forEach(paintLine);
+      need(28);
+      doc.setFont("helvetica", "bold");
+      var addon = doc.splitTextToSize("Optional add-ons: " + money(parts.optionalExcluded) + " not included", pageW - 80);
+      doc.text(addon, 48, y);
+      y += addon.length * 13 + 8;
+      doc.setFont("helvetica", "normal");
+      var choose = doc.splitTextToSize("Optional items are listed with their price and are not in the total. Tell your Driven contact which optional items you want.", pageW - 80);
+      need(choose.length * 12 + 8);
+      doc.text(choose, 48, y);
+      y += choose.length * 12 + 10;
+    }
+    y += 6;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     var terms = doc.splitTextToSize(m.terms || TERMS, pageW - 80);
@@ -203,6 +254,7 @@
     TERMS: TERMS,
     UNITS: UNITS,
     total: total,
+    splitLines: splitLines,
     describe: describe,
     dealPatch: dealPatch,
     headerBackfill: headerBackfill,

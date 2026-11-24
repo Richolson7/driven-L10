@@ -61,11 +61,17 @@
     var row = goalRow(goals, scope, rep, metric, period);
     return row ? +row.target : null;
   }
+  function lineCounts(line) {
+    if (!line || !line.optional) return true;
+    var v = line.included;
+    return v === true || v === 1 || v === "1" || v === "true";
+  }
   function moneyOf(deal) {
     var custom = deal.custom || {};
     var quote = custom._quote;
     if (quote && quote.lines && quote.lines.length) {
       return quote.lines.reduce(function (sum, line) {
+        if (!lineCounts(line)) return sum;
         return sum + ((+line.qty || 0) * (+line.price || 0));
       }, 0);
     }

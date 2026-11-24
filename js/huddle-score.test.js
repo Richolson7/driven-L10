@@ -92,6 +92,18 @@ assert.strictEqual(tue.team.cells.wins.yesterday.goal, null);
 assert.strictEqual(tue.team.cells.wins.week.goal, 3);
 assert.strictEqual(tue.team.cells.quotes_sent.yesterday.actual, 3);
 assert.strictEqual(tue.unmatched, 1);
+
+var optionalWin = run("2026-10-27", {
+  deals: [
+    { id: 14, sales_rep: "Rich", stage: "customer_po", stage_changed_at: "2026-10-26T12:00:00Z", custom: { _won_at: "2026-10-26", _quote: { lines: [
+      { qty: 1, price: 100 },
+      { qty: 2, price: 40, optional: true, included: true },
+      { qty: 3, price: 50, optional: true, included: false }
+    ] } }, quantity: 9, price_per_unit: 9 }
+  ]
+});
+assert.strictEqual(optionalWin.reps[0].cells.sales_landed.yesterday.actual, 180);
+assert.strictEqual(optionalWin.team.cells.sales_landed.yesterday.actual, 180);
 assert.strictEqual(tue.lastWeek, false);
 assert.strictEqual(tue.weekDays, 1);
 

@@ -638,7 +638,7 @@
   }
 
   function lineCovers(d, key) {
-    var lines = linesOf(d);
+    var lines = linesOf(d).filter(CRMLines.countsInTotal);
     if (key === "price_per_unit") return lines.some(function (l) { return CRMLines.num(l.price) != null; });
     if (key === "quantity" || key === "vendor_quantity") return lines.some(function (l) { return CRMLines.num(l.qty) != null; });
     if (key === "vendor_price_per_unit") return lines.some(function (l) { return CRMLines.num(l.cost) != null; });
@@ -680,11 +680,11 @@
     if (type === "number") return el.value === "" ? null : +el.value;
     return el.value === "" ? (type === "date" ? null : "") : el.value;
   }
-  function snapshotOrder(d) {
-    if (d.order_lines && d.order_lines.length) return;
+  function snapshotOrder(d, force) {
+    if (!force && d.order_lines && d.order_lines.length) return;
     var q = qOf(d);
     var lines = q && q.lines && q.lines.length ? q.lines : [{ desc: d.description, qty: d.quantity, unit: "", vendor_id: d.vendor_id, cost: d.vendor_price_per_unit, price: d.price_per_unit }];
-    d.order_lines = lines.map(function (l) {
+    d.order_lines = CRMLines.orderLines(lines).map(function (l) {
       return {
         date: d.won_at || TODAY, quote: q ? q.number : "", desc: l.desc,
         qty: l.qty == null || l.qty === "" ? null : +l.qty,
@@ -692,9 +692,43 @@
         vendor_id: l.vendor_id == null || l.vendor_id === "" ? null : l.vendor_id,
         cost: l.cost == null || l.cost === "" ? null : +l.cost,
         price: l.price == null || l.price === "" ? null : +l.price,
-        po: d.customer_po_number || ""
+        po: d.customer_po_number || "",
+        optional: CRMLines.isOptional(l),
+        included: true
       };
     });
+  }
+  function optionControls(prefix, i, l) {
+    var optional = CRMLines.isOptional(l);
+    var h = "<label class='optline'><input type='checkbox' data-" + prefix + "='" + i + ":optional'" + (optional ? " checked" : "") + " aria-label='Optional'> Optional</label>";
+    if (optional) {
+      h += "<label class='optline'><input type='checkbox' data-" + prefix + "='" + i + ":included'" + (CRMLines.isIncluded(l) ? " checked" : "") + " aria-label='Included'> Included</label>";
+    }
+    return "<td class='opt'>" + h + "</td>";
+  }
+  function lineRowClass(l) {
+    return CRMLines.isOptional(l) && !CRMLines.isIncluded(l) ? " class='opt-out'" : "";
+  }
+  function sellWithFlag(l, fig, fmt) {
+    if (fig.sell == null) return "—";
+    var text = fmt(fig.sell);
+    if (CRMLines.isOptional(l) && !CRMLines.isIncluded(l)) text += " <span class='log'>not in total</span>";
+    return text;
+  }
+  function optionalAddonHtml(math, fmt) {
+    if (!math || !math.optionalExcludedCount) return "";
+    return "<p class='qopt'>Optional add-ons: " + fmt(math.optionalExcluded) + " not included</p>";
+  }
+  function optionChoiceNote(d) {
+    var bits = ((d.quote && d.quote.lines) || []).filter(CRMLines.isOptional).map(function (l) {
+      var name = String(l.desc || "Item").trim() || "Item";
+      return name + (CRMLines.isIncluded(l) ? " included" : " not included");
+    });
+    return "Customer selected options" + (bits.length ? ". " + bits.join("; ") + "." : "");
+  }
+  function controlValue(el) {
+    if (el && el.type === "checkbox") return el.checked ? "1" : "0";
+    return el.value;
   }
 
   async function commitMove(d, toKey) {
@@ -942,6 +976,9 @@
     h += "<li><b>Search</b> matches the SKU, the QuickBooks product or service name, and the description.</li>";
     h += "<li><b>Click a row</b> to put that product on the line. Price, unit, category, and the QuickBooks item id still copy onto the line. Choose Type a description when the product is not in the catalog.</li>";
     h += "</ol></div></div>";
+    h += "<div class='sect' style='margin-top:28px'><h2>Quotes</h2><div class='grid2'><div class='panel' style='padding:14px'><h3 class='cond' style='font-size:20px'>Optional line items on quotes</h3>";
+    h += "<p>Tick Optional on a line the buyer can leave off. Included starts unchecked, so that line stays out of the total until you tick it. The quote total, margin, and deal value count required lines and included optional lines. Print and the PDF list the rest as optional add-ons with their prices. There is no customer page for the buyer to tick these. When they choose, tick Included. That saves the total and writes Customer selected options on the deal. A won deal copies only the included lines onto the order. Optional lines they left off stay on the quote.</p>";
+    h += "<p style='margin:8px 0 0'><a class='ghost' href='docs/optional-line-items.html' style='text-decoration:none'>Open the guide</a></p></div></div></div>";
     var topics = window.CRMPortalOrders ? CRMPortalOrders.trainingTopics() : [];
     if (topics.length) {
       h += "<div class='sect' style='margin-top:28px'><h2>Portal and the tab bar</h2><div class='grid2'>";
@@ -1127,18 +1164,19 @@
       return "<select " + attr + "><option value=''>Choose…</option>" + list.map(function (o) { return "<option value='" + o.id + "'" + (+v === o.id ? " selected" : "") + ">" + esc(lab(o)) + "</option>"; }).join("") + "</select>";
     }
     var h = "<fieldset><legend>Products</legend>";
-    h += "<p class='log'>Each color or product is its own line. Pick a catalog product, or type a name and a QuickBooks item id when it is not in the catalog. Line sell, cost, and margin are calculated. A blank unit cost stays blank and is not saved as $0. Freight is added once. The customer quote does not include cost or margin.</p>";
+    h += "<p class='log'>Each color or product is its own line. Pick a catalog product, or type a name and a QuickBooks item id when it is not in the catalog. Line sell, cost, and margin are calculated. A blank unit cost stays blank and is not saved as $0. Freight is added once, and per-line freight counts only on lines in the total. Tick Optional on a line the buyer can leave off. Included starts unchecked. The deal total counts required lines and included optional lines. The customer quote does not include cost or margin.</p>";
     if (S.productsNote && !S.products.length) h += "<p class='log'>" + esc(S.productsNote) + "</p>";
-    h += "<div class='tablewrap'><table class='qlines'><thead><tr><th>Catalog</th><th>Product or QuickBooks item</th><th>QB item id</th><th>Qty</th><th>Unit</th><th>Vendor</th><th>Unit cost</th><th>Unit sell</th><th>Line sell</th><th>Line cost</th><th>Margin</th><th></th></tr></thead><tbody>";
+    h += "<div class='tablewrap'><table class='qlines'><thead><tr><th>Catalog</th><th>Product or QuickBooks item</th><th>QB item id</th><th>Qty</th><th>Unit</th><th>Vendor</th><th>Unit cost</th><th>Unit sell</th><th>Line sell</th><th>Line cost</th><th>Margin</th><th>Options</th><th></th></tr></thead><tbody>";
     h += lines.map(function (l, i) {
       var catalog = "<select data-dl='" + i + ":product_id'><option value=''>Not in the catalog</option>" + sortedBy(S.products.filter(function (p) { return p.active !== false; }), function (p) { return p.sku ? p.sku + " · " + p.name : p.name; }).map(function (p) {
         return "<option value='" + p.id + "'" + (+l.product_id === p.id ? " selected" : "") + ">" + esc(p.sku ? p.sku + " · " + p.name : p.name) + "</option>";
       }).join("") + "</select>";
       var fig = CRMLines.lineFigures(l);
       var marginText = fig.margin == null || CRMLines.num(l.price) == null ? "—" : (money(fig.margin) + (fig.marginPct == null ? "" : " · " + pct(fig.marginPct)));
-      return "<tr><td>" + catalog + "</td><td><input data-dl='" + i + ":desc' list='qbItemNames' value='" + esc(l.desc || "") + "' placeholder='Colored pallet, blue' aria-label='Product'></td><td><input data-dl='" + i + ":qb_item_id' value='" + esc(l.qb_item_id || "") + "' placeholder='Item id' aria-label='QuickBooks item id'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-dl='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + ((l.unit || "each") === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-dl='" + i + ":vendor_id'", vend, l.vendor_id || d.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-dl='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Unit cost'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Unit sell'></td><td class='calc'>" + (fig.sell == null ? "—" : money(fig.sell)) + "</td><td class='calc'>" + (CRMLines.num(l.qty) == null || fig.cost == null ? "—" : money(fig.cost)) + "</td><td class='calc'>" + marginText + "</td><td>" + (lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
+      return "<tr" + lineRowClass(l) + "><td>" + catalog + "</td><td><input data-dl='" + i + ":desc' list='qbItemNames' value='" + esc(l.desc || "") + "' placeholder='Colored pallet, blue' aria-label='Product'></td><td><input data-dl='" + i + ":qb_item_id' value='" + esc(l.qb_item_id || "") + "' placeholder='Item id' aria-label='QuickBooks item id'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-dl='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + ((l.unit || "each") === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-dl='" + i + ":vendor_id'", vend, l.vendor_id || d.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-dl='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Unit cost'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Unit sell'></td><td class='calc'>" + sellWithFlag(l, fig, money) + "</td><td class='calc'>" + (CRMLines.num(l.qty) == null || fig.cost == null ? "—" : money(fig.cost)) + "</td><td class='calc'>" + marginText + "</td>" + optionControls("dl", i, l) + "<td>" + (lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
     }).join("");
-    h += "</tbody><tfoot><tr><td colspan='8'>Deal total" + (math.freight ? " · freight " + money(math.freight) : "") + "</td><td class='calc'>" + money(math.value) + "</td><td class='calc'>" + (math.cost == null ? "—" : money(math.cost)) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : money(math.grossMargin) + " · " + pct(math.marginPct)) + "</td><td></td></tr></tfoot></table></div>";
+    h += "</tbody><tfoot><tr><td colspan='8'>Deal total" + (math.freight ? " · freight " + money(math.freight) : "") + "</td><td class='calc'>" + money(math.value) + "</td><td class='calc'>" + (math.cost == null ? "—" : money(math.cost)) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : money(math.grossMargin) + " · " + pct(math.marginPct)) + "</td><td></td><td></td></tr></tfoot></table></div>";
+    h += optionalAddonHtml(math, money);
     h += "<datalist id='qbItemNames'>" + sortedBy(S.qbItems || [], "name").map(function (item) { return "<option value='" + esc(item.name) + "'>"; }).join("") + "</datalist>";
     h += "<button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> ";
     h += "<button class='ghost' data-act='q-download' data-id='" + d.id + "'>Download customer quote</button>";
@@ -1354,6 +1392,7 @@
       if (orderF.scope === "open" && !open) return;
       if (orderF.scope === "paid" && !paid) return;
       viewLines(d).forEach(function (l, i) {
+        if (!CRMLines.countsInTotal(l)) return;
         var customer = co(d.company_id);
         var vendor = co(l.vendor_id);
         var calc = Orders.calc(l);
@@ -1591,12 +1630,13 @@
       "<div class='f'><label>Customer PO #</label><input data-q='po' value='" + esc(q.po || "") + "'></div></div></fieldset>";
     h += "<fieldset><legend>Line items</legend>";
     if (S.productsNote) h += "<p class='log'>" + esc(S.productsNote) + "</p>";
-    h += "<div class='tablewrap'><table class='qlines'><thead><tr><th>Catalog</th><th>Product</th><th>Category</th><th>Invoice #</th><th>Qty</th><th>Unit</th><th>Vendor</th><th>Unit cost</th><th>Unit sell</th><th>Line sell</th><th>Margin</th><th></th></tr></thead><tbody>" +
+    var math = dealMath(d);
+    h += "<div class='tablewrap'><table class='qlines'><thead><tr><th>Catalog</th><th>Product</th><th>Category</th><th>Invoice #</th><th>Qty</th><th>Unit</th><th>Vendor</th><th>Unit cost</th><th>Unit sell</th><th>Line sell</th><th>Margin</th><th>Options</th><th></th></tr></thead><tbody>" +
       q.lines.map(function (l, i) {
         var catalog = quoteCatalogPicker(d, i, l);
         var fig = CRMLines.lineFigures(l);
-        return "<tr><td>" + catalog + "</td><td><input data-ql='" + i + ":desc' value='" + esc(l.desc || "") + "' aria-label='Product'></td><td><select data-ql='" + i + ":category'><option value=''>Choose…</option>" + categoryOptions(l.category) + "</select></td><td><input data-ql='" + i + ":invoice_number' value='" + esc(l.invoice_number || "") + "' aria-label='Invoice number'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-ql='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + (l.unit === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-ql='" + i + ":vendor_id'", vend, l.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-ql='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Vendor cost'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Sell price'></td><td class='calc'>" + (fig.sell == null ? "—" : Orders.money(fig.sell)) + "</td><td class='calc'>" + (fig.marginPct == null ? "—" : pct(fig.marginPct)) + "</td><td>" + (q.lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
-      }).join("") + "</tbody></table></div><button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> <button class='ghost' data-act='usual-order' data-id='" + d.id + "'>Use usual order</button><p class='log'>Every line is included in the deal total. The first line still fills the deal's unit price, quantity, and vendor so older screens keep a product on the deal. Vendor cost and margin stay off the customer PDF. The catalog lists QuickBooks SKU and Description. Search matches the SKU, the product or service name, and the description. Click a row to fill this line. Type a description when it is not in the catalog.</p></fieldset>";
+        return "<tr" + lineRowClass(l) + "><td>" + catalog + "</td><td><input data-ql='" + i + ":desc' value='" + esc(l.desc || "") + "' aria-label='Product'></td><td><select data-ql='" + i + ":category'><option value=''>Choose…</option>" + categoryOptions(l.category) + "</select></td><td><input data-ql='" + i + ":invoice_number' value='" + esc(l.invoice_number || "") + "' aria-label='Invoice number'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-ql='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + (l.unit === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-ql='" + i + ":vendor_id'", vend, l.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-ql='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Vendor cost'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Sell price'></td><td class='calc'>" + sellWithFlag(l, fig, Orders.money) + "</td><td class='calc'>" + (fig.marginPct == null ? "—" : pct(fig.marginPct)) + "</td>" + optionControls("ql", i, l) + "<td>" + (q.lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
+      }).join("") + "</tbody><tfoot><tr><td colspan='9'>Quote total" + (math.freight ? " · freight " + Orders.money(math.freight) : "") + "</td><td class='calc'>" + Orders.money(math.value) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : pct(math.marginPct)) + "</td><td></td><td></td></tr></tfoot></table></div>" + optionalAddonHtml(math, Orders.money) + "<button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> <button class='ghost' data-act='usual-order' data-id='" + d.id + "'>Use usual order</button><p class='log'>Tick Optional on a line the buyer can leave off. Included starts unchecked, so that line stays out of the total until you tick Included. Required lines and included optional lines make the quote total, margin, and deal value. Print and the PDF list the other optional lines with their prices. There is no customer page for the buyer to tick these; record their choice with Included. The first line still fills the deal's unit price, quantity, and vendor so older screens keep a product on the deal. Vendor cost and margin stay off the customer PDF. The catalog lists QuickBooks SKU and Description. Search matches the SKU, the product or service name, and the description. Click a row to fill this line. Type a description when it is not in the catalog.</p></fieldset>";
     h += "<fieldset><legend>Terms on the quote</legend><div class='f'><textarea data-q='terms'>" + esc(q.terms || "") + "</textarea></div></fieldset></div>";
     h += "<div class='dfoot'><button class='primary' data-act='q-download' data-id='" + d.id + "'>Download PDF</button><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-open-deal='" + d.id + "'>Open deal</button></div>";
     openDrawer(h, true);
@@ -1643,13 +1683,22 @@
 
   async function onQuoteField(d, change) {
     var prev = clone(d.quote);
+    var prevOrders = clone(d.order_lines || []);
+    var buyerChoice = false;
     if (change.part === "line") {
       var bits = change.raw.split(":");
       var idx = +bits[0];
       var key = bits[1];
       var line = d.quote.lines[idx];
       if (!line) return;
-      if (key === "cost" || key === "vendor_id") {
+      if (key === "optional") {
+        line.optional = change.value === "1" || change.value === true;
+        line.included = line.optional ? false : true;
+      } else if (key === "included") {
+        buyerChoice = true;
+        line.included = change.value === "1" || change.value === true;
+        if (line.included) line.optional = true;
+      } else if (key === "cost" || key === "vendor_id") {
         var nextMoney = change.value === "" ? null : +change.value;
         line[key] = CRMLines.keepIfSet(nextMoney, line[key]);
       } else if (key === "qty" || key === "price" || key === "freight" || key === "product_id") line[key] = change.value === "" ? null : +change.value;
@@ -1676,6 +1725,7 @@
       if (key !== "vendor_id" && !line.vendor_id && d.vendor_id) line.vendor_id = d.vendor_id;
       if (key === "freight" && idx === 0) d.quote.freight = line.freight;
       if (key === "sales_rep" && idx === 0) d.quote.rep = line.sales_rep || "";
+      if ((key === "optional" || key === "included") && isWon(d)) snapshotOrder(d, true);
       change = { part: "line", index: idx, key: key, value: line[key] };
     } else {
       var k = change.key;
@@ -1694,6 +1744,8 @@
       change = { part: "head", key: k, value: d.quote[k] };
     }
     var ok = await applyQuoteChange(d, prev, change);
+    if (!ok) d.order_lines = prevOrders;
+    if (ok && buyerChoice) await addActivity({ deal_id: d.id, company_id: d.company_id, kind: "note", note: optionChoiceNote(d), by: meName() });
     if (change.part === "head" && change.key === "company_id" && ok) {
       var extra = await saveDealColumns(d, { ship_to_id: d.quote.ship_to_id || null }, "deal");
       if (extra) d.ship_to_id = d.quote.ship_to_id || null;
@@ -2363,15 +2415,15 @@
     if (dr && dr.dataset.quote && (el.dataset.q || el.dataset.ql)) {
       var d = dealById(+dr.dataset.quote);
       if (!d || !d.quote) return;
-      if (el.dataset.ql) onQuoteField(d, { part: "line", raw: el.dataset.ql, value: el.value });
-      else onQuoteField(d, { part: "head", key: el.dataset.q, value: el.value });
+      if (el.dataset.ql) onQuoteField(d, { part: "line", raw: el.dataset.ql, value: controlValue(el) });
+      else onQuoteField(d, { part: "head", key: el.dataset.q, value: controlValue(el) });
       return;
     }
     if (dr && dr.dataset.deal && el.dataset.dl) {
       var dealLine = dealById(+dr.dataset.deal);
       if (!dealLine) return;
       if (!dealLine.quote) dealLine.quote = blankQuote(dealLine);
-      onQuoteField(dealLine, { part: "line", raw: el.dataset.dl, value: el.value });
+      onQuoteField(dealLine, { part: "line", raw: el.dataset.dl, value: controlValue(el) });
       return;
     }
     if (dr && dr.dataset.deal && (el.dataset.k || el.dataset.x)) { saveDealField(dealById(+dr.dataset.deal), el); return; }
