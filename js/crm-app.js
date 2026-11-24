@@ -1098,7 +1098,7 @@
       return "<select " + attr + "><option value=''>Choose…</option>" + list.map(function (o) { return "<option value='" + o.id + "'" + (+v === o.id ? " selected" : "") + ">" + esc(lab(o)) + "</option>"; }).join("") + "</select>";
     }
     var h = "<fieldset><legend>Products</legend>";
-    h += "<p class='log'>Each color or product is its own line. Pick a catalog product, or type a name and a QuickBooks item id when it is not in the catalog. Line sell, cost, and margin are calculated. A blank unit cost stays blank and is not saved as $0. Freight is added once. The customer quote does not include cost or margin.</p>";
+    h += "<p class='log'>Each color or product is its own line. Pick a catalog product, or type a name and a QuickBooks item id when it is not in the catalog. Line sell, cost, and margin are calculated. A blank unit cost stays blank and is not saved as $0. A typed unit cost is saved even when your role cannot see cost; it then shows as Saved (hidden). Freight is added once. The customer quote does not include cost or margin.</p>";
     if (S.productsNote && !S.products.length) h += "<p class='log'>" + esc(S.productsNote) + "</p>";
     h += "<div class='tablewrap'><table class='qlines'><thead><tr><th>Catalog</th><th>Product or QuickBooks item</th><th>QB item id</th><th>Qty</th><th>Unit</th><th>Vendor</th><th>Unit cost</th><th>Unit sell</th><th>Line sell</th><th>Line cost</th><th>Margin</th><th></th></tr></thead><tbody>";
     h += lines.map(function (l, i) {
@@ -1107,7 +1107,7 @@
       }).join("") + "</select>";
       var fig = CRMLines.lineFigures(l);
       var marginText = fig.margin == null || CRMLines.num(l.price) == null ? "—" : (money(fig.margin) + (fig.marginPct == null ? "" : " · " + pct(fig.marginPct)));
-      return "<tr><td>" + catalog + "</td><td><input data-dl='" + i + ":desc' list='qbItemNames' value='" + esc(l.desc || "") + "' placeholder='Colored pallet, blue' aria-label='Product'></td><td><input data-dl='" + i + ":qb_item_id' value='" + esc(l.qb_item_id || "") + "' placeholder='Item id' aria-label='QuickBooks item id'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-dl='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + ((l.unit || "each") === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-dl='" + i + ":vendor_id'", vend, l.vendor_id || d.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-dl='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Unit cost'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Unit sell'></td><td class='calc'>" + (fig.sell == null ? "—" : money(fig.sell)) + "</td><td class='calc'>" + (CRMLines.num(l.qty) == null || fig.cost == null ? "—" : money(fig.cost)) + "</td><td class='calc'>" + marginText + "</td><td>" + (lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
+      return "<tr><td>" + catalog + "</td><td><input data-dl='" + i + ":desc' list='qbItemNames' value='" + esc(l.desc || "") + "' placeholder='Colored pallet, blue' aria-label='Product'></td><td><input data-dl='" + i + ":qb_item_id' value='" + esc(l.qb_item_id || "") + "' placeholder='Item id' aria-label='QuickBooks item id'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-dl='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + ((l.unit || "each") === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-dl='" + i + ":vendor_id'", vend, l.vendor_id || d.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-dl='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' placeholder='" + esc(CRMLines.costPlaceholder(l)) + "' aria-label='Unit cost'></td><td class='n'><input type='number' step='any' data-dl='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Unit sell'></td><td class='calc'>" + (fig.sell == null ? "—" : money(fig.sell)) + "</td><td class='calc'>" + (CRMLines.num(l.qty) == null || fig.cost == null ? "—" : money(fig.cost)) + "</td><td class='calc'>" + marginText + "</td><td>" + (lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
     }).join("");
     h += "</tbody><tfoot><tr><td colspan='8'>Deal total" + (math.freight ? " · freight " + money(math.freight) : "") + "</td><td class='calc'>" + money(math.value) + "</td><td class='calc'>" + (math.cost == null ? "—" : money(math.cost)) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : money(math.grossMargin) + " · " + pct(math.marginPct)) + "</td><td></td></tr></tfoot></table></div>";
     h += "<datalist id='qbItemNames'>" + (S.qbItems || []).map(function (item) { return "<option value='" + esc(item.name) + "'>"; }).join("") + "</datalist>";
@@ -1534,7 +1534,7 @@
           return "<option value='" + p.id + "'" + (+l.product_id === p.id ? " selected" : "") + ">" + esc(p.sku ? p.sku + " · " + p.name : p.name) + "</option>";
         }).join("") + "</select>";
         var fig = CRMLines.lineFigures(l);
-        return "<tr><td>" + catalog + "</td><td><input data-ql='" + i + ":desc' value='" + esc(l.desc || "") + "' aria-label='Product'></td><td><select data-ql='" + i + ":category'><option value=''>Choose…</option>" + Orders.CATEGORIES.map(function (c) { return "<option" + (l.category === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select></td><td><input data-ql='" + i + ":invoice_number' value='" + esc(l.invoice_number || "") + "' aria-label='Invoice number'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-ql='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + (l.unit === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-ql='" + i + ":vendor_id'", vend, l.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-ql='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Vendor cost'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Sell price'></td><td class='calc'>" + (fig.sell == null ? "—" : Orders.money(fig.sell)) + "</td><td class='calc'>" + (fig.marginPct == null ? "—" : pct(fig.marginPct)) + "</td><td>" + (q.lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
+        return "<tr><td>" + catalog + "</td><td><input data-ql='" + i + ":desc' value='" + esc(l.desc || "") + "' aria-label='Product'></td><td><select data-ql='" + i + ":category'><option value=''>Choose…</option>" + Orders.CATEGORIES.map(function (c) { return "<option" + (l.category === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select></td><td><input data-ql='" + i + ":invoice_number' value='" + esc(l.invoice_number || "") + "' aria-label='Invoice number'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-ql='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + (l.unit === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-ql='" + i + ":vendor_id'", vend, l.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-ql='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' placeholder='" + esc(CRMLines.costPlaceholder(l)) + "' aria-label='Vendor cost'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Sell price'></td><td class='calc'>" + (fig.sell == null ? "—" : Orders.money(fig.sell)) + "</td><td class='calc'>" + (fig.marginPct == null ? "—" : pct(fig.marginPct)) + "</td><td>" + (q.lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
       }).join("") + "</tbody></table></div><button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> <button class='ghost' data-act='usual-order' data-id='" + d.id + "'>Use usual order</button><p class='log'>Every line is included in the deal total. The first line still fills the deal's unit price, quantity, and vendor so older screens keep a product on the deal. Vendor cost and margin stay off the customer PDF. Pick a catalog product, or type a QuickBooks item name when it is not in the catalog.</p></fieldset>";
     h += "<fieldset><legend>Terms on the quote</legend><div class='f'><textarea data-q='terms'>" + esc(q.terms || "") + "</textarea></div></fieldset></div>";
     h += "<div class='dfoot'><button class='primary' data-act='q-download' data-id='" + d.id + "'>Download PDF</button><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-open-deal='" + d.id + "'>Open deal</button></div>";
@@ -1641,11 +1641,85 @@
     paintLines(d);
     if (!ok) return;
   }
+  /* Saving a quote line replaces the drawer markup. That used to drop the
+     scroll position and the field being edited, so the quote jumped to the
+     top. Remember both, then put them back on the new markup. */
+  function quoteEditorPlace() {
+    var dr = $("#drawer");
+    if (!dr) return null;
+    var body = dr.querySelector(".dbody");
+    var active = document.activeElement;
+    var focus = null;
+    if (active && active.dataset && dr.contains(active) && active !== dr) {
+      focus = {};
+      if (active.dataset.ql) focus.ql = active.dataset.ql;
+      else if (active.dataset.dl) focus.dl = active.dataset.dl;
+      else if (active.dataset.q) focus.q = active.dataset.q;
+      else if (active.dataset.k) focus.k = active.dataset.k;
+      else if (active.id) focus.id = active.id;
+      try {
+        if (typeof active.selectionStart === "number") {
+          focus.start = active.selectionStart;
+          focus.end = active.selectionEnd;
+        }
+      } catch (err) {}
+    }
+    var tables = [];
+    var wraps = dr.querySelectorAll(".tablewrap");
+    for (var i = 0; i < wraps.length; i++) tables.push(wraps[i].scrollLeft || 0);
+    return {
+      top: body ? body.scrollTop : 0,
+      left: body ? body.scrollLeft : 0,
+      tables: tables,
+      focus: focus
+    };
+  }
+  function quoteEditorField(dr, focus) {
+    if (!focus) return null;
+    var sel = "";
+    if (focus.ql) sel = "[data-ql='" + focus.ql + "']";
+    else if (focus.dl) sel = "[data-dl='" + focus.dl + "']";
+    else if (focus.q) sel = "[data-q='" + focus.q + "']";
+    else if (focus.k) sel = "[data-k='" + focus.k + "']";
+    else if (focus.id) sel = "#" + (window.CSS && CSS.escape ? CSS.escape(focus.id) : focus.id);
+    return sel ? dr.querySelector(sel) : null;
+  }
+  function restoreQuoteEditorPlace(place) {
+    if (!place) return;
+    var dr = $("#drawer");
+    if (!dr) return;
+    function applyScroll() {
+      var body = dr.querySelector(".dbody");
+      if (body) {
+        body.scrollTop = place.top;
+        body.scrollLeft = place.left;
+      }
+      var wraps = dr.querySelectorAll(".tablewrap");
+      for (var i = 0; i < place.tables.length; i++) {
+        if (wraps[i]) wraps[i].scrollLeft = place.tables[i];
+      }
+    }
+    applyScroll();
+    var el = quoteEditorField(dr, place.focus);
+    if (el && el.focus) {
+      try { el.focus({ preventScroll: true }); }
+      catch (err) { try { el.focus(); } catch (err2) {} }
+      if (place.focus && typeof place.focus.start === "number" && el.setSelectionRange) {
+        try { el.setSelectionRange(place.focus.start, place.focus.end); }
+        catch (err3) {}
+      }
+    }
+    applyScroll();
+    if (window.requestAnimationFrame) requestAnimationFrame(applyScroll);
+  }
   function paintLines(d) {
     var dr = $("#drawer");
     if (!dr.classList.contains("open")) return;
+    var place = quoteEditorPlace();
     if (dr.dataset.quote === String(d.id)) openQuote(d.id);
     else if (dr.dataset.deal === String(d.id)) openDeal(d.id);
+    else return;
+    restoreQuoteEditorPlace(place);
   }
   function quoteForPdf(d) {
     if (d.quote && d.quote.lines && d.quote.lines.length) return d.quote;
