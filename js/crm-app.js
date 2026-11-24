@@ -925,6 +925,10 @@
       rc.hidden = !belowMin;
       rc.textContent = belowMin;
     }
+    if (window.CRMMessages) {
+      var reader = S.entered ? (S.team.find(function (t) { return t.id === +S.meId; }) || null) : null;
+      CRMMessages.sync({ home: !!reader && S.view === "pipeline", me: reader, team: S.team });
+    }
     var view = $("#view");
     var cat = VIEW_CAT[S.view] || "sales";
     if (view) view.dataset.cat = cat;
@@ -979,6 +983,7 @@
     h += "<div class='sect' style='margin-top:28px'><h2>Quotes</h2><div class='grid2'><div class='panel' style='padding:14px'><h3 class='cond' style='font-size:20px'>Optional line items on quotes</h3>";
     h += "<p>Tick Optional on a line the buyer can leave off. Included starts unchecked, so that line stays out of the total until you tick it. The quote total, margin, and deal value count required lines and included optional lines. Print and the PDF list the rest as optional add-ons with their prices. There is no customer page for the buyer to tick these. When they choose, tick Included. That saves the total and writes Customer selected options on the deal. A won deal copies only the included lines onto the order. Optional lines they left off stay on the quote.</p>";
     h += "<p style='margin:8px 0 0'><a class='ghost' href='docs/optional-line-items.html' style='text-decoration:none'>Open the guide</a></p></div></div></div>";
+    if (window.CRMMessages) h += CRMMessages.trainingHtml();
     var topics = window.CRMPortalOrders ? CRMPortalOrders.trainingTopics() : [];
     if (topics.length) {
       h += "<div class='sect' style='margin-top:28px'><h2>Portal and the tab bar</h2><div class='grid2'>";
@@ -1796,6 +1801,7 @@
     if (act && act.indexOf("vnd-") === 0 && window.CRMVendors) { CRMVendors.handle(a); return; }
     if (act && act.indexOf("com-") === 0 && window.CRMCommissions) { CRMCommissions.handle(a); return; }
     if (act && act.indexOf("sup-") === 0 && window.CRMSupply) { CRMSupply.handle(a); return; }
+    if (act === "tm-read" && window.CRMMessages) { CRMMessages.mark(id); return; }
     if (act === "close") { closeDrawer(); return; }
     if (act === "tour") { tourStep = 0; tourShow(); return; }
     if (act === "tour-next") { if (tourStep < TOUR.length - 1) tourStep += 1; tourShow(); return; }
@@ -2252,6 +2258,7 @@
     if ($("#modal")) closeModal();
     if (message != null) setGateMsg(message);
     setSaveState("", "");
+    if (window.CRMMessages) CRMMessages.stop();
   }
   async function rejectSession(message) {
     gateHold = true;
@@ -2336,6 +2343,7 @@
     }
     if (asked && VIEW_CAT[asked]) S.view = asked;
     render();
+    if (window.CRMMessages) await CRMMessages.start(CRMDB.db, toast);
     var signedIn = S.team.find(function (t) { return t.id === +S.meId; });
     setSaveState("Signed in as " + (signedIn ? signedIn.name : email) + " · " + email, "ok");
   }

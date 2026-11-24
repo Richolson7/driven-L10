@@ -240,6 +240,13 @@ legend{font-family:"Barlow Condensed",sans-serif;font-size:18px;font-weight:600;
 .log{font-size:13px;color:var(--muted)}
 .log li{list-style:none;padding:4px 0}
 .log{padding:0;margin:0}
+#teamMessages{margin:14px 18px 0}
+#teamMessages[hidden]{display:none}
+.tm-row{display:flex;flex-direction:column;align-items:stretch;gap:2px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:10px 12px}
+.tm-row:last-child{border-bottom:0}
+.tm-row:hover{background:var(--raise)}
+.tm-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.tm-who{font-weight:700}
 .dfoot{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
 
 /* modal */
@@ -448,7 +455,7 @@ details.seq[open] summary{background:var(--raise)}
       <span id="saveState" class="save-state" role="status">Loading…</span>
     </div>
     <nav class="tabs" aria-label="Sections">
-      <button class="tab" data-view="pipeline" data-cat="sales">Pipeline</button>
+      <button class="tab" data-view="pipeline" data-cat="sales">Pipeline<span class="n" id="msgCount" hidden></span></button>
       <button class="tab" data-view="companies" data-cat="sales">Companies</button>
       <a class="tab" href="vendors.html" data-cat="sales">Vendors</a>
       <button class="tab" data-view="calculator" data-cat="cs">Calculators</button>
@@ -482,6 +489,29 @@ details.seq[open] summary{background:var(--raise)}
     <button class="primary" data-act="feedback">Send feedback</button>
 </div>
 
+<section class="sect" id="teamMessages" hidden aria-labelledby="teamMessagesTitle">
+  <h2 id="teamMessagesTitle">Messages</h2>
+  <p class="lead">Notes to a teammate or to everyone. They stay in the CRM. Nothing is emailed or texted.</p>
+  <div class="grid2">
+    <div class="panel" id="tmList"></div>
+    <form id="tmForm" class="panel" style="padding:14px" autocomplete="off">
+      <h3 class="cond" style="font-size:18px">New message</h3>
+      <div class="f" style="margin-top:8px">
+        <label for="tmTo">To</label>
+        <select id="tmTo"></select>
+      </div>
+      <div class="f" style="margin-top:8px">
+        <label for="tmBody">Message</label>
+        <textarea id="tmBody" rows="3" placeholder="Write a short note"></textarea>
+      </div>
+      <div class="mactions" style="justify-content:flex-start">
+        <button class="primary" type="submit">Send</button>
+      </div>
+      <p class="log" id="tmNote" role="status"></p>
+    </form>
+  </div>
+</section>
+
 <main id="view"></main>
 
 <div class="scrim" id="scrim" data-act="close"></div>
@@ -505,6 +535,7 @@ details.seq[open] summary{background:var(--raise)}
 <script src="js/crm-forms.js"></script>
 <script src="js/crm-portal.js"></script>
 <script src="js/crm-portal-orders.js"></script>
+<script src="js/crm-messages.js"></script>
 <script src="js/crm-app.js"></script>
 <script src="js/crm-customer-portal.js"></script>
 </body>
