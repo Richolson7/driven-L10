@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>New customer from deal harness</title></head>
+<body>
+<div id="authGate" hidden><p id="gateMsg"></p></div>
+<div id="shell">
+  <div id="crmStick"></div>
+  <div id="crmActions"></div>
+  <button id="themeBtn" type="button">Light mode</button>
+  <button id="calcBtn" type="button"></button>
+  <span id="taskCount" hidden></span>
+  <span id="seqCount" hidden></span>
+  <span id="reorderCount" hidden></span>
+  <label id="whoLabel" for="who">Signed in as</label>
+  <select id="who"></select>
+  <button id="authBtn" type="button" data-act="signout">Sign out</button>
+  <span id="saveState"></span>
+  <button class="tab" data-view="pipeline" data-cat="sales" type="button">Pipeline</button>
+  <button class="tab" data-view="training" data-cat="train" type="button">Training</button>
+  <main id="view"></main>
+</div>
+<div id="scrim"></div>
+<aside id="drawer" aria-hidden="true"></aside>
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+<div id="toasts"></div>
+<div id="tour" hidden></div>
+<div id="printArea"></div>
+<script>
+window.__inserts = [];
+window.__errors = [];
+(function () {
+  var seq = 400;
+  var companies = [
+    { id: 10, name: "Acme Packaging", kind: "customer", list: "active", owner: "Rich", billing_address: "Austin, TX", status_note: "", notes: "", last_contact_at: null, custom: {} },
+    { id: 11, name: "Wrap Co", kind: "vendor", list: "none", owner: null, billing_address: null, status_note: "", notes: "", last_contact_at: null, custom: {} }
+  ];
+  var contacts = [
+    { id: 50, company_id: 10, role: "", name: "Pat Acme", email: "pat@acme.test", phone: "555-0100" }
+  ];
+  var team = [
+    { id: 1, name: "Rich", email: "rich@drivensol.com", team: "sales", alert_via: "both", active: true },
+    { id: 2, name: "Annie", email: "annie@drivensol.com", team: "sales", alert_via: "both", active: true }
+  ];
+  var stages = [
+    { id: 1, key: "working_on_quote", name: "Working on quote", position: 1, team: "sales", required_fields: [], active: true }
+  ];
+  var empty = { data: [], error: null };
+  var missing = { data: null, error: { message: "relation does not exist" } };
+  function rows(table) {
+    if (table === "crm_companies") return { data: companies, error: null };
+    if (table === "crm_contacts") return { data: contacts, error: null };
+    if (table === "crm_team") return { data: team, error: null };
+    if (table === "crm_stages") return { data: stages, error: null };
+    if (table === "crm_quotes" || table === "crm_order_lines" || table === "crm_deal_lines" || table === "crm_products" || table === "crm_qb_items" || table === "crm_messages" || table === "crm_user_prefs") return missing;
+    return empty;
+  }
+  function answer(table, op, row) {
+    if (op === "insert") {
+      var saved = Object.assign({ id: ++seq }, row);
+      window.__inserts.push({ table: table, row: JSON.parse(JSON.stringify(row)), id: saved.id });
+      if (table === "crm_companies") companies.push(saved);
+      if (table === "crm_contacts") contacts.push(saved);
+      return { data: saved, error: null };
+    }
+    return rows(table);
+  }
+  function query(table) {
+    var op = "select";
+    var payload = null;
+    var self = {
+      select: function () { return self; },
+      insert: function (row) { op = "insert"; payload = row; return self; },
+      update: function () { return self; },
+      upsert: function () { return self; },
+      delete: function () { return self; },
+      eq: function () { return self; },
+      ilike: function () { return self; },
+      order: function () { return self; },
+      limit: function () { return self; },
+      maybeSingle: function () { return Promise.resolve(answer(table, op, payload)); },
+      single: function () { return Promise.resolve(answer(table, op, payload)); },
+      then: function (ok, err) { return Promise.resolve(answer(table, op, payload)).then(ok, err); }
+    };
+    return self;
+  }
+  window.CRMDB = {
+    db: {
+      from: function (table) { return query(table); },
+      auth: { signOut: function () { return Promise.resolve({}); }, onAuthStateChange: function () { return { data: { subscription: { unsubscribe: function () {} } } }; } }
+    },
+    insert: function (table, row) {
+      var res = answer(table, "insert", row);
+      return Promise.resolve(res.error ? null : res.data);
+    },
+    update: function (table, id, row) { return Promise.resolve(Object.assign({ id: id }, row)); },
+    remove: function (table, id) { return Promise.resolve({ id: id }); },
+    selectAll: function (table) { return Promise.resolve(rows(table)); },
+    explain: function (error) { return (error && (error.message || error.code)) || "Unknown error"; },
+    onError: function (fn) { window.__onError = fn; },
+    onOk: function () {}
+  };
+  window.CRMAuth = {
+    bind: function (opts) {
+      setTimeout(function () { opts.onSession({ user: { email: "rich@drivensol.com" } }); }, 0);
+    },
+    isRecovery: function () { return false; }
+  };
+})();
+window.addEventListener("error", function (e) { window.__errors.push(String(e.message)); });
+</script>
+<script src="crm-lines.js"></script>
+<script src="crm-quote.js"></script>
+<script src="crm-orders.js"></script>
+<script src="crm-app.js"></script>
+</body>
+</html>

@@ -189,7 +189,8 @@
     return bag;
   }
   function blankQuote(d) {
-    var ct = S.contacts.find(function (x) { return x.company_id === d.company_id; });
+    var ct = d && d.contact_id ? S.contacts.find(function (x) { return x.id === +d.contact_id && x.company_id === d.company_id; }) : null;
+    if (!ct) ct = S.contacts.find(function (x) { return x.company_id === d.company_id; });
     return {
       id: null, db: false, number: "Q-" + TODAY.slice(0, 4) + "-" + String(d.id).padStart(4, "0"),
       company_id: d.company_id, ship_to_id: d.ship_to_id || null, contact_id: ct ? ct.id : null,
@@ -210,7 +211,7 @@
       freight: row.freight, invoice_sent_date: day(row.invoice_sent_date), paid_date: day(row.paid_date), notes: row.notes || "",
       vendor_po_number: row.vendor_po_number || "", bill_url: row.bill_url || "",
       custom: userCustom(c), status: c._status || "open", won_at: c._won_at || null, lost_reason: c._lost_reason || "",
-      order_lines: c._order_lines || [], quote: c._quote || null
+      order_lines: c._order_lines || [], quote: c._quote || null, contact_id: c._contact_id || null
     };
     if (d.quote && d.quote.lines && d.quote.lines[0]) {
       var line = d.quote.lines[0];
@@ -234,6 +235,7 @@
     bag._lost_reason = d.lost_reason || "";
     bag._order_lines = d.order_lines || [];
     bag._quote = d.quote || null;
+    if (d.contact_id) bag._contact_id = d.contact_id;
     return bag;
   }
   function mapTask(row) {
@@ -919,6 +921,13 @@
     h += "<li><b>QuickBooks SKU</b> is the SKU stored on the product. When that field is blank, the column shows the QuickBooks product or service name.</li>";
     h += "<li><b>Search</b> matches the SKU, the QuickBooks product or service name, and the description.</li>";
     h += "<li><b>Click a row</b> to put that product on the line. Price, unit, category, and the QuickBooks item id still copy onto the line. Choose Type a description when the product is not in the catalog.</li>";
+    h += "</ol></div></div>";
+    h += "<div class='sect' id='training-add-customer-from-deal' style='margin-top:28px'><h2>Adding a new customer from a new deal</h2><p class='lead'>You can add the customer without leaving the New deal form.</p><div class='panel' style='padding:14px'><ol class='crm-steps'>";
+    h += "<li><b>Open New deal.</b> On the Pipeline, click New deal.</li>";
+    h += "<li><b>Choose + Add new customer</b> at the bottom of the Customer list. The description and sales rep you already typed stay put.</li>";
+    h += "<li><b>Company name is required.</b> City, state, and phone are optional. A primary contact name, email, and phone are optional. If you type a contact email or phone, add the contact's name.</li>";
+    h += "<li><b>Save customer.</b> The new company is selected on this deal. If you added a contact, that contact is selected too. Then click Create deal.</li>";
+    h += "<li><b>Same name.</b> If a company with that name is already in the CRM, ignoring capitals, the form asks you to use that customer. It does not add a second record.</li>";
     h += "</ol></div></div>";
     var topics = window.CRMPortalOrders ? CRMPortalOrders.trainingTopics() : [];
     if (topics.length) {
@@ -1767,6 +1776,9 @@
     if (act === "gate-save") { gateSave(+id, a.dataset.to); return; }
     if (act === "new-deal") { newDealModal(a.dataset.company || ""); return; }
     if (act === "nd-ok") { createDealFromModal(); return; }
+    if (act === "nd-new-ok") { saveNewCustomerFromDeal(); return; }
+    if (act === "nd-new-cancel") { cancelNewCustomerOnDeal(); return; }
+    if (act === "nd-use") { selectDealCustomer(+a.dataset.id, ""); return; }
     if (act === "new-company") { openModal("<h2>New company</h2><div class='fields'><div class='f wide'><label>Company name</label><input id='ncoName'></div><div class='f'><label>Type</label><select id='ncoKind'><option value='prospect'>Prospect</option><option value='customer'>Customer</option><option value='vendor'>Vendor</option></select></div><div class='f'><label>Owner</label><select id='ncoOwner'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nco-ok'>Add company</button></div>"); return; }
     if (act === "nco-ok") { createCompanyFromModal(); return; }
     if (act === "new-quote") { ensureQuote(a.dataset.deal ? +a.dataset.deal : null, a.dataset.company ? +a.dataset.company : null); return; }
@@ -1883,15 +1895,138 @@
     closeModal();
     if (await commitMove(d, toKey)) { render(); openDeal(d.id); }
   }
+  function dealCustomers() {
+    return S.companies.filter(function (c) { return c.kind !== "vendor"; });
+  }
+  function sameCompanyName(a, b) {
+    return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+  }
+  function dealCustomerOptions(selected) {
+    return "<option value=''>Choose…</option>" + dealCustomers().map(function (c) {
+      return "<option value='" + c.id + "'" + (+selected === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>";
+    }).join("") + "<option value='__new__'>+ Add new customer</option>";
+  }
+  function dealContactOptions(companyId, selected) {
+    var cons = S.contacts.filter(function (x) { return x.company_id === +companyId; });
+    return "<option value=''>Choose…</option>" + cons.map(function (x) {
+      return "<option value='" + x.id + "'" + (+selected === x.id ? " selected" : "") + ">" + esc(x.name) + "</option>";
+    }).join("");
+  }
+  function fillDealContacts(companyId, contactId) {
+    var sel = $("#ndCt");
+    if (!sel) return;
+    sel.innerHTML = dealContactOptions(companyId, contactId);
+  }
+  function selectDealCustomer(companyId, contactId) {
+    var sel = $("#ndCo");
+    if (!sel) return;
+    sel.innerHTML = dealCustomerOptions(companyId);
+    sel.value = companyId ? String(companyId) : "";
+    fillDealContacts(companyId, contactId || "");
+    var box = $("#ndNew");
+    if (box) box.hidden = true;
+    var dup = $("#ndDup");
+    if (dup) { dup.hidden = true; dup.innerHTML = ""; }
+  }
+  function showCustomerDuplicate(matches) {
+    var box = $("#ndDup");
+    if (!box) return;
+    box.hidden = false;
+    box.innerHTML = "<p class='log'>" + esc(matches[0].name) + " is already in the CRM. Use that customer instead of adding another.</p>" + matches.map(function (c) {
+      return "<button type='button' class='ghost' data-act='nd-use' data-id='" + c.id + "'>Use " + esc(c.name) + "</button>";
+    }).join(" ");
+  }
+  function newCustomerFormHtml() {
+    return "<div id='ndNew' class='f wide' hidden><div class='fields'>" +
+      "<div class='f wide'><label>Company name</label><input id='nnName' autocomplete='off'></div>" +
+      "<div class='f'><label>City</label><input id='nnCity' autocomplete='off'></div>" +
+      "<div class='f'><label>State</label><input id='nnState' autocomplete='off'></div>" +
+      "<div class='f'><label>Phone</label><input id='nnPhone' autocomplete='off'></div>" +
+      "<div class='f wide'><label>Primary contact</label><input id='nnCName' placeholder='Name' autocomplete='off'></div>" +
+      "<div class='f'><label>Contact email</label><input id='nnCEmail' autocomplete='off'></div>" +
+      "<div class='f'><label>Contact phone</label><input id='nnCPhone' autocomplete='off'></div>" +
+      "</div><div id='ndDup' hidden></div><div class='mactions'><button type='button' class='ghost' data-act='nd-new-cancel'>Cancel</button><button type='button' class='primary' data-act='nd-new-ok'>Save customer</button></div></div>";
+  }
   function newDealModal(pre) {
-    openModal("<h2>New deal</h2><div class='fields'><div class='f wide'><label>Customer</label><select id='ndCo'><option value=''>Choose…</option>" + S.companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) { return "<option value='" + c.id + "'" + (+pre === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='f wide'><label>Brief description</label><input id='ndDesc'></div><div class='f'><label>Sales rep</label><select id='ndRep'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nd-ok'>Create deal</button></div>");
+    openModal("<h2>New deal</h2><div class='fields'><div class='f wide'><label>Customer</label><select id='ndCo'>" + dealCustomerOptions(pre) + "</select></div>" + newCustomerFormHtml() + "<div class='f wide'><label>Contact</label><select id='ndCt'>" + dealContactOptions(pre, "") + "</select></div><div class='f wide'><label>Brief description</label><input id='ndDesc'></div><div class='f'><label>Sales rep</label><select id='ndRep'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nd-ok'>Create deal</button></div>");
+    var coSel = $("#ndCo");
+    if (!coSel) return;
+    coSel.addEventListener("change", function () {
+      if (coSel.value === "__new__") {
+        var box = $("#ndNew");
+        if (box) box.hidden = false;
+        var name = $("#nnName");
+        if (name) name.focus();
+        return;
+      }
+      var box2 = $("#ndNew");
+      if (box2) box2.hidden = true;
+      var dup = $("#ndDup");
+      if (dup) { dup.hidden = true; dup.innerHTML = ""; }
+      fillDealContacts(coSel.value, "");
+    });
+  }
+  function cancelNewCustomerOnDeal() {
+    var sel = $("#ndCo");
+    if (sel && sel.value === "__new__") sel.value = "";
+    var box = $("#ndNew");
+    if (box) box.hidden = true;
+    var dup = $("#ndDup");
+    if (dup) { dup.hidden = true; dup.innerHTML = ""; }
+    fillDealContacts(sel ? sel.value : "", "");
+  }
+  var ndNewBusy = false;
+  async function saveNewCustomerFromDeal() {
+    if (ndNewBusy) return;
+    var nameEl = $("#nnName");
+    var n = nameEl ? nameEl.value.trim() : "";
+    if (!n) { toast("Add a company name."); if (nameEl) nameEl.focus(); return; }
+    var cName = ($("#nnCName") && $("#nnCName").value || "").trim();
+    var cEmail = ($("#nnCEmail") && $("#nnCEmail").value || "").trim();
+    var cPhone = ($("#nnCPhone") && $("#nnCPhone").value || "").trim();
+    if ((cEmail || cPhone) && !cName) { toast("Add the contact's name, or clear the contact email and phone."); return; }
+    var dupes = S.companies.filter(function (c) { return sameCompanyName(c.name, n); });
+    var pickable = dupes.filter(function (c) { return c.kind !== "vendor"; });
+    if (pickable.length) { showCustomerDuplicate(pickable); return; }
+    if (dupes.length) { toast(n + " is already a vendor. Use a different company name."); return; }
+    var city = ($("#nnCity") && $("#nnCity").value || "").trim();
+    var state = ($("#nnState") && $("#nnState").value || "").trim();
+    var phone = ($("#nnPhone") && $("#nnPhone").value || "").trim();
+    var place = [city, state].filter(Boolean).join(", ");
+    var owner = $("#ndRep") ? $("#ndRep").value : meName();
+    var row = { name: n, kind: "customer", list: "active", owner: owner || null, custom: phone ? { phone: phone } : {} };
+    if (place) row.billing_address = place;
+    ndNewBusy = true;
+    try {
+      var saved = await CRMDB.insert("crm_companies", row, "company");
+      if (!saved) return;
+      var c = mapCompany(saved);
+      S.companies.push(c);
+      var contactId = null;
+      if (cName) {
+        var ct = await CRMDB.insert("crm_contacts", { company_id: c.id, role: null, name: cName, email: cEmail || null, phone: cPhone || null }, "contact");
+        if (ct) {
+          S.contacts.push({ id: ct.id, company_id: c.id, role: ct.role || "", name: ct.name, email: ct.email || "", phone: ct.phone || "" });
+          contactId = ct.id;
+        }
+      }
+      selectDealCustomer(c.id, contactId);
+      toast("Customer added.");
+    } finally {
+      ndNewBusy = false;
+    }
   }
   async function createDealFromModal() {
-    var cid = +$("#ndCo").value;
+    var raw = $("#ndCo").value;
+    if (raw === "__new__") { toast("Save the new customer, or pick one."); return; }
+    var cid = +raw;
     var desc = $("#ndDesc").value.trim();
     if (!cid || !desc) { toast("Pick a customer and add a description."); return; }
+    var contactId = $("#ndCt") && $("#ndCt").value ? +$("#ndCt").value : null;
     var ship = S.shipTos.find(function (s) { return s.company_id === cid; });
-    var row = { company_id: cid, ship_to_id: ship ? ship.id : null, description: desc, stage: "working_on_quote", sales_rep: $("#ndRep").value, custom: { _status: "open", _won_at: null, _lost_reason: "", _order_lines: [], _quote: null } };
+    var custom = { _status: "open", _won_at: null, _lost_reason: "", _order_lines: [], _quote: null };
+    if (contactId) custom._contact_id = contactId;
+    var row = { company_id: cid, ship_to_id: ship ? ship.id : null, description: desc, stage: "working_on_quote", sales_rep: $("#ndRep").value, custom: custom };
     var saved = await CRMDB.insert("crm_deals", row, "deal");
     if (!saved) return;
     var d = mapDeal(saved);
