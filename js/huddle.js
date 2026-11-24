@@ -1,7 +1,8 @@
 /* Morning huddle screen. Numbers come from HuddleScore.
    After a team sign-in, a touch can be logged, goals can be saved,
    and open tasks can be checked off or added.
-   Loads per day are one saved snapshot at 10:00 AM CT. This file sends no email or text. */
+   Patrick's week loads and calls are read live and shown under his row.
+   This file sends no email or text. */
 (function () {
   "use strict";
   var Score = window.HuddleScore;
@@ -77,71 +78,6 @@
       load();
     }, wait);
   }
-  function snapshotProblem(error) {
-    var msg = CRMDB.explain(error);
-    var code = error && error.code || "";
-    if (code === "PGRST205" || code === "42P01" || /huddle_snapshots/i.test(msg) || /schema cache/i.test(msg) || /does not exist/i.test(msg)) {
-      return "The snapshot table is not in the database yet. Apply supabase/migrations/20261105160000_huddle_snapshots.sql on the Driven project. Until then loads per day stay blank. Live numbers were not used.";
-    }
-    return "The saved snapshot did not load. " + msg + " Live numbers were not used.";
-  }
-  function payloadOf(row) {
-    if (!row) return null;
-    var payload = row.payload;
-    if (typeof payload === "string") {
-      try { payload = JSON.parse(payload); } catch (e) { return null; }
-    }
-    if (!payload || typeof payload !== "object") return null;
-    return payload;
-  }
-  async function readSnapshot(day) {
-    var res = await CRMDB.db.from("huddle_snapshots").select("huddle_day,payload,captured_for").eq("huddle_day", day).maybeSingle();
-    return { error: res.error || null, payload: payloadOf(res.data) };
-  }
-  async function resolveScorecard(result, deals, wonKeys) {
-    var decision = Card.plan(new Date());
-    var read = await readSnapshot(decision.displayDay);
-    if (read.error) return { snapshot: null, huddleDay: decision.displayDay, note: snapshotProblem(read.error) };
-    if (read.payload) return { snapshot: read.payload, huddleDay: decision.displayDay, note: "" };
-    if (!decision.capture || result.today !== decision.displayDay) {
-      return { snapshot: null, huddleDay: decision.displayDay, note: "No snapshot was saved at 10:00 AM CT for this huddle. Refresh loads the saved snapshot only. It does not recompute the tiles." };
-    }
-    var dash = await CRMDB.db.from("dashboard_data").select('week_data,"Week Of"').eq("id", "driven_cmd").maybeSingle();
-    if (dash.error || !Card.plan(new Date()).capture) {
-      var why = dash.error ? CRMDB.explain(dash.error) : "Huddle start passed before the snapshot could be saved.";
-      return { snapshot: null, huddleDay: decision.displayDay, note: "No snapshot was saved. " + why + " The tiles were left blank." };
-    }
-    var row = dash.data || {};
-    var payload = Card.build({
-      today: result.today,
-      yesterday: result.yesterday,
-      weekStart: result.weekStart,
-      weekEnd: result.weekEnd,
-      weekDays: result.weekDays,
-      lastWeek: result.lastWeek,
-      deals: deals,
-      wonStageKeys: wonKeys,
-      team: result.team && result.team.cells,
-      weekData: row.week_data || {},
-      weekOf: row["Week Of"] || row.week_of || ""
-    });
-    var saved = await CRMDB.db.from("huddle_snapshots").insert({
-      huddle_day: decision.displayDay,
-      captured_for: Card.huddleStart(decision.displayDay).toISOString(),
-      payload: payload
-    }).select("huddle_day,payload,captured_for").single();
-    if (saved.error) {
-      if (saved.error.code === "23505") {
-        var again = await readSnapshot(decision.displayDay);
-        if (again.payload) return { snapshot: again.payload, huddleDay: decision.displayDay, note: "" };
-      }
-      return { snapshot: null, huddleDay: decision.displayDay, note: "The snapshot could not be saved, so the tiles were left blank. " + CRMDB.explain(saved.error) };
-    }
-    var stored = payloadOf(saved.data);
-    if (!stored) return { snapshot: null, huddleDay: decision.displayDay, note: "The snapshot did not save a row, so the tiles were left blank." };
-    return { snapshot: stored, huddleDay: decision.displayDay, note: "" };
-  }
-
   function showGate() {
     me = null;
     clearCapture();
@@ -157,17 +93,21 @@
     if (signOutBtn) signOutBtn.hidden = false;
   }
 
-  function renderBoard(result, goals, notes, taskSummary, taskNote, scorecard) {
+  function renderBoard(result, goals, notes, taskSummary, taskNote, patrick) {
     var head = Score.METRICS.map(function (metric) {
       return "<th>" + esc(METRIC_LABEL[metric]) + "<small>Yesterday</small></th><th>" + esc(METRIC_LABEL[metric]) + "<small>Week</small></th>";
     }).join("");
+    var columns = 1 + Score.METRICS.length * 2;
     var weekLabel = result.lastWeek ? "Last week" : "Week to date";
     var html = "<section class='sales' id='huddleSales' aria-label='Sales'>";
     html += "<h2>Sales</h2>";
-    html += Card.sectionHtml(scorecard);
     html += "<p class='range'>Yesterday " + esc(pretty(result.yesterday)) + " · " + esc(weekLabel) + " " + esc(pretty(result.weekStart)) + " – " + esc(pretty(result.weekEnd)) + " (" + result.weekDays + " weekday" + (result.weekDays === 1 ? "" : "s") + ")</p>";
     html += "<div class='scroll'><table><thead><tr><th>Rep</th>" + head + "</tr></thead><tbody>";
-    html += result.reps.map(rowHtml).join("");
+    html += result.reps.map(function (row) {
+      var line = rowHtml(row);
+      if (String(row.name || "").trim().toLowerCase() === "patrick") line += Card.patrickSectionHtml(patrick, columns);
+      return line;
+    }).join("");
     html += rowHtml(result.team);
     html += "</tbody></table></div>";
     html += "<div class='logbar'><span>Log for " + esc(me.name) + "</span>";
@@ -341,13 +281,16 @@
     var since = new Date();
     since.setDate(since.getDate() - 21);
     var today = Score.chicagoToday(new Date());
+    var patrickWeekStart = Score.weekStartMonday(today);
     var results = await Promise.all([
       CRMDB.db.from("crm_activity").select("kind,by_user,at").gte("at", since.toISOString()).limit(2000),
       CRMDB.db.from("crm_quotes").select("id,deal_id,rep,sent_date").not("sent_date", "is", null).limit(2000),
       CRMDB.db.from("crm_deals").select("id,sales_rep,stage,stage_changed_at,price_per_unit,quantity,quote_sent_date,est_ship_date,est_delivery_date,custom").limit(2000),
       CRMDB.db.from("crm_stages").select("key,position,active").eq("active", true).order("position"),
       CRMDB.db.from("driven_outreach_tally").select("day,owner,dials,emails").gte("day", since.toISOString().slice(0, 10)).limit(500),
-      CRMDB.db.from("driven_tasks").select("id,text,owner,due,done").limit(2000)
+      CRMDB.db.from("driven_tasks").select("id,text,owner,due,done").limit(2000),
+      CRMDB.db.from("dashboard_data").select("truck_checks").eq("id", "driven_cmd").maybeSingle(),
+      CRMDB.db.from("vmi_shipments").select("ship_date").gte("ship_date", patrickWeekStart).lte("ship_date", today).limit(2000)
     ]);
     var activity = results[0].error ? [] : (results[0].data || []);
     var quotes = results[1].error ? [] : (results[1].data || []);
@@ -362,6 +305,11 @@
     if (results[4].error) notes.push("The outreach tally did not load.");
     else if (!tally.length) notes.push("driven_outreach_tally has no rows in this window, so dials and emails there are not added.");
     else notes.push("Outreach tally dials are added to calls, and its emails are added to emails and touches.");
+    var truckChecks = results[6].error ? [] : ((results[6].data && results[6].data.truck_checks) || []);
+    var shipments = results[7].error ? [] : (results[7].data || []);
+    if (results[6].error) notes.push("The truck log did not load, so Patrick's loads may be missing. " + CRMDB.explain(results[6].error));
+    if (results[7].error) notes.push("Shipments did not load, so those loads are not in Patrick's week. " + CRMDB.explain(results[7].error));
+    else if (shipments.length >= 2000) notes.push("The shipment list hit 2,000 rows, so some of Patrick's loads may be missing.");
     var wonKeys = stages.filter(function (s) {
       var cut = stages.find(function (x) { return x.key === "customer_po"; });
       return cut && s.position >= cut.position;
@@ -386,8 +334,15 @@
     });
     if (result.unmatched) notes.push(result.unmatched + " touch" + (result.unmatched === 1 ? "" : "es") + " had a name that is not Rich or Landon, so they are not in the rep rows.");
     notes.push("Green is at or above the goal. Red is below. A dash means that column has no goal.");
-    var scorecard = await resolveScorecard(result, deals, wonKeys);
-    renderBoard(result, goalsRes.data || [], notes, taskSummary, taskNote, scorecard);
+    var patrick = Card.patrickWeek({
+      today: today,
+      goals: goalsRes.data || [],
+      activity: activity,
+      tally: tally,
+      truckChecks: truckChecks,
+      shipments: shipments
+    });
+    renderBoard(result, goalsRes.data || [], notes, taskSummary, taskNote, patrick);
     armCapture();
     setStatus("Signed in as " + me.name + " · " + email);
   }
