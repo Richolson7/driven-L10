@@ -171,4 +171,57 @@ assert.strictEqual(backfill.vendor_id, 159);
 var noBackfill = Q.headerBackfill({ lines: [{ cost: null, vendor_id: null }] }, { vendor_price_per_unit: 12, vendor_id: 4 });
 assert.deepStrictEqual(noBackfill, {});
 
+var mixed = [
+  { desc: "Machine wrap", qty: 10, price: 20, cost: 12, freight: 15 },
+  { desc: "Stretch film", qty: 5, price: 30, cost: 18, freight: 10 },
+  { desc: "Corner boards", qty: 2, price: 40, cost: 22, freight: 8, optional: true, included: true },
+  { desc: "Pallet covers", qty: 4, price: 25, cost: 11, freight: 100, optional: true, included: false }
+];
+var mixedTotals = L.dealTotals(mixed, null);
+assert.strictEqual(mixedTotals.value, 430);
+assert.strictEqual(mixedTotals.freight, 33);
+assert.strictEqual(mixedTotals.cost, 287);
+assert.strictEqual(mixedTotals.optionalExcluded, 100);
+assert.strictEqual(mixedTotals.optionalExcludedCount, 1);
+assert.strictEqual(L.orderLines(mixed).length, 3);
+assert.strictEqual(L.orderLines(mixed)[2].desc, "Corner boards");
+var headerFreight = L.dealTotals(mixed, 50);
+assert.strictEqual(headerFreight.freight, 50);
+assert.strictEqual(headerFreight.value, 430);
+assert.strictEqual(headerFreight.cost, 304);
+assert.strictEqual(L.isIncluded({ optional: true }), false);
+assert.strictEqual(L.isIncluded({ optional: true, included: true }), true);
+assert.strictEqual(L.countsInTotal({ qty: 1, price: 5 }), true);
+
+var keptFlags = L.mergeStored(
+  { line_id: 4, desc: "Pallet covers", cost: 11, price: 25 },
+  { line_id: 4, desc: "Pallet covers", cost: 11, optional: true, included: false }
+);
+assert.strictEqual(keptFlags.optional, true);
+assert.strictEqual(keptFlags.included, false);
+assert.strictEqual(keptFlags.cost, 11);
+
+var mixedCustomer = L.customerLines(mixed);
+assert.strictEqual(mixedCustomer[0].optional, undefined);
+assert.strictEqual(mixedCustomer[0].cost, undefined);
+assert.strictEqual(mixedCustomer[2].optional, true);
+assert.strictEqual(mixedCustomer[2].included, true);
+assert.strictEqual(mixedCustomer[3].included, false);
+assert.strictEqual(Q.total(mixedCustomer), 430);
+var mixedHtml = Q.docHtml({
+  number: "Q-2026-0099",
+  date: "2026-11-24",
+  valid: 30,
+  companyName: "River Valley Converting",
+  lines: mixedCustomer
+});
+assert.ok(mixedHtml.indexOf("Machine wrap") >= 0);
+assert.ok(mixedHtml.indexOf("Corner boards (Optional, included)") >= 0);
+assert.ok(mixedHtml.indexOf("Pallet covers (Optional)") >= 0);
+assert.ok(mixedHtml.indexOf("Optional add-ons: $100.00 not included") >= 0);
+assert.ok(mixedHtml.indexOf("$430.00") >= 0);
+assert.strictEqual(mixedHtml.indexOf("$530.00"), -1);
+assert.strictEqual(mixedHtml.toLowerCase().indexOf("margin"), -1);
+assert.strictEqual(mixedHtml.toLowerCase().indexOf("vendor"), -1);
+
 console.log("crm-lines tests ok");

@@ -2,8 +2,10 @@
    Line sell = quantity × unit sell. Line cost = quantity × unit cost.
    Line margin is those two amounts. Freight is added once on the deal:
    the deal's freight when that field is set, otherwise the sum of any
-   freight typed on the lines. A blank unit cost stays blank. It is not
-   treated as $0, and it is not written over a cost already stored.
+   freight typed on the lines that count. A blank unit cost stays blank.
+   It is not treated as $0, and it is not written over a cost already stored.
+   A line with optional true is an add-on. It counts only when included
+   is true. Those two flags live on the line object inside the quote JSON.
    Customer quotes use customerLines() and never receive cost or margin.
    This file does not talk to the database. */
 (function (root, factory) {
@@ -39,6 +41,24 @@
       marginPct: sellTotal && margin != null ? margin / sellTotal : null
     };
   }
+  /* Optional is a flag on the line, not a column. Missing means required. */
+  function isOptional(line) {
+    if (!line) return false;
+    var v = line.optional;
+    return v === true || v === 1 || v === "1" || v === "true";
+  }
+  /* Required lines always count. An optional line counts only when included. */
+  function isIncluded(line) {
+    if (!isOptional(line)) return true;
+    var v = line.included;
+    return v === true || v === 1 || v === "1" || v === "true";
+  }
+  function countsInTotal(line) {
+    return isIncluded(line);
+  }
+  function orderLines(lines) {
+    return (lines || []).filter(countsInTotal);
+  }
   function freightAmount(lines, dealFreight) {
     var deal = num(dealFreight);
     if (deal != null) return deal;
@@ -51,19 +71,39 @@
     return any ? sum : 0;
   }
   function dealTotals(lines, dealFreight) {
+    var all = lines || [];
+    var priced = all.filter(countsInTotal);
     var value = 0;
     var cost = 0;
     var anyCost = false;
-    (lines || []).forEach(function (l) {
+    var optionalExcluded = 0;
+    var optionalExcludedCount = 0;
+    priced.forEach(function (l) {
       var fig = lineFigures(l);
       if (fig.sell != null) value += fig.sell;
       if (fig.cost != null) { anyCost = true; cost += fig.cost; }
     });
-    var freight = freightAmount(lines, dealFreight);
-    var freightKnown = num(dealFreight) != null || (lines || []).some(function (l) { return num(l && l.freight) != null; });
+    all.forEach(function (l) {
+      if (!isOptional(l) || isIncluded(l)) return;
+      optionalExcludedCount += 1;
+      var fig = lineFigures(l);
+      if (fig.sell != null) optionalExcluded += fig.sell;
+    });
+    var freight = freightAmount(priced, dealFreight);
+    var freightKnown = num(dealFreight) != null || priced.some(function (l) { return num(l && l.freight) != null; });
     value = round2(value);
+    optionalExcluded = round2(optionalExcluded);
+    var extra = { optionalExcluded: optionalExcluded, optionalExcludedCount: optionalExcludedCount };
     if (!anyCost && !freightKnown) {
-      return { value: value, cost: null, freight: freight, grossMargin: null, marginPct: null };
+      return {
+        value: value,
+        cost: null,
+        freight: freight,
+        grossMargin: null,
+        marginPct: null,
+        optionalExcluded: extra.optionalExcluded,
+        optionalExcludedCount: extra.optionalExcludedCount
+      };
     }
     cost = round2(cost + freight);
     var grossMargin = round2(value - cost);
@@ -72,7 +112,9 @@
       cost: cost,
       freight: freight,
       grossMargin: grossMargin,
-      marginPct: value ? grossMargin / value : null
+      marginPct: value ? grossMargin / value : null,
+      optionalExcluded: extra.optionalExcluded,
+      optionalExcludedCount: extra.optionalExcludedCount
     };
   }
   /* Copy a deal header onto line 0 only when the header actually has a
@@ -94,6 +136,9 @@
     if (!backup) return out;
     if (!hasValue(out.cost) && hasValue(backup.cost)) out.cost = backup.cost;
     if (!hasValue(out.vendor_id) && hasValue(backup.vendor_id)) out.vendor_id = backup.vendor_id;
+    /* crm_deal_lines has no optional columns. The flags stay on the quote JSON. */
+    if (out.optional == null && backup.optional != null) out.optional = backup.optional;
+    if (out.included == null && backup.included != null) out.included = backup.included;
     return out;
   }
   /* Columns to write on a line. A blank is omitted so an update does not
@@ -136,18 +181,27 @@
   }
   function customerLines(lines) {
     return (lines || []).map(function (l) {
-      return {
+      var row = {
         desc: l.desc || l.name || "",
         qty: l.qty,
         unit: l.unit || "",
         price: l.price
       };
+      if (isOptional(l)) {
+        row.optional = true;
+        row.included = isIncluded(l);
+      }
+      return row;
     });
   }
   return {
     num: num,
     round2: round2,
     lineFigures: lineFigures,
+    isOptional: isOptional,
+    isIncluded: isIncluded,
+    countsInTotal: countsInTotal,
+    orderLines: orderLines,
     freightAmount: freightAmount,
     dealTotals: dealTotals,
     headerLine: headerLine,
