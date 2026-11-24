@@ -1636,11 +1636,85 @@
     paintLines(d);
     if (!ok) return;
   }
+  /* Saving a quote line replaces the drawer markup. That used to drop the
+     scroll position and the field being edited, so the quote jumped to the
+     top. Remember both, then put them back on the new markup. */
+  function quoteEditorPlace() {
+    var dr = $("#drawer");
+    if (!dr) return null;
+    var body = dr.querySelector(".dbody");
+    var active = document.activeElement;
+    var focus = null;
+    if (active && active.dataset && dr.contains(active) && active !== dr) {
+      focus = {};
+      if (active.dataset.ql) focus.ql = active.dataset.ql;
+      else if (active.dataset.dl) focus.dl = active.dataset.dl;
+      else if (active.dataset.q) focus.q = active.dataset.q;
+      else if (active.dataset.k) focus.k = active.dataset.k;
+      else if (active.id) focus.id = active.id;
+      try {
+        if (typeof active.selectionStart === "number") {
+          focus.start = active.selectionStart;
+          focus.end = active.selectionEnd;
+        }
+      } catch (err) {}
+    }
+    var tables = [];
+    var wraps = dr.querySelectorAll(".tablewrap");
+    for (var i = 0; i < wraps.length; i++) tables.push(wraps[i].scrollLeft || 0);
+    return {
+      top: body ? body.scrollTop : 0,
+      left: body ? body.scrollLeft : 0,
+      tables: tables,
+      focus: focus
+    };
+  }
+  function quoteEditorField(dr, focus) {
+    if (!focus) return null;
+    var sel = "";
+    if (focus.ql) sel = "[data-ql='" + focus.ql + "']";
+    else if (focus.dl) sel = "[data-dl='" + focus.dl + "']";
+    else if (focus.q) sel = "[data-q='" + focus.q + "']";
+    else if (focus.k) sel = "[data-k='" + focus.k + "']";
+    else if (focus.id) sel = "#" + (window.CSS && CSS.escape ? CSS.escape(focus.id) : focus.id);
+    return sel ? dr.querySelector(sel) : null;
+  }
+  function restoreQuoteEditorPlace(place) {
+    if (!place) return;
+    var dr = $("#drawer");
+    if (!dr) return;
+    function applyScroll() {
+      var body = dr.querySelector(".dbody");
+      if (body) {
+        body.scrollTop = place.top;
+        body.scrollLeft = place.left;
+      }
+      var wraps = dr.querySelectorAll(".tablewrap");
+      for (var i = 0; i < place.tables.length; i++) {
+        if (wraps[i]) wraps[i].scrollLeft = place.tables[i];
+      }
+    }
+    applyScroll();
+    var el = quoteEditorField(dr, place.focus);
+    if (el && el.focus) {
+      try { el.focus({ preventScroll: true }); }
+      catch (err) { try { el.focus(); } catch (err2) {} }
+      if (place.focus && typeof place.focus.start === "number" && el.setSelectionRange) {
+        try { el.setSelectionRange(place.focus.start, place.focus.end); }
+        catch (err3) {}
+      }
+    }
+    applyScroll();
+    if (window.requestAnimationFrame) requestAnimationFrame(applyScroll);
+  }
   function paintLines(d) {
     var dr = $("#drawer");
     if (!dr.classList.contains("open")) return;
+    var place = quoteEditorPlace();
     if (dr.dataset.quote === String(d.id)) openQuote(d.id);
     else if (dr.dataset.deal === String(d.id)) openDeal(d.id);
+    else return;
+    restoreQuoteEditorPlace(place);
   }
   function quoteForPdf(d) {
     if (d.quote && d.quote.lines && d.quote.lines.length) return d.quote;
