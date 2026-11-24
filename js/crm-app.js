@@ -942,6 +942,18 @@
     h += "<li><b>Move deals on the Pipeline.</b> Drag the card, or use the stage bar in the deal. Fill what the next stage asks for.</li>";
     h += "<li><b>Customer PO?</b> Move the deal to Customer PO the same day. The order lands in Open orders.</li>";
     h += "</ol></div></div></div>";
+    h += "<div class='sect' style='margin-top:28px'><h2>How customers pay</h2><div class='panel' style='padding:14px'><ol class='crm-steps'>";
+    h += "<li><b>Send the public page.</b> Customers pay an invoice at <a href='https://richolson7.github.io/driven-L10/pay.html'>pay.html</a>. No sign-in. The page asks for the invoice number and the amount only.</li>";
+    h += "<li><b>Prefill the link.</b> Add the invoice and amount, like <span class='log'>pay.html?invoice=20539&amp;amount=1964.80</span>. The customer sees those values filled in. Copy customer link on that page copies the same kind of link.</li>";
+    h += "<li><b>They finish on PayTrace.</b> Continue to secure payment opens the PayTrace hosted page. The PayTrace link inside pay.html is the source. Driven never sees the card number.</li>";
+    h += "</ol><p class='log'>Customer questions: 612-802-3187 or orders@drivensol.com.</p></div></div>";
+    h += "<div class='sect' id='training-quote-products' style='margin-top:28px'><h2>Adding a product to a quote</h2><p class='lead'>The catalog on a quote lists two columns. The quote line still stores the rest.</p><div class='panel' style='padding:14px'><ol class='crm-steps'>";
+    h += "<li><b>Open the quote.</b> Use New quote, or Open quote on a deal, then look at Line items.</li>";
+    h += "<li><b>The catalog shows QuickBooks SKU and Description.</b> Cost, price, category, and vendor are not columns on this list.</li>";
+    h += "<li><b>QuickBooks SKU</b> is the SKU stored on the product. When that field is blank, the column shows the QuickBooks product or service name.</li>";
+    h += "<li><b>Search</b> matches the SKU, the QuickBooks product or service name, and the description.</li>";
+    h += "<li><b>Click a row</b> to put that product on the line. Price, unit, category, and the QuickBooks item id still copy onto the line. Choose Type a description when the product is not in the catalog.</li>";
+    h += "</ol></div></div>";
     h += "<div class='sect' style='margin-top:28px'><h2>Quotes</h2><div class='grid2'><div class='panel' style='padding:14px'><h3 class='cond' style='font-size:20px'>Optional line items on quotes</h3>";
     h += "<p>Tick Optional on a line the buyer can leave off. Included starts unchecked, so that line stays out of the total until you tick it. The quote total, margin, and deal value count required lines and included optional lines. Print and the PDF list the rest as optional add-ons with their prices. There is no customer page for the buyer to tick these. When they choose, tick Included. That saves the total and writes Customer selected options on the deal. A won deal copies only the included lines onto the order. Optional lines they left off stay on the quote.</p>";
     h += "<p style='margin:8px 0 0'><a class='ghost' href='docs/optional-line-items.html' style='text-decoration:none'>Open the guide</a></p></div></div></div>";
@@ -1536,6 +1548,40 @@
   }
 
   function findQuoteDeal(id) { return dealById(id); }
+  /* QuickBooks SKU is crm_products.sku, the Item Sku field.
+     When Sku is blank, the Product/Service name is the identifier QuickBooks stored. */
+  function quoteProductSku(p) {
+    var sku = p && p.sku != null ? String(p.sku).trim() : "";
+    if (sku) return sku;
+    return p && p.name != null ? String(p.name).trim() : "";
+  }
+  function quoteProductDesc(p) {
+    var desc = p && p.description != null ? String(p.description).trim() : "";
+    if (desc) return desc;
+    return p && p.name != null ? String(p.name).trim() : "";
+  }
+  function quoteCatalogMatch(p, query) {
+    if (!p || p.active === false) return false;
+    var q = String(query || "").trim().toLowerCase();
+    if (!q) return true;
+    return [quoteProductSku(p), quoteProductDesc(p), p.sku, p.name, p.description].map(function (v) {
+      return v == null ? "" : String(v);
+    }).join("\n").toLowerCase().indexOf(q) >= 0;
+  }
+  function quoteCatalogRows(dealId, index, query, productId) {
+    var rows = S.products.filter(function (p) { return quoteCatalogMatch(p, query); });
+    if (!rows.length) return "<tr><td colspan='2' class='empty'>" + (S.products.some(function (p) { return p.active !== false; }) ? "No products match." : "No products yet.") + "</td></tr>";
+    return rows.map(function (p) {
+      var on = productId != null && productId !== "" && String(productId) === String(p.id);
+      return "<tr class='click" + (on ? " on" : "") + "' data-act='q-pick-product' data-id='" + dealId + "' data-i='" + index + "' data-product='" + p.id + "'><td>" + esc(quoteProductSku(p)) + "</td><td>" + esc(String(quoteProductDesc(p)).replace(/\s+/g, " ")) + "</td></tr>";
+    }).join("");
+  }
+  function quoteCatalogPicker(d, index, line) {
+    return "<div class='qpick'><input type='search' data-qpick-q='" + index + "' data-qpick-deal='" + d.id + "' placeholder='SKU or description' aria-label='Search QuickBooks SKU or description' autocomplete='off'>" +
+      "<button type='button' class='linkbtn' data-act='q-pick-clear' data-id='" + d.id + "' data-i='" + index + "'>Type a description</button>" +
+      "<div class='qpick-list'><table><thead><tr><th>QuickBooks SKU</th><th>Description</th></tr></thead><tbody data-qpick-body='" + index + "'>" +
+      quoteCatalogRows(d.id, index, "", line.product_id) + "</tbody></table></div></div>";
+  }
   function openQuote(dealId) {
     var d = dealById(dealId); if (!d) return;
     if (!d.quote) d.quote = blankQuote(d);
@@ -1565,12 +1611,10 @@
     var math = dealMath(d);
     h += "<div class='tablewrap'><table class='qlines'><thead><tr><th>Catalog</th><th>Product</th><th>Category</th><th>Invoice #</th><th>Qty</th><th>Unit</th><th>Vendor</th><th>Unit cost</th><th>Unit sell</th><th>Line sell</th><th>Margin</th><th>Options</th><th></th></tr></thead><tbody>" +
       q.lines.map(function (l, i) {
-        var catalog = "<select data-ql='" + i + ":product_id'><option value=''>Type a description</option>" + S.products.filter(function (p) { return p.active !== false; }).map(function (p) {
-          return "<option value='" + p.id + "'" + (+l.product_id === p.id ? " selected" : "") + ">" + esc(p.sku ? p.sku + " · " + p.name : p.name) + "</option>";
-        }).join("") + "</select>";
+        var catalog = quoteCatalogPicker(d, i, l);
         var fig = CRMLines.lineFigures(l);
         return "<tr" + lineRowClass(l) + "><td>" + catalog + "</td><td><input data-ql='" + i + ":desc' value='" + esc(l.desc || "") + "' aria-label='Product'></td><td><select data-ql='" + i + ":category'><option value=''>Choose…</option>" + Orders.CATEGORIES.map(function (c) { return "<option" + (l.category === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select></td><td><input data-ql='" + i + ":invoice_number' value='" + esc(l.invoice_number || "") + "' aria-label='Invoice number'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-ql='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + (l.unit === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-ql='" + i + ":vendor_id'", vend, l.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-ql='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Vendor cost'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Sell price'></td><td class='calc'>" + sellWithFlag(l, fig, Orders.money) + "</td><td class='calc'>" + (fig.marginPct == null ? "—" : pct(fig.marginPct)) + "</td>" + optionControls("ql", i, l) + "<td>" + (q.lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
-      }).join("") + "</tbody><tfoot><tr><td colspan='9'>Quote total" + (math.freight ? " · freight " + Orders.money(math.freight) : "") + "</td><td class='calc'>" + Orders.money(math.value) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : pct(math.marginPct)) + "</td><td></td><td></td></tr></tfoot></table></div>" + optionalAddonHtml(math, Orders.money) + "<button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> <button class='ghost' data-act='usual-order' data-id='" + d.id + "'>Use usual order</button><p class='log'>Tick Optional on a line the buyer can leave off. Included starts unchecked, so that line stays out of the total until you tick Included. Required lines and included optional lines make the quote total, margin, and deal value. Print and the PDF list the other optional lines with their prices. There is no customer page for the buyer to tick these; record their choice with Included. The first line still fills the deal's unit price, quantity, and vendor so older screens keep a product on the deal. Vendor cost and margin stay off the customer PDF.</p></fieldset>";
+      }).join("") + "</tbody><tfoot><tr><td colspan='9'>Quote total" + (math.freight ? " · freight " + Orders.money(math.freight) : "") + "</td><td class='calc'>" + Orders.money(math.value) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : pct(math.marginPct)) + "</td><td></td><td></td></tr></tfoot></table></div>" + optionalAddonHtml(math, Orders.money) + "<button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> <button class='ghost' data-act='usual-order' data-id='" + d.id + "'>Use usual order</button><p class='log'>Tick Optional on a line the buyer can leave off. Included starts unchecked, so that line stays out of the total until you tick Included. Required lines and included optional lines make the quote total, margin, and deal value. Print and the PDF list the other optional lines with their prices. There is no customer page for the buyer to tick these; record their choice with Included. The first line still fills the deal's unit price, quantity, and vendor so older screens keep a product on the deal. Vendor cost and margin stay off the customer PDF. The catalog lists QuickBooks SKU and Description. Search matches the SKU, the product or service name, and the description. Click a row to fill this line. Type a description when it is not in the catalog.</p></fieldset>";
     h += "<fieldset><legend>Terms on the quote</legend><div class='f'><textarea data-q='terms'>" + esc(q.terms || "") + "</textarea></div></fieldset></div>";
     h += "<div class='dfoot'><button class='primary' data-act='q-download' data-id='" + d.id + "'>Download PDF</button><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-open-deal='" + d.id + "'>Open deal</button></div>";
     openDrawer(h, true);
@@ -1780,6 +1824,12 @@
     if (act === "new-quote") { ensureQuote(a.dataset.deal ? +a.dataset.deal : null, a.dataset.company ? +a.dataset.company : null); return; }
     if (act === "new-quote-pick") { openModal("<h2>New quote</h2><div class='f'><label>Customer</label><select id='nqCo'><option value=''>Choose…</option>" + S.companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) { return "<option value='" + c.id + "'>" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nq-ok'>Start quote</button></div>"); return; }
     if (act === "nq-ok") { var cid = +$("#nqCo").value; if (!cid) { toast("Pick a customer."); return; } closeModal(); ensureQuote(null, cid); return; }
+    if (act === "q-pick-product" || act === "q-pick-clear") {
+      var picked = dealById(+id);
+      if (!picked || !picked.quote) return;
+      onQuoteField(picked, { part: "line", raw: a.dataset.i + ":product_id", value: act === "q-pick-clear" ? "" : a.dataset.product });
+      return;
+    }
     if (act === "open-quote") { openQuote(+id); return; }
     if (act === "q-print") { var pd = dealById(+id); if (pd) printQuote(quoteForPdf(pd)); return; }
     if (act === "q-download") { var dd = dealById(+id); if (dd) downloadQuote(quoteForPdf(dd)); return; }
@@ -2305,6 +2355,16 @@
     render();
     openCompany(cid);
   }
+
+  document.addEventListener("input", function (e) {
+    var el = e.target;
+    if (!el.dataset || el.dataset.qpickQ == null || el.dataset.qpickQ === "") return;
+    var body = document.querySelector("[data-qpick-body='" + el.dataset.qpickQ + "']");
+    if (!body) return;
+    var pickedDeal = dealById(+el.dataset.qpickDeal);
+    var line = pickedDeal && pickedDeal.quote && pickedDeal.quote.lines[+el.dataset.qpickQ];
+    body.innerHTML = quoteCatalogRows(el.dataset.qpickDeal, el.dataset.qpickQ, el.value, line ? line.product_id : null);
+  });
 
   document.addEventListener("change", function (e) {
     var el = e.target;
