@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pay an Invoice | Driven Solutions</title>
+<style>
+  :root {
+    --ink: #142018;
+    --muted: #3e5248;
+    --green: #146c3a;
+    --green-dark: #0e522c;
+    --line: #d5e2da;
+    --bg: #f3f6f3;
+    --card: #ffffff;
+    --danger: #8d1d1d;
+    --danger-bg: #fdecec;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 1.125rem;
+    line-height: 1.45;
+  }
+  .wrap {
+    width: min(32rem, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 1.75rem 0 2.5rem;
+  }
+  .brand {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+  }
+  .place {
+    margin: 0.15rem 0 0;
+    color: var(--muted);
+    font-size: 1rem;
+  }
+  h1 {
+    margin: 1.35rem 0 0.4rem;
+    font-size: 2rem;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+  }
+  .lede {
+    margin: 0 0 1.25rem;
+    color: var(--muted);
+    font-size: 1.125rem;
+  }
+  form {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-top: 4px solid var(--green);
+    border-radius: 14px;
+    padding: 1.15rem 1.15rem 1.2rem;
+  }
+  label {
+    display: block;
+    margin: 0 0 0.95rem;
+    font-weight: 700;
+  }
+  .hint {
+    display: block;
+    margin-top: 0.15rem;
+    font-weight: 500;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  input {
+    display: block;
+    width: 100%;
+    margin-top: 0.4rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid #b7c9be;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 1.25rem;
+  }
+  input:focus {
+    outline: 3px solid rgba(20, 108, 58, 0.28);
+    border-color: var(--green);
+  }
+  .error {
+    margin: 0 0 0.9rem;
+    padding: 0.7rem 0.8rem;
+    border-radius: 10px;
+    background: var(--danger-bg);
+    color: var(--danger);
+    font-size: 1.05rem;
+    font-weight: 650;
+  }
+  button[type="submit"] {
+    display: block;
+    width: 100%;
+    margin: 0.2rem 0 0;
+    padding: 0.9rem 1rem;
+    border: 0;
+    border-radius: 10px;
+    background: var(--green);
+    color: #fff;
+    font: inherit;
+    font-size: 1.2rem;
+    font-weight: 750;
+    cursor: pointer;
+  }
+  button[type="submit"]:hover { background: var(--green-dark); }
+  button[type="submit"]:focus-visible {
+    outline: 3px solid rgba(20, 108, 58, 0.45);
+    outline-offset: 2px;
+  }
+  .note, .contact, .site {
+    margin: 0.85rem 0 0;
+    color: var(--muted);
+    font-size: 1.02rem;
+  }
+  .copy {
+    display: inline-block;
+    margin-top: 0.85rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--green-dark);
+    font: inherit;
+    font-size: 0.98rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    cursor: pointer;
+  }
+  .copy:focus-visible { outline: 3px solid rgba(20, 108, 58, 0.35); }
+  .copied {
+    margin: 0.35rem 0 0;
+    color: var(--green-dark);
+    font-size: 0.98rem;
+    font-weight: 700;
+  }
+  a { color: var(--green-dark); }
+  .contact a, .site a { font-weight: 700; }
+  @media (min-width: 40rem) {
+    .wrap { padding-top: 3rem; }
+    h1 { font-size: 2.35rem; }
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <p class="brand">Driven Solutions</p>
+    <p class="place">Packaging · River Falls, WI</p>
+    <h1>Pay an invoice</h1>
+    <p class="lede">Enter the invoice number and the amount due. You will finish on PayTrace’s secure page.</p>
+    <form id="pay" action="#" method="post" novalidate>
+      <label>
+        Invoice number
+        <input id="invoice" name="invoice" type="text" autocomplete="off" required>
+      </label>
+      <label>
+        Amount
+        <span class="hint">US dollars</span>
+        <input id="amount" name="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" required>
+      </label>
+      <p id="error" class="error" role="alert" hidden></p>
+      <button type="submit">Continue to secure payment</button>
+      <p class="note">You’ll finish payment on PayTrace’s secure page. Driven never sees your card number.</p>
+      <button type="button" class="copy" id="copy">Copy customer link</button>
+      <p id="copied" class="copied" role="status" hidden>Link copied.</p>
+    </form>
+    <p class="contact">Questions? Call <a href="tel:+16128023187">612-802-3187</a> or email <a href="mailto:orders@drivensol.com">orders@drivensol.com</a>.</p>
+    <p class="site"><a href="https://www.drivensol.com">drivensol.com</a></p>
+  </main>
+  <script>
+    (function () {
+      var BASE = "https://paylink.paytrace.com/Payment?m=eyJhbGciOiJBMjU2S1ciLCJlbmMiOiJBMTI4R0NNIn0.IB1x-Am_0uSzqNmdpz_VNDnjuMX4VzZC.yeGF50ONFU1P6BJ2.Jy3MjezpW3i5oT3PbPB7cdUFYFPeAKdJHcSa2R8oM1t6H-yWSXFhkpWHAQqzoNdotC3dNxpfNhtC98DMimzi4uVB_hGVnxdtJYRkdNLBrdaqFPqoc-ty-tbIoCbkF5T6jjzqBvTO6o_iBdGCvyifSqVC9nbBo53chQy4gnHPMAVxoQrl-DgVlxJug7VLHmRP-RPnZAP8ACJtFJa63X-F7ZdJIGdO2RZTYdgMWrkdcm6p4Hr46-FCbodPy8AYeevf4CL3YEssAqzPxF0I3q1mtfE2Wuj8T2Prk-32TQ.aJIPh3lMzlqosf3l_86jCw";
+      var form = document.getElementById("pay");
+      var invoiceEl = document.getElementById("invoice");
+      var amountEl = document.getElementById("amount");
+      var errorEl = document.getElementById("error");
+      var copiedEl = document.getElementById("copied");
+
+      function showError(message) {
+        errorEl.textContent = message;
+        errorEl.hidden = !message;
+      }
+
+      function readInvoice() {
+        return invoiceEl.value.trim();
+      }
+
+      function readAmount() {
+        var raw = String(amountEl.value || "").replace(/[$,\s]/g, "");
+        if (!raw) return { error: "Enter the amount due." };
+        if (!/^\d+(\.\d{1,2})?$/.test(raw)) return { error: "Enter the amount in dollars and cents, like 1964.80." };
+        var value = Number(raw).toFixed(2);
+        if (!(Number(value) > 0)) return { error: "Amount must be more than zero." };
+        return { value: value };
+      }
+
+      function readFields() {
+        var invoice = readInvoice();
+        if (!invoice) return { error: "Enter the invoice number." };
+        var amount = readAmount();
+        if (amount.error) return amount;
+        return { invoice: invoice, amount: amount.value };
+      }
+
+      function paymentUrl(fields) {
+        return BASE + "&amount=" + encodeURIComponent(fields.amount) + "&invoice=" + encodeURIComponent(fields.invoice);
+      }
+
+      function customerLink(fields) {
+        return location.origin + location.pathname + "?invoice=" + encodeURIComponent(fields.invoice) + "&amount=" + encodeURIComponent(fields.amount);
+      }
+
+      var params = new URLSearchParams(location.search);
+      if (params.has("invoice")) invoiceEl.value = String(params.get("invoice") || "").trim();
+      if (params.has("amount")) {
+        var seeded = String(params.get("amount") || "").replace(/[$,\s]/g, "");
+        amountEl.value = /^\d+(\.\d{1,2})?$/.test(seeded) && Number(seeded) > 0 ? Number(seeded).toFixed(2) : String(params.get("amount") || "").trim();
+      }
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        copiedEl.hidden = true;
+        var fields = readFields();
+        if (fields.error) {
+          showError(fields.error);
+          return;
+        }
+        showError("");
+        window.location.assign(paymentUrl(fields));
+      });
+
+      document.getElementById("copy").addEventListener("click", function () {
+        var fields = readFields();
+        if (fields.error) {
+          copiedEl.hidden = true;
+          showError(fields.error);
+          return;
+        }
+        var link = customerLink(fields);
+        function done() {
+          showError("");
+          copiedEl.hidden = false;
+          copiedEl.textContent = "Link copied.";
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link).then(done, function () {
+            showError("Copy this link: " + link);
+          });
+          return;
+        }
+        showError("Copy this link: " + link);
+      });
+    })();
+  </script>
+</body>
+</html>

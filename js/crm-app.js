@@ -908,6 +908,11 @@
     h += "<li><b>Move deals on the Pipeline.</b> Drag the card, or use the stage bar in the deal. Fill what the next stage asks for.</li>";
     h += "<li><b>Customer PO?</b> Move the deal to Customer PO the same day. The order lands in Open orders.</li>";
     h += "</ol></div></div></div>";
+    h += "<div class='sect' style='margin-top:28px'><h2>How customers pay</h2><div class='panel' style='padding:14px'><ol class='crm-steps'>";
+    h += "<li><b>Send the public page.</b> Customers pay an invoice at <a href='https://richolson7.github.io/driven-L10/pay.html'>pay.html</a>. No sign-in. The page asks for the invoice number and the amount only.</li>";
+    h += "<li><b>Prefill the link.</b> Add the invoice and amount, like <span class='log'>pay.html?invoice=20539&amp;amount=1964.80</span>. The customer sees those values filled in. Copy customer link on that page copies the same kind of link.</li>";
+    h += "<li><b>They finish on PayTrace.</b> Continue to secure payment opens the PayTrace hosted page. The PayTrace link inside pay.html is the source. Driven never sees the card number.</li>";
+    h += "</ol><p class='log'>Customer questions: 612-802-3187 or orders@drivensol.com.</p></div></div>";
     var topics = window.CRMPortalOrders ? CRMPortalOrders.trainingTopics() : [];
     if (topics.length) {
       h += "<div class='sect' style='margin-top:28px'><h2>Portal and the tab bar</h2><div class='grid2'>";
