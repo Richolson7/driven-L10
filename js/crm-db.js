@@ -2,7 +2,9 @@
    Landon: this file only talks to the database. Screens live in crm-app.js.
    Each write is one row. The {error} from Supabase is always reported.
    A write that comes back with no row is treated as a failure too
-   (row level security can hide a failed update). */
+   (row level security can hide a failed update).
+   selectAll pages past PostgREST's 1,000-row cap so every row loads.
+   See docs/crm-rows.md. */
 (function () {
   "use strict";
 
@@ -96,7 +98,20 @@
   }
 
   async function selectAll(table) {
-    return db.from(table).select("*");
+    var page = 1000;
+    var from = 0;
+    var all = [];
+    for (;;) {
+      var res = await db.from(table).select("*").order("id", { ascending: true }).range(from, from + page - 1);
+      if (res.error) return res;
+      var rows = res.data || [];
+      all = all.concat(rows);
+      if (rows.length < page) return { data: all, error: null, count: all.length };
+      from += page;
+      if (from >= 50000) {
+        return { data: all, error: { message: "selectAll stopped at 50,000 rows on " + table } };
+      }
+    }
   }
 
   window.CRMDB = {
