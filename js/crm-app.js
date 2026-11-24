@@ -78,6 +78,7 @@
   var DATE_KEYS = { quote_sent_date: 1, est_ship_date: 1, est_delivery_date: 1, invoice_sent_date: 1, paid_date: 1 };
   var NUM_KEYS = { price_per_unit: 1, quantity: 1, vendor_price_per_unit: 1, vendor_quantity: 1, freight: 1, ship_to_id: 1, vendor_id: 1, company_id: 1 };
 
+  var editingContactId = null;
   var S = { theme: "dark", view: "pipeline", calcReturn: "", meId: null, authEmail: "", authLocked: false, entered: false, stages: [], team: [], rules: [], fields: [], companies: [], contacts: [], shipTos: [], deals: [], tasks: [], activity: [], stepRows: [], targets: [], outreach: [], products: [], messages: [], sequenceNote: "", targetsNote: "", quotesNote: "", linesNote: "", productsNote: "", messagesNote: "", feedback: "" };
   function rememberCalcReturn(fromView) {
     if (!fromView || fromView === "calculator") return;
@@ -913,6 +914,11 @@
     h += "<li><b>Prefill the link.</b> Add the invoice and amount, like <span class='log'>pay.html?invoice=20539&amp;amount=1964.80</span>. The customer sees those values filled in. Copy customer link on that page copies the same kind of link.</li>";
     h += "<li><b>They finish on PayTrace.</b> Continue to secure payment opens the PayTrace hosted page. The PayTrace link inside pay.html is the source. Driven never sees the card number.</li>";
     h += "</ol><p class='log'>Customer questions: 612-802-3187 or orders@drivensol.com.</p></div></div>";
+    h += "<div class='sect' style='margin-top:28px'><h2>Editing a contact</h2><div class='panel' style='padding:14px'><ol class='crm-steps'>";
+    h += "<li><b>Open the company.</b> Search Companies and open the company that person belongs to.</li>";
+    h += "<li><b>Click Edit.</b> Edit sits next to Remove. Role, name, email, and phone fill in.</li>";
+    h += "<li><b>Save or cancel.</b> Save writes the contact. Cancel leaves it unchanged. Remove still deletes it.</li>";
+    h += "</ol></div></div>";
     var topics = window.CRMPortalOrders ? CRMPortalOrders.trainingTopics() : [];
     if (topics.length) {
       h += "<div class='sect' style='margin-top:28px'><h2>Portal and the tab bar</h2><div class='grid2'>";
@@ -1186,7 +1192,13 @@
     h += (c.ready_for_qb ? "<span class='chip active'>Ready for QuickBooks</span> " : "") + (c.qb_id ? "<span class='chip active'>Marked in QuickBooks (" + esc(c.qb_id) + ")</span>" : "<button class='ghost' data-act='qb-mark' data-id='" + c.id + "'>Mark ready / set up in QuickBooks</button>");
     h += "<p class='log'>Checklist ticks save on this company. QuickBooks itself is not updated.</p></fieldset>";
     h += "<fieldset><legend>Ship-to addresses</legend><ul class='mini'>" + (ships.length ? ships.map(function (s) { return "<li><b>" + esc(s.label) + "</b> · " + esc(s.address) + " <button class='linkbtn' data-act='del-ship' data-id='" + s.id + "'>Remove</button></li>"; }).join("") : "<li class='log'>None yet.</li>") + "</ul><div class='addrow' style='grid-template-columns:1fr 2fr auto'><input id='nsLabel' placeholder='Label'><input id='nsAddr' placeholder='Full address'><button class='ghost' data-act='add-ship' data-id='" + c.id + "'>Add</button></div></fieldset>";
-    h += "<fieldset><legend>Contacts</legend><ul class='mini'>" + (cons.length ? cons.map(function (x) { return "<li><b>" + esc(x.name) + "</b> · " + esc(x.role) + "<br><span class='log'>" + esc(x.email) + (x.phone ? " · " + esc(x.phone) : "") + "</span> <label class='switch' style='display:inline-flex'><input type='checkbox' data-textok='" + x.id + "'" + (c.textOk[x.id] ? " checked" : "") + "> OK to text</label> <button class='linkbtn' data-act='del-contact' data-id='" + x.id + "'>Remove</button></li>"; }).join("") : "<li class='log'>No contacts yet.</li>") + "</ul><div class='addrow'><input id='ncRole' placeholder='Role'><input id='ncName' placeholder='Name'><input id='ncEmail' placeholder='Email'><input id='ncPhone' placeholder='Phone'><button class='ghost' data-act='add-contact' data-id='" + c.id + "'>Add</button></div></fieldset>";
+    var editing = S.contacts.find(function (x) { return x.id === editingContactId && x.company_id === c.id; }) || null;
+    h += "<fieldset><legend>Contacts</legend><ul class='mini'>" + (cons.length ? cons.map(function (x) { return "<li><b>" + esc(x.name) + "</b> · " + esc(x.role) + "<br><span class='log'>" + esc(x.email) + (x.phone ? " · " + esc(x.phone) : "") + "</span> <label class='switch' style='display:inline-flex'><input type='checkbox' data-textok='" + x.id + "'" + (c.textOk[x.id] ? " checked" : "") + "> OK to text</label> <button class='linkbtn' data-act='edit-contact' data-id='" + x.id + "'>Edit</button> <button class='linkbtn' data-act='del-contact' data-id='" + x.id + "'>Remove</button></li>"; }).join("") : "<li class='log'>No contacts yet.</li>") + "</ul>";
+    if (editing) {
+      h += "<div class='addrow' style='grid-template-columns:repeat(4,1fr) auto auto'><input id='ncRole' placeholder='Role' value='" + esc(editing.role) + "'><input id='ncName' placeholder='Name' value='" + esc(editing.name) + "'><input id='ncEmail' placeholder='Email' value='" + esc(editing.email) + "'><input id='ncPhone' placeholder='Phone' value='" + esc(editing.phone) + "'><button class='primary' data-act='save-contact' data-id='" + editing.id + "'>Save</button><button class='ghost' data-act='cancel-edit-contact' data-id='" + c.id + "'>Cancel</button></div></fieldset>";
+    } else {
+      h += "<div class='addrow'><input id='ncRole' placeholder='Role'><input id='ncName' placeholder='Name'><input id='ncEmail' placeholder='Email'><input id='ncPhone' placeholder='Phone'><button class='ghost' data-act='add-contact' data-id='" + c.id + "'>Add</button></div></fieldset>";
+    }
     if (c.kind !== "vendor") {
       var sqs = sequences();
       var ens = c.enrollments || [];
@@ -1779,6 +1791,9 @@
     if (act === "add-ship") { addShip(+id); return; }
     if (act === "del-ship") { delShip(+id); return; }
     if (act === "add-contact") { addContact(+id); return; }
+    if (act === "edit-contact") { startEditContact(+id); return; }
+    if (act === "save-contact") { saveContact(+id); return; }
+    if (act === "cancel-edit-contact") { cancelEditContact(+id); return; }
     if (act === "del-contact") { delContact(+id); return; }
     if (act === "log-contact") { quickLog("touch", +id); return; }
     if (act === "quick-log") { quickLog(a.dataset.kind || "touch", id ? +id : null); return; }
@@ -1967,12 +1982,39 @@
     var saved = await CRMDB.insert("crm_contacts", { company_id: companyId, role: $("#ncRole").value.trim() || null, name: name, email: $("#ncEmail").value.trim() || null, phone: $("#ncPhone").value.trim() || null }, "contact");
     if (!saved) return;
     S.contacts.push({ id: saved.id, company_id: companyId, role: saved.role || "", name: saved.name, email: saved.email || "", phone: saved.phone || "" });
+    editingContactId = null;
     openCompany(companyId);
+  }
+  function startEditContact(id) {
+    var x = S.contacts.find(function (y) { return y.id === id; });
+    if (!x) { toast("That contact is not loaded. Reload the CRM and try again.", "bad"); return; }
+    editingContactId = id;
+    openCompany(x.company_id);
+  }
+  function cancelEditContact(companyId) {
+    editingContactId = null;
+    openCompany(companyId);
+  }
+  async function saveContact(id) {
+    var x = S.contacts.find(function (y) { return y.id === id; });
+    if (!x) { toast("That contact is not loaded.", "bad"); return; }
+    var name = $("#ncName").value.trim();
+    if (!name) { toast("Add a name."); return; }
+    var patch = { role: $("#ncRole").value.trim() || null, name: name, email: $("#ncEmail").value.trim() || null, phone: $("#ncPhone").value.trim() || null };
+    var saved = await CRMDB.update("crm_contacts", id, patch, "contact");
+    if (!saved) return;
+    x.role = saved.role || "";
+    x.name = saved.name;
+    x.email = saved.email || "";
+    x.phone = saved.phone || "";
+    editingContactId = null;
+    openCompany(x.company_id);
   }
   async function delContact(id) {
     var x = S.contacts.find(function (y) { return y.id === id; });
     var gone = await CRMDB.remove("crm_contacts", id, "contact");
     if (!gone) return;
+    if (editingContactId === id) editingContactId = null;
     S.contacts = S.contacts.filter(function (y) { return y.id !== id; });
     if (x) openCompany(x.company_id);
   }
