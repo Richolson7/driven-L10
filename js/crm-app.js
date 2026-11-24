@@ -140,11 +140,33 @@
   function SI(k) { return S.stages.findIndex(function (s) { return s.key === k; }); }
   function WON() { var i = SI("customer_po"); return i < 0 ? 2 : i; }
   function stageName(k) { var s = S.stages.find(function (x) { return x.key === k; }); return s ? s.name : (k || ""); }
-  function reps() { return S.team.filter(function (t) { return t.team === "sales" && t.active !== false; }).map(function (t) { return t.name; }); }
+  /* A to Z, ignoring case, with 2 before 10. */
+  function cmpName(a, b) {
+    return String(a == null ? "" : a).localeCompare(String(b == null ? "" : b), undefined, { numeric: true, sensitivity: "base" });
+  }
+  function sortedBy(list, label) {
+    return (list || []).slice().sort(function (a, b) {
+      var left = typeof label === "function" ? label(a) : a[label];
+      var right = typeof label === "function" ? label(b) : b[label];
+      return cmpName(left, right);
+    });
+  }
+  function cmpDeal(a, b) {
+    var byCompany = cmpName((co(a.company_id) || {}).name || "", (co(b.company_id) || {}).name || "");
+    return byCompany || cmpName(a.description || "", b.description || "");
+  }
+  function sortedNames(list) { return (list || []).slice().sort(cmpName); }
+  function reps() { return sortedNames(S.team.filter(function (t) { return t.team === "sales" && t.active !== false; }).map(function (t) { return t.name; })); }
   function repOptions() {
     var names = reps().slice();
     ["House", "Brady"].forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); });
-    return names;
+    return names.sort(cmpName);
+  }
+  function teamByName() { return sortedBy(S.team, "name"); }
+  function customersByName() { return sortedBy(S.companies.filter(function (c) { return c.kind !== "vendor"; }), "name"); }
+  function vendorsByName() { return sortedBy(S.companies.filter(function (c) { return c.kind === "vendor"; }), "name"); }
+  function categoryOptions(selected) {
+    return sortedNames(Orders.CATEGORIES).map(function (c) { return "<option" + (selected === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("");
   }
   function isWon(d) { return d.status !== "lost" && SI(d.stage) >= WON(); }
   function qOf(d) { return d && d.quote ? d.quote : null; }
@@ -639,11 +661,11 @@
   function inputFor(f, v, d, attr) {
     var a = attr + '="' + f.k + '"';
     if (f.t === "company" || f.t === "vendor") {
-      var list = S.companies.filter(function (c) { return f.t === "vendor" ? c.kind === "vendor" : c.kind !== "vendor"; });
+      var list = f.t === "vendor" ? vendorsByName() : customersByName();
       return "<select " + a + "><option value=''>Choose…</option>" + list.map(function (c) { return "<option value='" + c.id + "'" + (+v === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>"; }).join("") + "</select>";
     }
     if (f.t === "shipto") {
-      var ships = S.shipTos.filter(function (s) { return s.company_id === +d.company_id; });
+      var ships = sortedBy(S.shipTos.filter(function (s) { return s.company_id === +d.company_id; }), function (s) { return (s.label || "") + " " + (s.address || ""); });
       return "<select " + a + "><option value=''>" + (ships.length ? "Choose…" : "Add a ship-to on the company first") + "</option>" + ships.map(function (s) { return "<option value='" + s.id + "'" + (+v === s.id ? " selected" : "") + ">" + esc(s.label + ": " + s.address) + "</option>"; }).join("") + "</select>";
     }
     if (f.t === "rep") return "<select " + a + "><option value=''>Choose…</option>" + repOptions().map(function (r) { return "<option" + (v === r ? " selected" : "") + ">" + esc(r) + "</option>"; }).join("") + "</select>";
@@ -821,7 +843,7 @@
       });
       var approve = mine.some(function (r) { return typeof r.requires_approval === "boolean"; }) ? mine.some(function (r) { return r.requires_approval; }) : localStorage.getItem("driven-crm-seq-approve:" + name) !== "0";
       return { name: name, active: mine.some(function (r) { return r.active; }), approve: approve, steps: steps };
-    });
+    }).sort(function (a, b) { return cmpName(a.name, b.name); });
   }
   function allEnrollments() {
     var out = [];
@@ -949,7 +971,7 @@
     h += "</ol><p class='log'>Customer questions: 612-802-3187 or orders@drivensol.com.</p></div></div>";
     h += "<div class='sect' id='training-quote-products' style='margin-top:28px'><h2>Adding a product to a quote</h2><p class='lead'>The catalog on a quote lists two columns. The quote line still stores the rest.</p><div class='panel' style='padding:14px'><ol class='crm-steps'>";
     h += "<li><b>Open the quote.</b> Use New quote, or Open quote on a deal, then look at Line items.</li>";
-    h += "<li><b>The catalog shows QuickBooks SKU and Description.</b> Cost, price, category, and vendor are not columns on this list.</li>";
+    h += "<li><b>The catalog shows QuickBooks SKU and Description.</b> Rows stay A to Z by QuickBooks SKU, including after a search. Cost, price, category, and vendor are not columns on this list.</li>";
     h += "<li><b>QuickBooks SKU</b> is the SKU stored on the product. When that field is blank, the column shows the QuickBooks product or service name.</li>";
     h += "<li><b>Search</b> matches the SKU, the QuickBooks product or service name, and the description.</li>";
     h += "<li><b>Click a row</b> to put that product on the line. Price, unit, category, and the QuickBooks item id still copy onto the line. Choose Type a description when the product is not in the catalog.</li>";
@@ -1051,7 +1073,7 @@
       h += "<button type='button' class='zone " + team + (collapsed ? " collapsed" : "") + "' style='grid-column:" + start + " / " + (start + n) + "' data-act='toggle-zone' data-zone='" + team + "' aria-expanded='" + (!collapsed) + "'>" + label + (collapsed ? " · show" : " · hide") + "<small>" + sub + "</small></button>";
     });
     S.stages.forEach(function (s, i) {
-      var ds = open.filter(function (d) { return d.stage === s.key; });
+      var ds = open.filter(function (d) { return d.stage === s.key; }).slice().sort(cmpDeal);
       var tot = ds.reduce(function (a, d) { return a + val(d); }, 0);
       var collapsed = colCollapsed(s);
       h += "<section class='col" + (collapsed ? " collapsed" : "") + "' data-stage='" + s.key + "'><div class='colhead' data-act='toggle-col' data-stage='" + s.key + "' role='button' tabindex='0' aria-expanded='" + (!collapsed) + "'><h3>" + esc(s.name) + "<span class='ct'>" + ds.length + "</span></h3><div class='tot'>" + money(tot) + (i === WON() ? " · <span class='wonmark'>Closed won starts here</span>" : "") + "</div></div><div class='cards'>";
@@ -1060,7 +1082,7 @@
     });
     h += "</div></div>";
     if (F.showLost) {
-      var lost = S.deals.filter(function (d) { return d.status === "lost" && match(d); });
+      var lost = S.deals.filter(function (d) { return d.status === "lost" && match(d); }).slice().sort(cmpDeal);
       h += "<div class='sect' style='margin-top:18px'><h2>Lost deals</h2><div class='panel tablewrap'><table><thead><tr><th>Deal</th><th>Company</th><th>Value</th><th>Stage</th><th>Reason</th></tr></thead><tbody>" + (lost.length ? lost.map(function (d) { return "<tr class='click' data-open-deal='" + d.id + "'><td>" + esc(d.description) + "</td><td>" + esc((co(d.company_id) || {}).name || "") + "</td><td>" + money(val(d)) + "</td><td>" + esc(stageName(d.stage)) + "</td><td>" + esc(d.lost_reason) + "</td></tr>"; }).join("") : "<tr><td colspan='5' class='empty'>No lost deals.</td></tr>") + "</tbody></table></div></div>";
     }
     $("#view").innerHTML = h;
@@ -1137,7 +1159,7 @@
   function productLinesHtml(d) {
     var lines = linesOf(d);
     var math = dealMath(d);
-    var vend = S.companies.filter(function (x) { return x.kind === "vendor"; });
+    var vend = vendorsByName();
     function sel(attr, list, v, lab) {
       return "<select " + attr + "><option value=''>Choose…</option>" + list.map(function (o) { return "<option value='" + o.id + "'" + (+v === o.id ? " selected" : "") + ">" + esc(lab(o)) + "</option>"; }).join("") + "</select>";
     }
@@ -1146,7 +1168,7 @@
     if (S.productsNote && !S.products.length) h += "<p class='log'>" + esc(S.productsNote) + "</p>";
     h += "<div class='tablewrap'><table class='qlines'><thead><tr><th>Catalog</th><th>Product or QuickBooks item</th><th>QB item id</th><th>Qty</th><th>Unit</th><th>Vendor</th><th>Unit cost</th><th>Unit sell</th><th>Line sell</th><th>Line cost</th><th>Margin</th><th>Options</th><th></th></tr></thead><tbody>";
     h += lines.map(function (l, i) {
-      var catalog = "<select data-dl='" + i + ":product_id'><option value=''>Not in the catalog</option>" + S.products.filter(function (p) { return p.active !== false; }).map(function (p) {
+      var catalog = "<select data-dl='" + i + ":product_id'><option value=''>Not in the catalog</option>" + sortedBy(S.products.filter(function (p) { return p.active !== false; }), function (p) { return p.sku ? p.sku + " · " + p.name : p.name; }).map(function (p) {
         return "<option value='" + p.id + "'" + (+l.product_id === p.id ? " selected" : "") + ">" + esc(p.sku ? p.sku + " · " + p.name : p.name) + "</option>";
       }).join("") + "</select>";
       var fig = CRMLines.lineFigures(l);
@@ -1155,7 +1177,7 @@
     }).join("");
     h += "</tbody><tfoot><tr><td colspan='8'>Deal total" + (math.freight ? " · freight " + money(math.freight) : "") + "</td><td class='calc'>" + money(math.value) + "</td><td class='calc'>" + (math.cost == null ? "—" : money(math.cost)) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : money(math.grossMargin) + " · " + pct(math.marginPct)) + "</td><td></td><td></td></tr></tfoot></table></div>";
     h += optionalAddonHtml(math, money);
-    h += "<datalist id='qbItemNames'>" + (S.qbItems || []).map(function (item) { return "<option value='" + esc(item.name) + "'>"; }).join("") + "</datalist>";
+    h += "<datalist id='qbItemNames'>" + sortedBy(S.qbItems || [], "name").map(function (item) { return "<option value='" + esc(item.name) + "'>"; }).join("") + "</datalist>";
     h += "<button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> ";
     h += "<button class='ghost' data-act='q-download' data-id='" + d.id + "'>Download customer quote</button>";
     h += "</fieldset>";
@@ -1184,11 +1206,11 @@
 
   function vCompanies() {
     var q = coQ.toLowerCase();
-    var list = S.companies.filter(function (c) {
+    var list = sortedBy(S.companies.filter(function (c) {
       var kindOk = coFilter === "all" || (coFilter === "vendor" ? c.kind === "vendor" : c.list === coFilter && c.kind !== "vendor");
       var blob = (c.name + " " + c.billing + " " + S.contacts.filter(function (x) { return x.company_id === c.id; }).map(function (x) { return x.name + " " + x.email; }).join(" ")).toLowerCase();
       return kindOk && (!q || blob.indexOf(q) >= 0);
-    });
+    }), "name");
     var h = "<div class='bar'><input type='search' id='q' placeholder='Search companies, contacts, addresses' value='" + esc(coQ) + "'><div class='filters'>" + [["all", "All"], ["active", "Active customers"], ["potential", "Potential customers"], ["vendor", "Vendors"]].map(function (x) { return "<button data-act='cof' data-v='" + x[0] + "' aria-pressed='" + (coFilter === x[0]) + "'>" + x[1] + "</button>"; }).join("") + "</div><div class='spacer'></div><button class='ghost' data-act='add-target'>Add from target list</button><button class='primary' data-act='new-company'>New company</button></div>";
     if (S.targetsNote) h += "<p class='banner'>" + esc(S.targetsNote) + "</p>";
     h += "<div class='panel tablewrap'><table><thead><tr><th>Company</th><th>Type</th><th>Owner</th><th>Last contact</th><th>Open deals</th><th>Status</th></tr></thead><tbody>";
@@ -1214,9 +1236,9 @@
       if (t === "date") return "<div class='f'><label>" + l + "</label><input type='date' data-k='" + k + "' value='" + esc(c[k] || "") + "'></div>";
       return "<div class='f" + (k === "name" || k === "billing" || k === "status" ? " wide" : "") + "'><label>" + l + "</label><input data-k='" + k + "' value='" + esc(c[k] || "") + "'></div>";
     }
-    var ships = S.shipTos.filter(function (s) { return s.company_id === c.id; });
-    var cons = S.contacts.filter(function (x) { return x.company_id === c.id; });
-    var deals = S.deals.filter(function (d) { return d.company_id === c.id || d.vendor_id === c.id; });
+    var ships = sortedBy(S.shipTos.filter(function (s) { return s.company_id === c.id; }), function (s) { return (s.label || "") + " " + (s.address || ""); });
+    var cons = sortedBy(S.contacts.filter(function (x) { return x.company_id === c.id; }), "name");
+    var deals = S.deals.filter(function (d) { return d.company_id === c.id || d.vendor_id === c.id; }).slice().sort(cmpDeal);
     var portalHtml = window.CRMPortal ? CRMPortal.forCompany(c.id, portalCtx()) : "";
     var h = "<div class='dhead'><div style='flex:1'><div class='sub'>" + (c.kind === "vendor" ? "Vendor" : c.kind === "prospect" ? "Prospect" : "Customer") + "</div><h2>" + esc(c.name) + "</h2></div><button class='ghost' data-act='close'>Close</button></div><div class='dbody'>";
     if (portalHtml) h += portalHtml;
@@ -1310,10 +1332,10 @@
   }
 
   function vDocs() {
-    var rows = S.companies.filter(function (c) { return c.kind !== "vendor" && (c.kind === "customer" || c.setup_started); }).map(function (c) { return { c: c, st: setupStatus(c) }; });
+    var rows = sortedBy(S.companies.filter(function (c) { return c.kind !== "vendor" && (c.kind === "customer" || c.setup_started); }).map(function (c) { return { c: c, st: setupStatus(c) }; }), function (r) { return r.c.name; });
     var h = "<div class='grid2'><div class='sect'><h2>Customer setup</h2><p class='lead'>Checklist state saves on the company. Alerts become follow-ups or drafts. Nothing is emailed.</p><div class='panel tablewrap'><table><thead><tr><th>Customer</th><th>Progress</th><th>Still missing</th></tr></thead><tbody>" + (rows.length ? rows.map(function (r) { return "<tr class='click' data-open-company='" + r.c.id + "'><td><b>" + esc(r.c.name) + "</b></td><td>" + r.st.done + " of " + r.st.total + "</td><td>" + (r.st.missing.length ? esc(r.st.missing.join(", ")) : "<span class='mg-good'>Complete</span>") + "</td></tr>"; }).join("") : "<tr><td colspan='3' class='empty'>No customers in setup.</td></tr>") + "</tbody></table></div></div>";
     h += packetSection("customer", "Setup packet", PACKET.template) + "</div>";
-    var vrows = S.companies.filter(function (c) { return c.kind === "vendor"; }).map(function (c) { syncReadyFlags(c); return { c: c, st: setupStatus(c) }; });
+    var vrows = sortedBy(S.companies.filter(function (c) { return c.kind === "vendor"; }).map(function (c) { syncReadyFlags(c); return { c: c, st: setupStatus(c) }; }), function (r) { return r.c.name; });
     h += "<div class='grid2' style='margin-top:28px'><div class='sect'><h2>Vendor setup</h2><p class='lead'>When the vendor form and W-9 are both checked, the company is flagged Alert Amber and Ready for QuickBooks.</p><div class='panel tablewrap'><table><thead><tr><th>Vendor</th><th>Progress</th><th>Flags</th></tr></thead><tbody>" + (vrows.length ? vrows.map(function (r) { return "<tr class='click' data-open-company='" + r.c.id + "'><td><b>" + esc(r.c.name) + "</b></td><td>" + r.st.done + " of " + r.st.total + "</td><td>" + (r.c.alert_amber ? "<span class='chip'>Alert Amber</span> " : "") + (r.c.ready_for_qb ? "<span class='chip active'>Ready for QuickBooks</span>" : "") + (r.c.qb_id ? "<span class='chip active'>Marked</span>" : "") + "</td></tr>"; }).join("") : "<tr><td colspan='3' class='empty'>No vendors yet.</td></tr>") + "</tbody></table></div></div>";
     h += packetSection("vendor", "Vendor packet", PACKET.vtemplate) + "</div>";
     $("#view").innerHTML = h;
@@ -1322,7 +1344,7 @@
   function vTasks() {
     var mine = S.tasks.filter(function (t) { return !taskWho || t.assignee === taskWho; });
     var groups = [["Overdue", function (t) { return !t.done && t.due < TODAY; }], ["Today", function (t) { return !t.done && t.due === TODAY; }], ["Coming up", function (t) { return !t.done && t.due > TODAY; }], ["Done", function (t) { return t.done; }]];
-    var h = "<div class='bar'><select id='pf'><option value=''>Everyone</option>" + S.team.map(function (p) { return "<option" + (taskWho === p.name ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + "</select><span class='log'>Auto items are follow-ups or drafts. Nothing is emailed or texted.</span></div><div class='grid2'><div>";
+    var h = "<div class='bar'><select id='pf'><option value=''>Everyone</option>" + teamByName().map(function (p) { return "<option" + (taskWho === p.name ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + "</select><span class='log'>Auto items are follow-ups or drafts. Nothing is emailed or texted.</span></div><div class='grid2'><div>";
     groups.forEach(function (g) {
       var ts = mine.filter(g[1]).sort(function (a, b) { return a.due < b.due ? -1 : 1; });
       if (g[0] === "Done" && !ts.length) return;
@@ -1330,7 +1352,7 @@
         return "<div class='task" + (t.done ? " done" : "") + "'><input type='checkbox' data-act='toggle-task' data-id='" + t.id + "'" + (t.done ? " checked" : "") + "><div class='tt'><div>" + esc(t.title) + (t.rule_id || (t.dedupe_key || "").indexOf("draft:") === 0 ? "<span class='auto'>Auto</span>" : "") + "</div><div class='tm'>" + esc(t.assignee) + " · due " + (t.due === TODAY ? "today" : shortDate(t.due)) + (t.deal_id ? " · <button class='linkbtn' data-open-deal='" + t.deal_id + "'>Open deal</button>" : "") + "</div></div></div>";
       }).join("") : "<div class='empty'>Nothing here.</div>") + "</div></div>";
     });
-    h += "</div><div class='sect'><h2>Add a follow-up</h2><div class='panel' style='padding:14px'><div class='fields'><div class='f wide'><label>Follow-up</label><input id='ntTitle'></div><div class='f'><label>Who</label><select id='ntWho'>" + S.team.map(function (p) { return "<option>" + esc(p.name) + "</option>"; }).join("") + "</select></div><div class='f'><label>Due</label><input type='date' id='ntDue' value='" + TODAY + "'></div></div><div class='mactions'><button class='primary' data-act='add-task'>Add follow-up</button></div></div></div></div>";
+    h += "</div><div class='sect'><h2>Add a follow-up</h2><div class='panel' style='padding:14px'><div class='fields'><div class='f wide'><label>Follow-up</label><input id='ntTitle'></div><div class='f'><label>Who</label><select id='ntWho'>" + teamByName().map(function (p) { return "<option>" + esc(p.name) + "</option>"; }).join("") + "</select></div><div class='f'><label>Due</label><input type='date' id='ntDue' value='" + TODAY + "'></div></div><div class='mactions'><button class='primary' data-act='add-task'>Add follow-up</button></div></div></div></div>";
     $("#view").innerHTML = h;
     $("#pf").addEventListener("change", function (e) { taskWho = e.target.value; vTasks(); });
   }
@@ -1349,7 +1371,7 @@
     h += "<div class='tablewrap'><div class='cal'>" + ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(function (x) { return "<div class='dow'>" + x + "</div>"; }).join("");
     for (var i = 0; i < 42; i++) {
       var x = new Date(start); x.setDate(start.getDate() + i); var k = iso(x);
-      h += "<div class='day" + (x.getMonth() !== m ? " out" : "") + (k === TODAY ? " today" : "") + "'><div class='num'>" + x.getDate() + "</div>" + (evs[k] || []).map(function (e) { return "<button class='ev " + e.c + "' data-open-deal='" + e.d.id + "'>" + e.t + ": " + esc(e.d.description) + "</button>"; }).join("") + "</div>";
+      h += "<div class='day" + (x.getMonth() !== m ? " out" : "") + (k === TODAY ? " today" : "") + "'><div class='num'>" + x.getDate() + "</div>" + (evs[k] || []).slice().sort(function (a, b) { return cmpDeal(a.d, b.d); }).map(function (e) { return "<button class='ev " + e.c + "' data-open-deal='" + e.d.id + "'>" + e.t + ": " + esc(e.d.description) + "</button>"; }).join("") + "</div>";
     }
     h += "</div></div>";
     $("#view").innerHTML = h;
@@ -1360,8 +1382,8 @@
     return [{ desc: d.description || "", qty: d.quantity, unit: "", vendor_id: d.vendor_id, cost: d.vendor_price_per_unit, price: d.price_per_unit, freight: d.freight, category: "", invoice_number: "", line_date: d.won_at || d.stage_changed_at || "", sales_rep: d.sales_rep || "", product_id: null }];
   }
   function orderRows() {
-    var vendors = S.companies.filter(function (c) { return c.kind === "vendor"; });
-    var customers = S.companies.filter(function (c) { return c.kind !== "vendor"; });
+    var vendors = vendorsByName();
+    var customers = customersByName();
     var rows = [];
     S.deals.forEach(function (d) {
       if (d.status === "lost") return;
@@ -1404,7 +1426,7 @@
       if (av == null || av === "") return 1;
       if (bv == null || bv === "") return -1;
       if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
-      return String(av).localeCompare(String(bv)) * dir;
+      return cmpName(av, bv) * dir;
     });
     return { rows: rows, customers: customers, vendors: vendors };
   }
@@ -1426,7 +1448,7 @@
     var h = "<div class='bar'><input type='search' id='oq' placeholder='Customer, product, invoice' value='" + esc(orderF.q) + "'>";
     h += "<select id='ocust'><option value=''>All customers</option>" + pack.customers.map(function (c) { return "<option value='" + c.id + "'" + (String(orderF.customer) === String(c.id) ? " selected" : "") + ">" + esc(c.name) + "</option>"; }).join("") + "</select>";
     h += "<select id='orep'><option value=''>All reps</option>" + repOptions().map(function (r) { return "<option" + (orderF.rep === r ? " selected" : "") + ">" + esc(r) + "</option>"; }).join("") + "</select>";
-    h += "<select id='ocat'><option value=''>All categories</option>" + Orders.CATEGORIES.map(function (c) { return "<option" + (orderF.category === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select>";
+    h += "<select id='ocat'><option value=''>All categories</option>" + categoryOptions(orderF.category) + "</select>";
     h += "<select id='ovend'><option value=''>All vendors</option>" + pack.vendors.map(function (c) { return "<option value='" + c.id + "'" + (String(orderF.vendor) === String(c.id) ? " selected" : "") + ">" + esc(c.name) + "</option>"; }).join("") + "</select>";
     h += "<select id='oscope'><option value='open'" + (orderF.scope === "open" ? " selected" : "") + ">Open (not paid)</option><option value='paid'" + (orderF.scope === "paid" ? " selected" : "") + ">Paid</option><option value='all'" + (orderF.scope === "all" ? " selected" : "") + ">All lines</option></select>";
     h += "<button class='ghost' data-act='orders-csv'>Export CSV</button></div>";
@@ -1445,7 +1467,7 @@
       h += "<td><input " + id + ":desc' value='" + esc(r.description) + "' aria-label='Product description'></td>";
       h += "<td><input " + id + ":invoice_number' value='" + esc(r.invoice) + "' aria-label='Invoice number'></td>";
       h += "<td><select " + id + ":sales_rep'>" + repOptions().map(function (n) { return "<option" + (r.rep === n ? " selected" : "") + ">" + esc(n) + "</option>"; }).join("") + "</select></td>";
-      h += "<td><select " + id + ":category'><option value=''>Choose…</option>" + Orders.CATEGORIES.map(function (c) { return "<option" + (r.category === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select></td>";
+      h += "<td><select " + id + ":category'><option value=''>Choose…</option>" + categoryOptions(r.category) + "</select></td>";
       h += "<td>" + sel(pack.vendors, r.vendorId, id + ":vendor_id'", function (c) { return c.name; }) + "</td>";
       h += "<td><input type='number' step='any' " + id + ":qty' value='" + esc(r.qty == null ? "" : r.qty) + "' aria-label='Qty ordered'></td>";
       h += "<td><input " + id + ":unit' value='" + esc(r.unit) + "' aria-label='Unit'></td>";
@@ -1501,7 +1523,7 @@
     }).join("");
     var pending = PENDING_RULES.filter(function (p) { return !S.rules.some(function (r) { return r.name === p.name; }); });
     if (pending.length) h += pending.map(function (p) { return "<div class='rule'><div><h3>" + esc(p.name) + "</h3><div class='when'>" + esc(whenText(p)) + " In the migration, not in the database yet.</div></div></div>"; }).join("");
-    h += "</div></div><div><div class='sect'><h2>Who gets alerts, and how</h2><div class='panel'>" + S.team.map(function (p) {
+    h += "</div></div><div><div class='sect'><h2>Who gets alerts, and how</h2><div class='panel'>" + teamByName().map(function (p) {
       return "<div class='cf'><div><b>" + esc(p.name) + "</b> <span class='log'>" + esc(p.team) + " · " + esc(p.email) + "</span></div><select data-act='via' data-id='" + p.id + "'><option value='task'" + (p.via === "task" ? " selected" : "") + ">Follow-up list</option><option value='email'" + (p.via === "email" ? " selected" : "") + ">Draft only</option><option value='both'" + (p.via === "both" ? " selected" : "") + ">Follow-up and draft</option></select></div>";
     }).join("") + "</div><p class='log'>Draft only means a draft row, not a sent email.</p></div>";
     var drafts = S.activity.filter(function (a) { return a.kind === "draft"; }).slice(0, 40);
@@ -1540,8 +1562,8 @@
     h += "<div><div class='sect'><h2>Custom fields</h2><div class='panel'>" + (S.fields.length ? S.fields.map(function (f) { return "<div class='cf'><div><b>" + esc(f.label) + "</b> <span class='log'>" + esc(f.entity) + " · " + esc(f.type) + "</span></div><button class='linkbtn' data-act='del-field' data-id='" + f.id + "'>Remove</button></div>"; }).join("") : "<div class='empty'>No custom fields.</div>") + "<div class='cfadd'><input id='cfLabel' placeholder='Field name'><select id='cfEntity'><option value='deal'>Deals</option><option value='company'>Companies</option></select><select id='cfType'><option value='text'>Text</option><option value='number'>Number</option><option value='date'>Date</option><option value='select'>Dropdown</option><option value='checkbox'>Checkbox</option></select><button class='ghost' data-act='add-field'>Add</button><input id='cfOpts' placeholder='Dropdown choices, comma separated' style='grid-column:1/-1'></div></div></div>";
     h += "<div class='sect' style='margin-top:16px'><h2>Product catalog</h2><p class='lead'>QuickBooks Item names and part numbers. Import is off until crm_products exists. The QuickBooks read is a separate function and is not connected.</p>";
     if (S.productsNote) h += "<p class='banner'>" + esc(S.productsNote) + "</p>";
-    h += "<div class='panel'>" + (S.products.length ? S.products.map(function (p) { return "<div class='cf'><div><b>" + esc(p.name) + "</b> <span class='log'>" + esc(p.sku || "no SKU") + (p.default_price != null ? " · " + Orders.money(p.default_price) : "") + "</span></div></div>"; }).join("") : "<div class='empty'>No products yet.</div>") + "<div class='cfadd'><input type='file' id='prodCsv' accept='.csv,text/csv'><button class='ghost' data-act='import-products'>Import item CSV</button></div><p class='log'>Accepts a QuickBooks item export. Headers it understands: Product/Service Name, SKU, Sales Description, Sales Price, and an item id. This does not write to QuickBooks.</p></div></div>";
-    h += "<div class='sect' style='margin-top:16px'><h2>Team</h2><div class='panel'>" + S.team.map(function (p) {
+    h += "<div class='panel'>" + (S.products.length ? sortedBy(S.products, "name").map(function (p) { return "<div class='cf'><div><b>" + esc(p.name) + "</b> <span class='log'>" + esc(p.sku || "no SKU") + (p.default_price != null ? " · " + Orders.money(p.default_price) : "") + "</span></div></div>"; }).join("") : "<div class='empty'>No products yet.</div>") + "<div class='cfadd'><input type='file' id='prodCsv' accept='.csv,text/csv'><button class='ghost' data-act='import-products'>Import item CSV</button></div><p class='log'>Accepts a QuickBooks item export. Headers it understands: Product/Service Name, SKU, Sales Description, Sales Price, and an item id. This does not write to QuickBooks.</p></div></div>";
+    h += "<div class='sect' style='margin-top:16px'><h2>Team</h2><div class='panel'>" + teamByName().map(function (p) {
       return "<div class='cf'><div><b>" + esc(p.name) + "</b> <span class='log'>" + esc(p.email) + " · " + esc(p.team) + (p.active ? "" : " · inactive") + "</span></div></div>";
     }).join("") + "</div><p class='log'>Alert delivery is on the Automations tab. Data saves to Supabase per record. There is no reset-to-sample button.</p></div></div></div>";
     $("#view").innerHTML = h;
@@ -1569,7 +1591,7 @@
     }).join("\n").toLowerCase().indexOf(q) >= 0;
   }
   function quoteCatalogRows(dealId, index, query, productId) {
-    var rows = S.products.filter(function (p) { return quoteCatalogMatch(p, query); });
+    var rows = sortedBy(S.products.filter(function (p) { return quoteCatalogMatch(p, query); }), quoteProductSku);
     if (!rows.length) return "<tr><td colspan='2' class='empty'>" + (S.products.some(function (p) { return p.active !== false; }) ? "No products match." : "No products yet.") + "</td></tr>";
     return rows.map(function (p) {
       var on = productId != null && productId !== "" && String(productId) === String(p.id);
@@ -1587,9 +1609,9 @@
     if (!d.quote) d.quote = blankQuote(d);
     var q = d.quote;
     var c = co(q.company_id) || {};
-    var ships = S.shipTos.filter(function (s) { return s.company_id === +q.company_id; });
-    var cons = S.contacts.filter(function (x) { return x.company_id === +q.company_id; });
-    var vend = S.companies.filter(function (x) { return x.kind === "vendor"; });
+    var ships = sortedBy(S.shipTos.filter(function (s) { return s.company_id === +q.company_id; }), function (s) { return (s.label || "") + " " + (s.address || ""); });
+    var cons = sortedBy(S.contacts.filter(function (x) { return x.company_id === +q.company_id; }), "name");
+    var vend = vendorsByName();
     function sel(attr, list, v, lab) {
       return "<select " + attr + "><option value=''>Choose…</option>" + list.map(function (o) { return "<option value='" + o.id + "'" + (+v === o.id ? " selected" : "") + ">" + esc(lab(o)) + "</option>"; }).join("") + "</select>";
     }
@@ -1597,7 +1619,7 @@
     if (S.quotesNote) h += "<p class='banner'>" + esc(S.quotesNote) + "</p>";
     h += "<p class='log'>Each field you change is copied onto the linked deal and saved on its own. Print and Download leave out vendor cost and margin. Nothing is emailed.</p>";
     h += "<fieldset><legend>Customer</legend><div class='fields'>" +
-      "<div class='f'><label>Customer</label>" + sel("data-q='company_id'", S.companies.filter(function (x) { return x.kind !== "vendor"; }), q.company_id, function (o) { return o.name; }) + "</div>" +
+      "<div class='f'><label>Customer</label>" + sel("data-q='company_id'", customersByName(), q.company_id, function (o) { return o.name; }) + "</div>" +
       "<div class='f'><label>Attention</label>" + sel("data-q='contact_id'", cons, q.contact_id, function (o) { return o.name; }) + "</div>" +
       "<div class='f'><label>Ship-to</label>" + sel("data-q='ship_to_id'", ships, q.ship_to_id, function (o) { return o.label + ": " + o.address; }) + "</div>" +
       "<div class='f'><label>Sales rep</label><select data-q='rep'>" + repOptions().map(function (r) { return "<option" + (q.rep === r ? " selected" : "") + ">" + esc(r) + "</option>"; }).join("") + "</select></div>" +
@@ -1613,7 +1635,7 @@
       q.lines.map(function (l, i) {
         var catalog = quoteCatalogPicker(d, i, l);
         var fig = CRMLines.lineFigures(l);
-        return "<tr" + lineRowClass(l) + "><td>" + catalog + "</td><td><input data-ql='" + i + ":desc' value='" + esc(l.desc || "") + "' aria-label='Product'></td><td><select data-ql='" + i + ":category'><option value=''>Choose…</option>" + Orders.CATEGORIES.map(function (c) { return "<option" + (l.category === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select></td><td><input data-ql='" + i + ":invoice_number' value='" + esc(l.invoice_number || "") + "' aria-label='Invoice number'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-ql='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + (l.unit === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-ql='" + i + ":vendor_id'", vend, l.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-ql='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Vendor cost'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Sell price'></td><td class='calc'>" + sellWithFlag(l, fig, Orders.money) + "</td><td class='calc'>" + (fig.marginPct == null ? "—" : pct(fig.marginPct)) + "</td>" + optionControls("ql", i, l) + "<td>" + (q.lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
+        return "<tr" + lineRowClass(l) + "><td>" + catalog + "</td><td><input data-ql='" + i + ":desc' value='" + esc(l.desc || "") + "' aria-label='Product'></td><td><select data-ql='" + i + ":category'><option value=''>Choose…</option>" + categoryOptions(l.category) + "</select></td><td><input data-ql='" + i + ":invoice_number' value='" + esc(l.invoice_number || "") + "' aria-label='Invoice number'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":qty' value='" + esc(l.qty == null ? "" : l.qty) + "' aria-label='Quantity'></td><td class='s'><select data-ql='" + i + ":unit'>" + Q.UNITS.map(function (u) { return "<option" + (l.unit === u ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select></td><td>" + sel("data-ql='" + i + ":vendor_id'", vend, l.vendor_id, function (o) { return o.name; }) + "</td><td class='n'><input type='number' step='any' data-ql='" + i + ":cost' value='" + esc(l.cost == null ? "" : l.cost) + "' aria-label='Vendor cost'></td><td class='n'><input type='number' step='any' data-ql='" + i + ":price' value='" + esc(l.price == null ? "" : l.price) + "' aria-label='Sell price'></td><td class='calc'>" + sellWithFlag(l, fig, Orders.money) + "</td><td class='calc'>" + (fig.marginPct == null ? "—" : pct(fig.marginPct)) + "</td>" + optionControls("ql", i, l) + "<td>" + (q.lines.length > 1 ? "<button class='linkbtn' data-act='q-del-line' data-id='" + d.id + "' data-i='" + i + "'>Remove</button>" : "") + "</td></tr>";
       }).join("") + "</tbody><tfoot><tr><td colspan='9'>Quote total" + (math.freight ? " · freight " + Orders.money(math.freight) : "") + "</td><td class='calc'>" + Orders.money(math.value) + "</td><td class='calc'>" + (math.marginPct == null ? "—" : pct(math.marginPct)) + "</td><td></td><td></td></tr></tfoot></table></div>" + optionalAddonHtml(math, Orders.money) + "<button class='ghost' data-act='q-add-line' data-id='" + d.id + "'>Add line</button> <button class='ghost' data-act='usual-order' data-id='" + d.id + "'>Use usual order</button><p class='log'>Tick Optional on a line the buyer can leave off. Included starts unchecked, so that line stays out of the total until you tick Included. Required lines and included optional lines make the quote total, margin, and deal value. Print and the PDF list the other optional lines with their prices. There is no customer page for the buyer to tick these; record their choice with Included. The first line still fills the deal's unit price, quantity, and vendor so older screens keep a product on the deal. Vendor cost and margin stay off the customer PDF. The catalog lists QuickBooks SKU and Description. Search matches the SKU, the product or service name, and the description. Click a row to fill this line. Type a description when it is not in the catalog.</p></fieldset>";
     h += "<fieldset><legend>Terms on the quote</legend><div class='f'><textarea data-q='terms'>" + esc(q.terms || "") + "</textarea></div></fieldset></div>";
     h += "<div class='dfoot'><button class='primary' data-act='q-download' data-id='" + d.id + "'>Download PDF</button><button class='ghost' data-act='q-print' data-id='" + d.id + "'>Print</button><button class='ghost' data-open-deal='" + d.id + "'>Open deal</button></div>";
@@ -1822,7 +1844,7 @@
     if (act === "new-company") { openModal("<h2>New company</h2><div class='fields'><div class='f wide'><label>Company name</label><input id='ncoName'></div><div class='f'><label>Type</label><select id='ncoKind'><option value='prospect'>Prospect</option><option value='customer'>Customer</option><option value='vendor'>Vendor</option></select></div><div class='f'><label>Owner</label><select id='ncoOwner'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nco-ok'>Add company</button></div>"); return; }
     if (act === "nco-ok") { createCompanyFromModal(); return; }
     if (act === "new-quote") { ensureQuote(a.dataset.deal ? +a.dataset.deal : null, a.dataset.company ? +a.dataset.company : null); return; }
-    if (act === "new-quote-pick") { openModal("<h2>New quote</h2><div class='f'><label>Customer</label><select id='nqCo'><option value=''>Choose…</option>" + S.companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) { return "<option value='" + c.id + "'>" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nq-ok'>Start quote</button></div>"); return; }
+    if (act === "new-quote-pick") { openModal("<h2>New quote</h2><div class='f'><label>Customer</label><select id='nqCo'><option value=''>Choose…</option>" + customersByName().map(function (c) { return "<option value='" + c.id + "'>" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nq-ok'>Start quote</button></div>"); return; }
     if (act === "nq-ok") { var cid = +$("#nqCo").value; if (!cid) { toast("Pick a customer."); return; } closeModal(); ensureQuote(null, cid); return; }
     if (act === "q-pick-product" || act === "q-pick-clear") {
       var picked = dealById(+id);
@@ -1897,7 +1919,7 @@
     if (act === "fb-copy") { S.feedback = $("#fbText").value; localStorage.setItem("driven-crm-feedback", S.feedback); navigator.clipboard && navigator.clipboard.writeText(S.feedback).then(function () { toast("Copied."); }, function () { toast("Select the text and copy it."); }); return; }
     if (act === "add-target") { openTargetPicker(); return; }
     if (act === "target-add") { addTarget(+id); return; }
-    if (act === "voice") { openModal("<h2>Talk it in</h2><p>The test page's AI filler is not connected. Save the note onto the company instead.</p><div class='f'><label>Company</label><select id='vCo'><option value=''>Choose…</option>" + S.companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) { return "<option value='" + c.id + "'>" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='f'><textarea id='vText' style='min-height:120px'></textarea></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='voice-note'>Save as note</button></div>"); return; }
+    if (act === "voice") { openModal("<h2>Talk it in</h2><p>The test page's AI filler is not connected. Save the note onto the company instead.</p><div class='f'><label>Company</label><select id='vCo'><option value=''>Choose…</option>" + customersByName().map(function (c) { return "<option value='" + c.id + "'>" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='f'><textarea id='vText' style='min-height:120px'></textarea></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='voice-note'>Save as note</button></div>"); return; }
     if (act === "voice-note") { saveVoiceNote(); return; }
   }
 
@@ -1936,7 +1958,7 @@
     if (await commitMove(d, toKey)) { render(); openDeal(d.id); }
   }
   function newDealModal(pre) {
-    openModal("<h2>New deal</h2><div class='fields'><div class='f wide'><label>Customer</label><select id='ndCo'><option value=''>Choose…</option>" + S.companies.filter(function (c) { return c.kind !== "vendor"; }).map(function (c) { return "<option value='" + c.id + "'" + (+pre === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='f wide'><label>Brief description</label><input id='ndDesc'></div><div class='f'><label>Sales rep</label><select id='ndRep'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nd-ok'>Create deal</button></div>");
+    openModal("<h2>New deal</h2><div class='fields'><div class='f wide'><label>Customer</label><select id='ndCo'><option value=''>Choose…</option>" + customersByName().map(function (c) { return "<option value='" + c.id + "'" + (+pre === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>"; }).join("") + "</select></div><div class='f wide'><label>Brief description</label><input id='ndDesc'></div><div class='f'><label>Sales rep</label><select id='ndRep'>" + reps().map(function (r) { return "<option>" + esc(r) + "</option>"; }).join("") + "</select></div></div><div class='mactions'><button class='ghost' data-act='mclose'>Cancel</button><button class='primary' data-act='nd-ok'>Create deal</button></div>");
   }
   async function createDealFromModal() {
     var cid = +$("#ndCo").value;
@@ -2321,7 +2343,7 @@
     if (!S.targets.length) { toast(S.targetsNote || "No target accounts are visible."); return; }
     var linked = {};
     S.companies.forEach(function (c) { if (c.target_account_id) linked[c.target_account_id] = 1; });
-    var rows = S.targets.filter(function (t) { return !linked[t.id]; }).slice(0, 40);
+    var rows = sortedBy(S.targets.filter(function (t) { return !linked[t.id]; }), "company").slice(0, 40);
     openModal("<h2>Add a prospect</h2><p>Copies the target account into a CRM company. It does not send outreach.</p><div class='panel' style='max-height:360px;overflow:auto'>" + rows.map(function (t) {
       return "<div class='cf'><div><b>" + esc(t.company) + "</b> <span class='log'>" + esc([t.city, t.state].filter(Boolean).join(", ")) + "</span></div><button class='ghost' data-act='target-add' data-id='" + t.id + "'>Add</button></div>";
     }).join("") + "</div><div class='mactions'><button class='ghost' data-act='mclose'>Close</button></div>");
