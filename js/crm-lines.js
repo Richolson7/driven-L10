@@ -4,6 +4,8 @@
    the deal's freight when that field is set, otherwise the sum of any
    freight typed on the lines. A blank unit cost stays blank. It is not
    treated as $0, and it is not written over a cost already stored.
+   When this role cannot see cost, a saved cost arrives as cost_set with
+   no number. The unit cost box then shows "Saved (hidden)".
    Customer quotes use customerLines() and never receive cost or margin.
    This file does not talk to the database. */
 (function (root, factory) {
@@ -94,7 +96,15 @@
     if (!backup) return out;
     if (!hasValue(out.cost) && hasValue(backup.cost)) out.cost = backup.cost;
     if (!hasValue(out.vendor_id) && hasValue(backup.vendor_id)) out.vendor_id = backup.vendor_id;
+    if (backup.cost_set === true) out.cost_set = true;
     return out;
+  }
+  /* True when a unit cost is stored but this role was not given the number. */
+  function costHiddenButSaved(line) {
+    return !!(line && !hasValue(line.cost) && line.cost_set === true);
+  }
+  function costPlaceholder(line) {
+    return costHiddenButSaved(line) ? "Saved (hidden)" : "";
   }
   /* Columns to write on a line. A blank is omitted so an update does not
      store null or 0 over a cost or vendor already in the database. */
@@ -156,6 +166,8 @@
     hasValue: hasValue,
     copyHeaderWhenSet: copyHeaderWhenSet,
     mergeStored: mergeStored,
+    costHiddenButSaved: costHiddenButSaved,
+    costPlaceholder: costPlaceholder,
     lineMoneyColumns: lineMoneyColumns,
     keepIfSet: keepIfSet
   };

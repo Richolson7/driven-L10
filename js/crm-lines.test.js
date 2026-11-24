@@ -171,4 +171,47 @@ assert.strictEqual(backfill.vendor_id, 159);
 var noBackfill = Q.headerBackfill({ lines: [{ cost: null, vendor_id: null }] }, { vendor_price_per_unit: 12, vendor_id: 4 });
 assert.deepStrictEqual(noBackfill, {});
 
+var hidden = L.mergeStored(
+  { line_id: 31, cost: null, vendor_id: null, price: 14.5 },
+  { line_id: 31, cost_set: true, vendor_id: 164 }
+);
+assert.strictEqual(hidden.cost, null);
+assert.strictEqual(hidden.cost_set, true);
+assert.strictEqual(hidden.vendor_id, 164);
+assert.strictEqual(hidden.price, 14.5);
+assert.strictEqual(L.costHiddenButSaved(hidden), true);
+assert.strictEqual(L.costPlaceholder(hidden), "Saved (hidden)");
+
+var carried = L.mergeStored({ cost: "", cost_set: true });
+assert.strictEqual(carried.cost_set, true);
+assert.strictEqual(L.costHiddenButSaved(carried), true);
+assert.strictEqual(L.costPlaceholder(carried), "Saved (hidden)");
+
+var shown = L.mergeStored({ cost: null, price: 11 }, { cost: 6.5, cost_set: true });
+assert.strictEqual(shown.cost, 6.5);
+assert.strictEqual(shown.cost_set, true);
+assert.strictEqual(L.costHiddenButSaved(shown), false);
+assert.strictEqual(L.costPlaceholder(shown), "");
+
+var plain = L.mergeStored({ cost: null, price: 1 }, { price: 2 });
+assert.strictEqual(plain.cost_set, undefined);
+assert.strictEqual(plain.price, 1);
+assert.strictEqual(L.costHiddenButSaved(plain), false);
+assert.strictEqual(L.costPlaceholder(plain), "");
+
+assert.strictEqual(L.costHiddenButSaved({ cost: "", cost_set: true }), true);
+assert.strictEqual(L.costHiddenButSaved({ cost: null, cost_set: true }), true);
+assert.strictEqual(L.costHiddenButSaved({ cost: null }), false);
+assert.strictEqual(L.costHiddenButSaved({ cost: null, cost_set: false }), false);
+assert.strictEqual(L.costHiddenButSaved({ cost: 0, cost_set: true }), false);
+assert.strictEqual(L.costHiddenButSaved(null), false);
+assert.strictEqual(L.costPlaceholder({ cost: "", cost_set: true }), "Saved (hidden)");
+assert.strictEqual(L.costPlaceholder({ cost: 9.25 }), "");
+assert.strictEqual(L.costPlaceholder({ cost: null }), "");
+assert.strictEqual(L.costPlaceholder(null), "");
+
+var flipped = L.mergeStored({ cost: null, cost_set: false }, { cost_set: true });
+assert.strictEqual(flipped.cost_set, true);
+assert.strictEqual(L.costPlaceholder(flipped), "Saved (hidden)");
+
 console.log("crm-lines tests ok");
