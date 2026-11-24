@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="js/l10-ids.js"></script>
 <style>
 :root{
   --dk:#060808;--s:#0C1010;--s2:#121818;--s3:#1A2020;
@@ -123,7 +124,7 @@ a.tab.tab-link:hover .tab-sub{color:var(--td)}
 .att-chip .att-x:hover{color:var(--red)}
 
 /* ── L10 MEETING STEPPER ── */
-.meeting-shell{display:grid;grid-template-columns:230px 1fr;gap:0;border:1px solid var(--br);border-radius:6px;overflow:hidden;min-height:560px}
+.meeting-shell{display:grid;grid-template-columns:230px minmax(0,1fr);gap:0;border:1px solid var(--br);border-radius:6px;overflow:hidden;min-height:560px}
 .meeting-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px}
 .meeting-date{display:flex;align-items:center;gap:10px}
 .meeting-date input{background:var(--s2);border:1px solid var(--br);border-radius:3px;color:var(--g);font-family:'DM Mono',monospace;font-size:13px;padding:6px 10px}
@@ -132,7 +133,9 @@ a.tab.tab-link:hover .tab-sub{color:var(--td)}
 .timer-lbl{font-size:9px;color:var(--tm);letter-spacing:1px;text-transform:uppercase}
 .timer-val{font-family:'DM Mono',monospace;font-size:20px;color:var(--g);font-weight:700}
 .timer-val.seg{color:var(--tx)}
-.agenda-sidebar{background:var(--s2);border-right:1px solid var(--br);padding:16px 0;display:flex;flex-direction:column}
+.agenda-sidebar{background:var(--s2);border-right:1px solid var(--br);padding:16px 0;display:flex;flex-direction:column;min-width:0}
+.agenda-steps{display:flex;flex-direction:column;min-width:0}
+.agenda-foot{margin-top:auto}
 .agenda-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-left:3px solid transparent;color:var(--tm)}
 .agenda-item:hover{color:var(--td)}
 .agenda-item.active{border-left-color:var(--g);background:rgba(57,255,20,.05);color:var(--tx)}
@@ -141,12 +144,12 @@ a.tab.tab-link:hover .tab-sub{color:var(--td)}
 .agenda-item .atext{line-height:1.3}
 .agenda-item .atitle{font-size:12px;font-weight:600}
 .agenda-item .atime{font-size:9px;color:var(--tm)}
-.agenda-stats{margin-top:auto;padding:14px 16px;border-top:1px solid var(--br);font-size:11px}
+.agenda-stats{padding:14px 16px;border-top:1px solid var(--br);font-size:11px}
 .astat-row{display:flex;justify-content:space-between;padding:4px 0;color:var(--td)}
 .astat-row b{color:var(--tx);font-family:'DM Mono',monospace}
 .astat-row.warn b{color:var(--red)}
 .save-meeting-btn{margin:14px 16px 0;padding:10px;border:none;border-radius:3px;background:var(--g);color:#040804;font-weight:800;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;cursor:pointer;text-transform:uppercase;font-size:12px}
-.meeting-main{padding:26px 30px;overflow-y:auto}
+.meeting-main{padding:26px 30px;overflow-y:auto;min-width:0}
 .step-title{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--g);letter-spacing:1px}
 .step-sub{font-size:12px;color:var(--td);margin:6px 0 20px}
 .segue-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -186,7 +189,21 @@ a.tab.tab-link:hover .tab-sub{color:var(--td)}
 .chart-wrap{position:relative;height:190px}
 
 .rock-row{display:grid;grid-template-columns:1fr 110px 90px auto 32px;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05);background:var(--s2)}
-.issue-row{display:grid;grid-template-columns:1fr 110px 130px 32px;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05);background:var(--s2)}
+.issue-row{display:flex;flex-direction:column;gap:8px;padding:12px;border-bottom:1px solid rgba(255,255,255,.05);background:var(--s2);min-width:0}
+.issue-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-width:0}
+.issue-head .trow-title{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
+.issue-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-left:auto;max-width:100%}
+.issue-owner{font-size:11px;color:var(--td);max-width:160px;overflow-wrap:anywhere;text-align:right}
+.issue-notes{width:100%;min-height:64px;resize:vertical}
+.ids-task-block{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ids-task-launch{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.ids-hint{flex:1;min-width:180px;margin:0;font-size:12px;line-height:1.45;color:var(--td)}
+.ids-add-task,.ids-save,.ids-cancel{min-height:36px;padding:0 14px}
+.ids-task-form{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--gd);border-radius:4px;background:var(--s);min-width:0}
+.ids-label{display:flex;flex-direction:column;gap:4px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--td)}
+.ids-task-grid{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:8px}
+.ids-task-form .tinp,.ids-task-form .tsel{width:100%;max-width:100%;min-width:0}
+.ids-task-actions{display:flex;gap:8px;flex-wrap:wrap}
 .track-chip{padding:3px 9px;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer;border:none;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;white-space:nowrap}
 .track-chip.on{background:rgba(92,184,0,.15);color:#5CB800}
 .track-chip.off{background:var(--rbg);color:var(--red)}
@@ -196,7 +213,42 @@ a.tab.tab-link:hover .tab-sub{color:var(--td)}
 .status-btn.solved{background:rgba(92,184,0,.15);color:#5CB800}
 .add-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
 .add-row input{flex:1;min-width:160px}
+.issue-owner-inp{max-width:160px;flex:0 1 160px}
 
+@media (max-width:900px){
+  .header{padding:14px 12px 10px}
+  .sync-bar,.links-bar{padding-left:12px;padding-right:12px}
+  .content{padding:14px 12px 40px}
+  .nav-actions{padding-left:12px}
+  .tabs{padding-right:12px;gap:22px}
+  .meeting-top{align-items:flex-start}
+  .timer-block{flex-wrap:wrap;gap:8px}
+  .meeting-shell{grid-template-columns:minmax(0,1fr);overflow:visible;min-height:0}
+  .agenda-sidebar{border-right:none;border-bottom:1px solid var(--br);padding:0}
+  .agenda-steps{flex-direction:row;overflow-x:auto;padding:8px 8px 0;gap:2px}
+  .agenda-item{flex:0 0 auto;border-left:none;border-bottom:3px solid transparent;min-height:44px;padding:10px 12px}
+  .agenda-item.active{border-left-color:transparent;border-bottom-color:var(--g)}
+  .agenda-foot{margin-top:0}
+  .agenda-stats{display:flex;flex-wrap:wrap;gap:4px 14px;border-top:none;padding:8px 12px 0}
+  .save-meeting-btn{margin:8px 12px}
+  .meeting-main{padding:16px 12px 28px;overflow:visible}
+  .segue-grid{grid-template-columns:1fr}
+  .meeting-main .add-row{flex-direction:column;align-items:stretch}
+  .meeting-main .add-row input,.meeting-main .add-row .tbtn,.meeting-main .add-row .tsel{width:100%;max-width:none;min-width:0;min-height:44px}
+  .meeting-main .add-row .mic-btn{align-self:flex-start;width:44px;min-width:44px;min-height:44px}
+  .meeting-main .ids-add-row{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center}
+  .meeting-main .ids-add-row .issue-owner-inp,.meeting-main .ids-add-row .tbtn{grid-column:1 / -1}
+  .meeting-main .tinp,.meeting-main .tsel,.meeting-main textarea{font-size:16px}
+  .issue-notes{min-height:88px}
+  .ids-task-launch{flex-direction:column}
+  .ids-task-grid{grid-template-columns:minmax(0,1fr)}
+  .ids-add-task,.ids-save,.ids-cancel{min-height:44px}
+  .ids-add-task,.ids-save{width:100%}
+  .status-btn{min-height:36px;padding:0 12px}
+  #ids-task-text{min-height:96px}
+  .ids-task-actions{flex-direction:column}
+  .trow-del{min-width:44px;min-height:44px}
+}
 @media (max-width:640px){
   .nav-actions{padding-left:12px}
   .tabs{padding-right:12px;gap:22px}
@@ -1170,62 +1222,154 @@ function cycleIssue(id){
   const i = issues.find(x=>x.id===id);
   if (i){ const idx = ISSUE_STATES.indexOf(i.status); i.status = ISSUE_STATES[(idx+1)%ISSUE_STATES.length]; saveAllData(); renderIssues(); }
 }
-function deleteIssue(id){ issues = issues.filter(x=>x.id!==id); saveAllData(); renderIssues(); }
+function deleteIssue(id){
+  if (String(idsTaskFor) === String(id)){ idsTaskFor = null; idsTaskDraft = null; }
+  issues = issues.filter(x=>x.id!==id);
+  saveAllData();
+  renderIssues();
+}
 function updateIssueNotes(id, val){
   const i = issues.find(x=>x.id===id);
   if (i){ i.notes = val; saveAllData(); }
 }
-function taskTextFromIssue(issue){
-  const title = (issue.text || '').trim();
-  const notes = (issue.notes || '').trim();
-  if (!title && !notes) return '';
-  if (!notes || notes === title) return title;
-  if (!title) return notes;
-  return title + '\n\n' + notes;
+let idsTaskFor = null;
+let idsTaskDraft = null;
+const IDS_TASK_HINT = 'Title, owner, and a 7-day due date are filled in from this issue. Save adds it to the To-Do list and the Task Tracker.';
+function readIdsTaskDraft(){
+  const textEl = document.getElementById('ids-task-text');
+  if (!textEl || idsTaskFor == null) return;
+  const form = textEl.closest('.ids-task-form');
+  if (!form || form.getAttribute('data-issue') !== String(idsTaskFor)) return;
+  const ownerEl = document.getElementById('ids-task-owner');
+  const dueEl = document.getElementById('ids-task-due');
+  idsTaskDraft = {
+    id: String(idsTaskFor),
+    text: textEl.value,
+    owner: ownerEl ? ownerEl.value : '',
+    due: dueEl ? dueEl.value : ''
+  };
 }
-async function addTaskFromIssue(id, btn){
-  const i = issues.find(x=>x.id===id);
-  if (!i) return;
-  const rowEl = btn && btn.closest ? btn.closest('.issue-row') : null;
-  const notesEl = rowEl && rowEl.querySelector('textarea');
+function syncIssueNotes(id){
+  const i = issues.find(x => String(x.id) === String(id));
+  if (!i) return null;
+  const rowEl = document.querySelector('.issue-row[data-id="'+id+'"]');
+  const notesEl = rowEl && rowEl.querySelector('textarea.issue-notes');
   if (notesEl && notesEl.value !== (i.notes||'')){
     i.notes = notesEl.value;
     saveAllData();
   }
-  const text = taskTextFromIssue(i);
-  if (!text){ toast('⚠️ Add a finding before creating a to-do'); return; }
+  return i;
+}
+function openIdsTask(id){
+  const i = syncIssueNotes(id);
+  if (!i) return;
+  const draft = L10Ids.taskDraftFromIssue(i, participants, new Date());
+  idsTaskFor = id;
+  idsTaskDraft = { id: String(id), text: draft.text, owner: draft.owner, due: draft.due };
+  renderIssues();
+  const el = document.getElementById('ids-task-text');
+  if (el){
+    el.focus({ preventScroll: true });
+    const len = el.value.length;
+    if (el.setSelectionRange) el.setSelectionRange(len, len);
+    requestAnimationFrame(() => {
+      const save = document.querySelector('.ids-cancel') || document.querySelector('.ids-save');
+      if (!save) return;
+      save.scrollIntoView({ block: 'end', inline: 'nearest' });
+      const rect = save.getBoundingClientRect();
+      const gap = 28;
+      if (rect.bottom > window.innerHeight - gap) window.scrollBy(0, rect.bottom - window.innerHeight + gap);
+    });
+  }
+}
+function closeIdsTask(){
+  idsTaskFor = null;
+  idsTaskDraft = null;
+  renderIssues();
+}
+async function addTaskFromIssue(id, btn){
+  const i = syncIssueNotes(id);
+  if (!i) return;
+  readIdsTaskDraft();
+  const draft = (idsTaskDraft && String(idsTaskDraft.id) === String(id))
+    ? idsTaskDraft
+    : L10Ids.taskDraftFromIssue(i, participants, new Date());
+  const built = L10Ids.taskRowFromDraft(draft);
+  if (!built.row){
+    toast(built.error === 'due' ? '⚠️ Due date needs to be a calendar day' : '⚠️ Add a to-do before saving');
+    return;
+  }
   if (btn) btn.disabled = true;
   try {
-    const {data:row, error} = await db.from('driven_tasks').insert({
-      text, owner: i.owner||'', category:'General', priority:'Medium', due:null, done:false, attachments:[]
-    }).select().single();
+    const {data:row, error} = await db.from('driven_tasks').insert(built.row).select().single();
     if (error) throw error;
     const mapped = rowToTask(row);
     tasks = [mapped, ...tasks.filter(t=>t.id!==mapped.id)];
+    idsTaskFor = null;
+    idsTaskDraft = null;
     renderTasks();
-    if (AGENDA[stepIdx] && AGENDA[stepIdx].key === 'ids') renderStepMain();
+    renderAgendaSidebar();
+    if (AGENDA[stepIdx] && AGENDA[stepIdx].key === 'ids') renderIssues();
     else if (AGENDA[stepIdx] && AGENDA[stepIdx].key === 'todos') renderStepMain();
-    toast('To-do added to the To-Do list and the Task Tracker');
+    toast('To-do saved. It is on the To-Do list and the Task Tracker.');
   } catch(e){
     if (btn) btn.disabled = false;
     toast('⚠️ Could not add task — try again');
   }
 }
+function idsOwnerOptionsHtml(selected){
+  const field = L10Ids.ownerField(participants, selected);
+  const blank = `<option value=""${field.selected===''?' selected':''}>Unassigned</option>`;
+  return blank + field.options.map(name=>`<option value="${escapeAttr(name)}"${name===field.selected?' selected':''}>${escapeAttr(name)}</option>`).join('');
+}
+function idsTaskFormHtml(i){
+  const draft = (idsTaskDraft && String(idsTaskDraft.id) === String(i.id))
+    ? idsTaskDraft
+    : L10Ids.taskDraftFromIssue(i, participants, new Date());
+  return `<div class="ids-task-form" data-issue="${i.id}">
+    <label class="ids-label">To-do
+      <textarea id="ids-task-text" class="tinp" rows="3" aria-describedby="ids-hint-${i.id}">${escapeAttr(draft.text||'')}</textarea>
+    </label>
+    <div class="ids-task-grid">
+      <label class="ids-label">Owner
+        <select id="ids-task-owner" class="tsel">${idsOwnerOptionsHtml(draft.owner||'')}</select>
+      </label>
+      <label class="ids-label">Due
+        <input id="ids-task-due" class="tinp" type="date" value="${escapeAttr(draft.due||'')}">
+      </label>
+    </div>
+    <p class="ids-hint" id="ids-hint-${i.id}">${IDS_TASK_HINT}</p>
+    <div class="ids-task-actions">
+      <button type="button" class="tbtn green ids-save" onclick="addTaskFromIssue(${i.id}, this)">Save to-do</button>
+      <button type="button" class="tbtn ids-cancel" onclick="closeIdsTask()">Cancel</button>
+    </div>
+  </div>`;
+}
 function issueRowHtml(i){
   const label = i.status.charAt(0).toUpperCase()+i.status.slice(1);
-  return `<div class="issue-row" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05);background:var(--s2)">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div class="trow-title" style="flex:1;min-width:160px">${i.text}</div>
-      <div style="font-size:11px;color:var(--td)">${i.owner||'—'}</div>
-      <button class="status-btn ${i.status}" onclick="cycleIssue(${i.id})">${label}</button>
-      <button class="tbtn green" style="flex-shrink:0" title="Create a to-do from this finding and its notes" onclick="addTaskFromIssue(${i.id}, this)">Create to-do from finding</button>
-      <button class="trow-del" onclick="deleteIssue(${i.id})">✕</button>
+  const open = String(idsTaskFor) === String(i.id);
+  const taskBlock = open
+    ? idsTaskFormHtml(i)
+    : `<div class="ids-task-launch">
+        <button type="button" class="tbtn green ids-add-task" title="Add a to-do for this issue. Title, owner, and due date are filled in." aria-describedby="ids-hint-${i.id}" onclick="openIdsTask(${i.id})">Add to-do</button>
+        <p class="ids-hint" id="ids-hint-${i.id}">${IDS_TASK_HINT}</p>
+      </div>`;
+  return `<div class="issue-row" data-id="${i.id}">
+    <div class="issue-head">
+      <div class="trow-title">${escapeAttr(i.text)}</div>
+      <div class="issue-tools">
+        <div class="issue-owner">${escapeAttr(i.owner)||'—'}</div>
+        <button type="button" class="status-btn ${i.status}" onclick="cycleIssue(${i.id})">${label}</button>
+        <button type="button" class="trow-del" title="Remove issue" onclick="deleteIssue(${i.id})">✕</button>
+      </div>
     </div>
-    <textarea class="tinp" placeholder="What did we discuss / decide..." style="width:100%;min-height:44px;resize:vertical" onchange="updateIssueNotes(${i.id}, this.value)">${i.notes||''}</textarea>
+    <textarea class="tinp issue-notes" placeholder="What did we discuss / decide..." onchange="updateIssueNotes(${i.id}, this.value)">${escapeAttr(i.notes||'')}</textarea>
+    <div class="ids-task-block">${taskBlock}</div>
   </div>`;
 }
 function renderIssues(){
-  const html = issues.length ? issues.map(issueRowHtml).join('') : '<div style="color:var(--td);font-size:12px;padding:8px 0">No open issues. Nice.</div>';
+  readIdsTaskDraft();
+  const html = issues.length ? issues.map(issueRowHtml).join('') : '<div style="color:var(--td);font-size:12px;padding:8px 0">No open issues. Add one above, then use Add to-do on it.</div>';
   const el = document.getElementById('step-issues-list'); if (el) el.innerHTML = html;
 }
 
@@ -1381,22 +1525,30 @@ function renderAgendaSidebar(){
   const openIssues = issues.filter(i=>i.status!=='solved').length;
   const openTodos = tasks.filter(t=>!t.done).length;
 
-  let html = AGENDA.map((step,i)=>`
+  let html = `<div class="agenda-steps">` + AGENDA.map((step,i)=>`
     <div class="agenda-item ${i===stepIdx?'active':''}" onclick="goToStep(${i})">
       <div class="anum">${i+1}</div>
       <div class="atext"><div class="atitle">${step.label}</div><div class="atime">${step.min} min</div></div>
-    </div>`).join('');
+    </div>`).join('') + `</div>`;
 
-  html += `<div class="agenda-stats">
+  html += `<div class="agenda-foot">
+  <div class="agenda-stats">
     <div class="astat-row"><span>Rocks OT</span><b>${rocksOn}/${rocks.length}</b></div>
     <div class="astat-row ${openIssues?'warn':''}"><span>Open issues</span><b>${openIssues}</b></div>
     <div class="astat-row"><span>Open to-dos</span><b>${openTodos}</b></div>
     <div class="astat-row"><span>KPIs green</span><b>${kpiGreen}/${kpiTotal}</b></div>
   </div>
   <button class="save-meeting-btn" onclick="saveMeeting()">✓ Save Meeting</button>
-  <button class="save-meeting-btn" style="background:var(--s3);color:var(--tx);margin-top:8px" onclick="exportAgenda()">📄 Export Agenda</button>`;
+  <button class="save-meeting-btn" style="background:var(--s3);color:var(--tx);margin-top:8px" onclick="exportAgenda()">📄 Export Agenda</button>
+  </div>`;
 
   document.getElementById('agenda-sidebar').innerHTML = html;
+  const active = document.querySelector('#agenda-sidebar .agenda-item.active');
+  const scroller = active && active.closest('.agenda-steps');
+  if (active && scroller && scroller.scrollWidth > scroller.clientWidth + 1) {
+    const delta = active.getBoundingClientRect().left - scroller.getBoundingClientRect().left;
+    scroller.scrollLeft += delta - 8;
+  }
 }
 
 function goToStep(i){
@@ -1447,6 +1599,7 @@ function saveCascade(skipRead){ if(!skipRead) notes.cascade = document.getElemen
 function saveRating(){ notes.rating = document.getElementById('note-rating').value; debouncedSave(); }
 
 function renderStepMain(){
+  readIdsTaskDraft();
   const step = AGENDA[stepIdx];
   const main = document.getElementById('meeting-main');
 
@@ -1546,11 +1699,11 @@ function renderStepMain(){
   else if (step.key === 'ids'){
     main.innerHTML = `
       <div class="step-title">IDS — IDENTIFY, DISCUSS, SOLVE — 55 min</div>
-      <div class="step-sub">Click a status chip to cycle it: Identified → Discussing → Solved. Create to-do from finding adds that issue and its notes to the To-Do list and the Task Tracker.</div>
-      <div class="add-row">
+      <div class="step-sub">Tap a status to move it: Identified → Discussing → Solved. On an issue, Add to-do files a task without leaving IDS. The title starts from the issue and the notes, the owner is filled in, and the due date starts 7 days out. Save puts it on the To-Do list and the Task Tracker.</div>
+      <div class="add-row ids-add-row">
         <input class="tinp" id="new-issue-text" placeholder="Issue...">
         <button class="mic-btn" onclick="startVoiceInto('new-issue-text', this)">🎤</button>
-        <input class="tinp" id="new-issue-owner" placeholder="Owner" style="max-width:130px">
+        <input class="tinp issue-owner-inp" id="new-issue-owner" placeholder="Owner">
         <button class="tbtn green" onclick="addIssue()">+ Add Issue</button>
       </div>
       <div id="step-issues-list"></div>`;
